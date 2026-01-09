@@ -1,0 +1,95 @@
+use plotters::prelude::*;
+use rand::Rng;
+use vorothree::{BoundingBox, Tessellation, Wall};
+
+fn draw_tessellation(
+    tess: &Tessellation,
+    generators: &[f64],
+    filename: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = SVGBackend::new(filename, (1024, 768)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption(format!("3D Voronoi - {}", filename), ("sans-serif", 20))
+        .margin(20)
+        .x_label_area_size(30)
+        .y_label_area_size(30)
+        .build_cartesian_3d(0.0..100.0, 0.0..100.0, 0.0..100.0)?;
+
+    chart.configure_axes().draw()?;
+
+    // Draw the cells with transparency
+    for i in 0..tess.count_cells() {
+        if let Some(cell) = tess.get(i) {
+            let vertices = cell.vertices();
+            for face in cell.faces() {
+                let poly: Vec<(f64, f64, f64)> = face
+                    .iter()
+                    .map(|&idx| (vertices[idx * 3], vertices[idx * 3 + 1], vertices[idx * 3 + 2]))
+                    .collect();
+                chart.draw_series(std::iter::once(Polygon::new(poly, BLUE.mix(0.1).filled())))?;
+            }
+        }
+    }
+
+    // Draw the generators as points
+    let points: Vec<(f64, f64, f64)> = generators
+        .chunks(3)
+        .map(|c| (c[0], c[1], c[2]))
+        .collect();
+
+    chart.draw_series(points.iter().map(|&p| Circle::new(p, 3, RED.filled())))?;
+
+    root.present()?;
+    println!("Output saved to {}", filename);
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Setup the tessellation
+    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
+
+    // Generate random points
+    let mut rng = rand::thread_rng();
+    let mut generators = Vec::new();
+    for _ in 0..100 {
+        generators.push(rng.gen_range(0.0..100.0));
+        generators.push(rng.gen_range(0.0..100.0));
+        generators.push(rng.gen_range(0.0..100.0));
+    }
+
+    // Run 1: Plane Wall
+    {
+        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        tess.set_generators(&generators);
+
+        tess.add_wall(Wall::new_plane(
+            40.0, 40.0, 40.0, // Point
+            1.0, 1.0, 1.0,    // Normal
+            -10               // Wall ID
+        ));
+        tess.calculate();
+        draw_tessellation(&tess, &generators, "wall_plane.svg")?;
+    }
+
+    // Run 2: Sphere Wall
+    {
+        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        tess.set_generators(&generators);
+        tess.add_wall(Wall::new_sphere(50.0, 50.0, 50.0, 40.0, -11));
+        tess.calculate();
+        draw_tessellation(&tess, &generators, "wall_sphere.svg")?;
+    }
+    
+    // Run 3: Cylinder Wall
+    {
+        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        tess.set_generators(&generators);
+        tess.add_wall(Wall::new_cylinder(50.0, 50.0, 50.0, 0.0, 0.0, 1.0, 40.0, -12));
+        tess.calculate();
+        draw_tessellation(&tess, &generators, "wall_cylinder.svg")?;
+    }
+
+    Ok(())
+}
