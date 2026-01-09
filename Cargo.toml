@@ -1,0 +1,30 @@
+[package]
+name = "vorothree"
+version = "0.1.0"
+authors = ["Maikel de Vries <info@mdt.re>"]
+description = "3D Voronoi tessellation: feature rich for wasm."
+license = "MIT/Apache-2.0"
+repository = "https://github.com/mdt-re/voro-js"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+rayon = "1.10"
+wasm-bindgen-rayon = "1.2"
+js-sys = "0.3"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[dev-dependencies]
+criterion = "0.5"
+plotters = "0.3"
+rand = "0.8"
+
+[[bench]]
+name = "tessellation"
+harness = false
+path = "benches/tessellation.rs"
