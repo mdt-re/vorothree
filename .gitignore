@@ -1,4 +1,5 @@
 /target
 
 *.svg
+*.glb
 *.code-workspace

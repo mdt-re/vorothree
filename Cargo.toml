@@ -2,7 +2,7 @@
 name = "vorothree"
 version = "0.1.0"
 authors = ["Maikel de Vries <info@mdt.re>"]
-description = "3D Voronoi tessellation: feature rich for wasm."
+description = "3D Voronoi tessellation in Rust: a fast, feature-rich grid-based approach ready for WASM and TypeScript."
 license = "MIT/Apache-2.0"
 repository = "https://github.com/mdt-re/voro-js"
 edition = "2024"
@@ -19,12 +19,26 @@ js-sys = "0.3"
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
 
+# Configuration for docs.rs
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+all-features = true
+
 [dev-dependencies]
 criterion = "0.5"
 plotters = "0.3"
 rand = "0.8"
+gltf = "1.4"
 
 [[bench]]
 name = "tessellation"
 harness = false
 path = "benches/tessellation.rs"
+
+[[bench]]
+name = "cell"
+harness = false
+
+[[bench]]
+name = "wall"
+harness = false

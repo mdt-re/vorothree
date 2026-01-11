@@ -243,4 +243,62 @@ mod tests {
         
         assert_eq!(tess.generators().len(), 6);
     }
+
+    #[test]
+    fn test_wall_clipping_volume() {
+        let bounds = BoundingBox {
+            min_x: 0.0, min_y: 0.0, min_z: 0.0,
+            max_x: 10.0, max_y: 10.0, max_z: 10.0,
+        };
+
+        // Generate 1000 points in a grid to ensure uniform filling
+        let mut generators = Vec::new();
+        for x in 0..10 {
+            for y in 0..10 {
+                for z in 0..10 {
+                    generators.push(x as f64 + 0.5);
+                    generators.push(y as f64 + 0.5);
+                    generators.push(z as f64 + 0.5);
+                }
+            }
+        }
+
+        // Test Plane Wall
+        {
+            let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
+            tess.set_generators(&generators);
+            // Keep x > 5.0
+            tess.add_wall(Wall::new_plane(5.0, 0.0, 0.0, 1.0, 0.0, 0.0, -11));
+            tess.calculate();
+            let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
+            assert!((vol - 500.0).abs() < 1e-3, "Plane wall volume incorrect: {}", vol);
+        }
+
+        // Test Sphere Wall
+        {
+            let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
+            tess.set_generators(&generators);
+            // Sphere at center, radius 4. Volume = 4/3 * pi * 4^3 = 268.08257
+            tess.add_wall(Wall::new_sphere(5.0, 5.0, 5.0, 4.0, -11));
+            tess.calculate();
+            let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
+            let expected = 4.0 / 3.0 * std::f64::consts::PI * 4.0f64.powi(3);
+            // Voronoi approximation of a curved surface with 1000 cells might have some error
+            // The error depends on the resolution (number of cells).
+            // With 1000 cells, it should be reasonably close, maybe within 1-2%?
+            assert!((vol - expected).abs() / expected < 0.05, "Sphere wall volume incorrect: got {}, expected {}", vol, expected);
+        }
+
+        // Test Cylinder Wall
+        {
+            let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
+            tess.set_generators(&generators);
+            // Cylinder along Z, radius 4. Volume = pi * r^2 * h = pi * 16 * 10 = 502.6548
+            tess.add_wall(Wall::new_cylinder(5.0, 5.0, 5.0, 0.0, 0.0, 1.0, 4.0, -11));
+            tess.calculate();
+            let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
+            let expected = std::f64::consts::PI * 4.0f64.powi(2) * 10.0;
+            assert!((vol - expected).abs() / expected < 0.05, "Cylinder wall volume incorrect: got {}, expected {}", vol, expected);
+        }
+    }
 }

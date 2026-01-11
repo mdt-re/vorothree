@@ -1,6 +1,7 @@
 use plotters::prelude::*;
 use rand::Rng;
 use vorothree::{BoundingBox, Tessellation, Wall};
+use vorothree::geometries::TrefoilKnotGeometry;
 
 fn draw_tessellation(
     tess: &Tessellation,
@@ -46,14 +47,14 @@ fn draw_tessellation(
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Setup the tessellation
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
 
     // Generate random points
     let mut rng = rand::thread_rng();
     let mut generators = Vec::new();
-    for _ in 0..100 {
+    for _ in 0..1000 {
         generators.push(rng.gen_range(0.0..100.0));
         generators.push(rng.gen_range(0.0..100.0));
         generators.push(rng.gen_range(0.0..100.0));
@@ -89,6 +90,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         tess.add_wall(Wall::new_cylinder(50.0, 50.0, 50.0, 0.0, 0.0, 1.0, 40.0, -12));
         tess.calculate();
         draw_tessellation(&tess, &generators, "wall_cylinder.svg")?;
+    }
+
+    // Run 4: Torus Wall
+    {
+        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        tess.set_generators(&generators);
+        tess.add_wall(Wall::new_torus(50.0, 50.0, 50.0, 0.0, 0.0, 1.0, 35.0, 10.0, -13));
+        tess.calculate();
+        draw_tessellation(&tess, &generators, "wall_torus.svg")?;
+    }
+
+    // Run 6: Trefoil Knot Wall (Custom)
+    {
+        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        tess.set_generators(&generators);
+        tess.add_wall(Wall::new(-15, Box::new(TrefoilKnotGeometry::new(
+            [50.0, 50.0, 50.0],
+            12.0,
+            8.0,
+            200
+        ))));
+        tess.calculate();
+        draw_tessellation(&tess, &generators, "wall_knot.svg")?;
     }
 
     Ok(())

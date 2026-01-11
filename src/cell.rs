@@ -19,6 +19,7 @@ pub const BOX_BACK: i32 = -4;
 pub const BOX_LEFT: i32 = -5;
 pub const BOX_RIGHT: i32 = -6;
 
+/// A Voronoi cell containing vertices and face information.
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct Cell {
@@ -75,26 +76,31 @@ impl Cell {
         }
     }
 
+    /// The ID of the generator associated with this cell.
     #[wasm_bindgen(getter)]
     pub fn id(&self) -> usize {
         self.id
     }
 
+    /// Flat array of vertices [x, y, z, x, y, z, ...].
     #[wasm_bindgen(getter)]
     pub fn vertices(&self) -> Vec<f64> {
         self.vertices.clone()
     }
 
+    /// Number of vertices for each face.
     #[wasm_bindgen(getter)]
     pub fn face_counts(&self) -> Vec<u32> {
         self.face_counts.clone()
     }
 
+    /// Flattened indices for all faces.
     #[wasm_bindgen(getter)]
     pub fn face_indices(&self) -> Vec<u32> {
         self.face_indices.clone()
     }
 
+    /// Neighbor ID for each face. Negative values indicate walls/boundaries.
     #[wasm_bindgen(getter)]
     pub fn face_neighbors(&self) -> Vec<i32> {
         self.face_neighbors.clone()
@@ -191,7 +197,7 @@ impl Cell {
                         let idx = if let Some(&(_, id)) = intersection_map.iter().find(|&&(k, _)| k == key) {
                             id
                         } else {
-                            let t = d_s / (d_s - d_e);
+                            let t = (d_s / (d_s - d_e)).clamp(0.0, 1.0);
                             let ax = self.vertices[idx_s * 3]; let ay = self.vertices[idx_s * 3 + 1]; let az = self.vertices[idx_s * 3 + 2];
                             let bx = self.vertices[idx_e * 3]; let by = self.vertices[idx_e * 3 + 1]; let bz = self.vertices[idx_e * 3 + 2];
                             let new_idx = (new_vertices.len() / 3) as u32;
@@ -210,7 +216,7 @@ impl Cell {
                     let idx = if let Some(&(_, id)) = intersection_map.iter().find(|&&(k, _)| k == key) {
                         id
                     } else {
-                        let t = d_s / (d_s - d_e);
+                        let t = (d_s / (d_s - d_e)).clamp(0.0, 1.0);
                         let ax = self.vertices[idx_s * 3]; let ay = self.vertices[idx_s * 3 + 1]; let az = self.vertices[idx_s * 3 + 2];
                         let bx = self.vertices[idx_e * 3]; let by = self.vertices[idx_e * 3 + 1]; let bz = self.vertices[idx_e * 3 + 2];
                         let new_idx = (new_vertices.len() / 3) as u32;
@@ -368,6 +374,71 @@ impl Cell {
             centroid_y * factor,
             centroid_z * factor,
         ]
+    }
+
+    pub fn face_area(&self, face_index: usize) -> f64 {
+        if face_index >= self.face_counts.len() {
+            return 0.0;
+        }
+        let mut offset = 0;
+        for i in 0..face_index {
+            offset += self.face_counts[i] as usize;
+        }
+        let count = self.face_counts[face_index] as usize;
+
+        if count < 3 {
+            return 0.0;
+        }
+
+        let mut area = 0.0;
+        let p0_idx = self.face_indices[offset] as usize;
+        let p0_x = self.vertices[p0_idx * 3];
+        let p0_y = self.vertices[p0_idx * 3 + 1];
+        let p0_z = self.vertices[p0_idx * 3 + 2];
+
+        for i in 1..count - 1 {
+            let p1_idx = self.face_indices[offset + i] as usize;
+            let p2_idx = self.face_indices[offset + i + 1] as usize;
+
+            let p1_x = self.vertices[p1_idx * 3];
+            let p1_y = self.vertices[p1_idx * 3 + 1];
+            let p1_z = self.vertices[p1_idx * 3 + 2];
+
+            let p2_x = self.vertices[p2_idx * 3];
+            let p2_y = self.vertices[p2_idx * 3 + 1];
+            let p2_z = self.vertices[p2_idx * 3 + 2];
+
+            let v1_x = p1_x - p0_x;
+            let v1_y = p1_y - p0_y;
+            let v1_z = p1_z - p0_z;
+
+            let v2_x = p2_x - p0_x;
+            let v2_y = p2_y - p0_y;
+            let v2_z = p2_z - p0_z;
+
+            let cross_x = v1_y * v2_z - v1_z * v2_y;
+            let cross_y = v1_z * v2_x - v1_x * v2_z;
+            let cross_z = v1_x * v2_y - v1_y * v2_x;
+
+            area += 0.5 * (cross_x * cross_x + cross_y * cross_y + cross_z * cross_z).sqrt();
+        }
+        area
+    }
+
+    #[wasm_bindgen(js_name = faces)]
+    // Workaround for the fact that wasm-bindgen does not support nested vectors directly
+    pub fn wasm_faces(&self) -> js_sys::Array {
+        let result = js_sys::Array::new_with_length(self.face_counts.len() as u32);
+        let mut offset = 0;
+        for (i, &count) in self.face_counts.iter().enumerate() {
+            let count = count as usize;
+            let end = offset + count;
+            let face_slice = &self.face_indices[offset..end];
+            let js_face = js_sys::Uint32Array::from(face_slice);
+            result.set(i as u32, js_face.into());
+            offset = end;
+        }
+        result
     }
 }
 

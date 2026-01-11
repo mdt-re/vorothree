@@ -8,4 +8,5 @@ This directory contains examples demonstrating how to use the `vorothree` librar
 
 ```bash
 cargo run --example tessellation_svg
+cargo run --example walls
 ```
