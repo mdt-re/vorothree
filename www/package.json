@@ -10,12 +10,15 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@types/three": "^0.182.0",
+    "three": "^0.182.0",
     "vorothree": "file:../pkg"
   },
   "devDependencies": {
+    "@types/node": "^25.0.6",
+    "jsdom": "^24.0.0",
     "typescript": "^5.0.0",
     "vite": "^5.0.0",
-    "vitest": "^1.0.0",
-    "jsdom": "^24.0.0"
+    "vitest": "^1.0.0"
   }
 }

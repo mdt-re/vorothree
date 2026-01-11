@@ -9,7 +9,7 @@ Before running any commands, ensure you have built the WASM package and installe
 1. **Build the WASM package** (from the parent directory):
    ```bash
    cd ..
-   rustup run nightly wasm-pack build --target web
+   wasm-pack build --target web
    cd www
    ```
 

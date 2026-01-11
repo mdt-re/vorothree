@@ -30,7 +30,7 @@ describe('Vorothree WASM', () => {
 
     it('should create a tessellation and count generators', () => {
         const bounds = new BoundingBox(0, 0, 0, 100, 100, 100);
-        const tess = new Tessellation(bounds);
+        const tess = new Tessellation(bounds, 10, 10, 10);
 
         const points = new Float64Array([10, 10, 10, 20, 20, 20]);
         tess.set_generators(points);
@@ -41,7 +41,7 @@ describe('Vorothree WASM', () => {
 
     it('should performantly add points to the tessellation', () => {
         const bounds = new BoundingBox(0, 0, 0, 1000, 1000, 1000);
-        const tess = new Tessellation(bounds);
+        const tess = new Tessellation(bounds, 10, 10, 10);
 
         const numPoints = 10000;
         const points = new Float64Array(numPoints * 3);
@@ -63,7 +63,7 @@ describe('Vorothree WASM', () => {
         const height = 100;
         const depth = 100;
         const bounds = new BoundingBox(0, 0, 0, width, height, depth);
-        const tess = new Tessellation(bounds);
+        const tess = new Tessellation(bounds, 10, 10, 10);
 
         // Add some points to generate cells
         const points = new Float64Array([

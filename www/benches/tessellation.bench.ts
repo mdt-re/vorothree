@@ -1,7 +1,14 @@
 import { describe, bench } from 'vitest';
-import init, { Tessellation, BoundingBox } from 'vorothree';
 import fs from 'fs/promises';
 import path from 'path';
+
+// Polyfill self for wasm-bindgen-rayon
+if (typeof self === 'undefined') {
+    // @ts-ignore
+    global.self = global;
+}
+
+const { default: init, Tessellation, BoundingBox } = await import('vorothree');
 
 // Initialize WASM module globally for the benchmarks
 // We use top-level await here which Vitest supports
@@ -20,7 +27,7 @@ describe('Tessellation Performance', () => {
 
     // We reuse the instance to match the Rust benchmark strategy
     // and measure the cost of the update/calculation specifically.
-    const tess = new Tessellation(bounds);
+    const tess = new Tessellation(bounds, 10, 10, 10);
 
     bench('set_generators (10k points)', () => {
         tess.set_generators(points);
