@@ -41,7 +41,6 @@ impl WallGeometry for ConeGeometry {
         let r_dir_y = py / r;
         let r_dir_z = pz / r;
         
-        let tan_a = self.angle.tan();
         let cos_a = self.angle.cos();
         let sin_a = self.angle.sin();
         

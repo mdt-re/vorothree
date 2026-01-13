@@ -1,135 +1,61 @@
 import './style.css';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import init, { Tessellation, BoundingBox, Wall } from 'vorothree';
+import init from 'vorothree';
+
+const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promise<void> }>> = {
+    'sphere': () => import('./examples/moving_cell'),
+    'trefoil': () => import('./examples/walls'),
+    'performance': () => import('./examples/performance'),
+    'relaxation': () => import('./examples/relaxation'),
+};
 
 async function run() {
     await init();
 
+    // Inject styles to ensure full screen canvas
+    const style = document.createElement('style');
+    style.innerHTML = `
+        body { margin: 0; overflow: hidden; }
+        #app { max-width: none; margin: 0; padding: 0; width: 100%; height: 100%; }
+        canvas { display: block; }
+    `;
+    document.head.appendChild(style);
+
     const app = document.querySelector<HTMLDivElement>('#app')!;
-    app.innerHTML = ''; // Clear existing content
-
-    // --- Three.js Setup ---
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x242424);
-
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(150, 150, 150);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    app.appendChild(renderer.domElement);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(50, 100, 50);
-    scene.add(dirLight);
-
-    // --- Vorothree Setup ---
-    const bounds = new BoundingBox(0, 0, 0, 100, 100, 100);
-    const tess = new Tessellation(bounds, 10, 10, 10);
-
-    // Add Sphere Wall
-    // Center (50,50,50), Radius 40.0, ID -15
-    tess.add_wall(Wall.new_sphere(50.0, 50.0, 50.0, 40.0, -15));
-
-    // Generate Random Points
-    const numPoints = 2000;
-    const points = new Float64Array(numPoints * 3);
-    for (let i = 0; i < points.length; i++) {
-        points[i] = Math.random() * 100;
-    }
-    tess.set_generators(points);
-    tess.calculate();
-
-    // --- Visualization ---
     
-    // 1. Visualize the Sphere "Ghost" (Wireframe)
-    const sphereGeom = new THREE.SphereGeometry(40.0, 32, 32);
-    sphereGeom.translate(50.0, 50.0, 50.0);
+    const params = new URLSearchParams(window.location.search);
+    const exampleName = params.get('example');
 
-    const sphereMat = new THREE.MeshBasicMaterial({ 
-        color: 0xff0000, 
-        wireframe: true, 
-        transparent: true, 
-        opacity: 0.1 
-    });
-    scene.add(new THREE.Mesh(sphereGeom, sphereMat));
-
-    // 2. Create Meshes for Cells
-    const material = new THREE.MeshPhysicalMaterial({
-        color: 0x00aaff,
-        metalness: 0.1,
-        roughness: 0.5,
-        transmission: 0.6, // Glass-like
-        thickness: 1.0,
-        transparent: true,
-        opacity: 0.3,
-        side: THREE.DoubleSide
-    });
-
-    const cellCount = tess.count_cells;
-    const geometryGroup = new THREE.Group();
-
-    for (let i = 0; i < cellCount; i++) {
-        const cell = tess.get(i);
-        if (!cell) continue;
-
-        const vertices = cell.vertices;
-        const faces = cell.faces();
-
-        const positions: number[] = [];
+    if (exampleName && examples[exampleName]) {
+        const module = await examples[exampleName]();
         
-        // Triangulate faces (Fan triangulation for convex polygons)
-        for (const face of faces) {
-            if (face.length < 3) continue;
+        // Add a "Back" button
+        const backBtn = document.createElement('a');
+        backBtn.href = '/';
+        backBtn.textContent = '← Back to Examples';
+        backBtn.style.position = 'absolute';
+        backBtn.style.top = '10px';
+        backBtn.style.left = '10px';
+        backBtn.style.zIndex = '1000';
+        backBtn.style.color = 'white';
+        backBtn.style.background = 'rgba(0,0,0,0.5)';
+        backBtn.style.padding = '5px 10px';
+        backBtn.style.borderRadius = '4px';
+        backBtn.style.textDecoration = 'none';
+        document.body.appendChild(backBtn);
 
-            const v0Idx = face[0];
-            const v0x = vertices[v0Idx * 3];
-            const v0y = vertices[v0Idx * 3 + 1];
-            const v0z = vertices[v0Idx * 3 + 2];
-
-            for (let k = 1; k < face.length - 1; k++) {
-                const v1Idx = face[k];
-                const v2Idx = face[k + 1];
-
-                positions.push(v0x, v0y, v0z);
-                positions.push(vertices[v1Idx * 3], vertices[v1Idx * 3 + 1], vertices[v1Idx * 3 + 2]);
-                positions.push(vertices[v2Idx * 3], vertices[v2Idx * 3 + 1], vertices[v2Idx * 3 + 2]);
-            }
-        }
-
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.computeVertexNormals();
-
-        // Scale down slightly to see gaps
-        geometry.scale(0.95, 0.95, 0.95);
-        // Re-center after scaling (approximate)
-        geometry.computeBoundingBox();
-        const center = new THREE.Vector3();
-        geometry.boundingBox!.getCenter(center);
-        const offset = center.clone().multiplyScalar(1 - 0.95);
-        geometry.translate(offset.x, offset.y, offset.z);
-
-        const mesh = new THREE.Mesh(geometry, material);
-        geometryGroup.add(mesh);
+        await module.run(app);
+    } else {
+        app.innerHTML = `
+            <h1>Vorothree Examples</h1>
+            <ul style="list-style: none; padding: 0;">
+                ${Object.keys(examples).map(key => `
+                    <li style="margin: 10px;">
+                        <a href="?example=${key}" style="font-size: 1.2em; color: #646cff;">${key.charAt(0).toUpperCase() + key.slice(1)} Example</a>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
     }
-
-    scene.add(geometryGroup);
-
-    // Animation Loop
-    function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-    }
-    animate();
 }
 
 run().catch(console.error);

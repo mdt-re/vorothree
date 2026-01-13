@@ -123,6 +123,27 @@ impl Tessellation {
         }).collect();
     }
 
+    /// Performs one step of Lloyd's relaxation.
+    /// Moves each generator to the centroid of its cell.
+    pub fn relax(&mut self) {
+        if self.cells.len() != self.generators.len() / 3 {
+            return;
+        }
+
+        let new_generators: Vec<f64> = self.cells.par_iter()
+            .zip(self.generators.par_chunks(3))
+            .flat_map(|(cell, original_pos)| {
+                if cell.vertices.is_empty() {
+                    original_pos.to_vec()
+                } else {
+                    cell.centroid()
+                }
+            })
+            .collect();
+
+        self.set_generators(&new_generators);
+    }
+
     /// Update all generators at once.
     /// Expects a flat array [x, y, z, x, y, z, ...]
     pub fn set_generators(&mut self, generators: &[f64]) {

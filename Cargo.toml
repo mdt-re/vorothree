@@ -6,6 +6,7 @@ description = "3D Voronoi tessellation in Rust: a fast, feature-rich grid-based 
 license = "MIT/Apache-2.0"
 repository = "https://github.com/mdt-re/voro-js"
 edition = "2024"
+readme = "README.md"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
