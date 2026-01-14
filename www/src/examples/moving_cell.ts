@@ -14,8 +14,7 @@ export async function run(app: HTMLElement) {
     const params = {
         count: 50,
         speed: 1.0,
-        opacity: 0.3,
-        wireframe: false
+        opacity: 0.3
     };
 
     // --- Three.js Setup ---
@@ -72,28 +71,24 @@ export async function run(app: HTMLElement) {
     initPoints();
 
     // --- Visualization ---
-    const material = new THREE.MeshPhysicalMaterial({
+    const material = new THREE.MeshStandardMaterial({
         color: 0x00aaff,
-        metalness: 0.1,
         roughness: 0.5,
-        transmission: 0.6,
-        thickness: 1.0,
+        metalness: 0.1,
         transparent: true,
         opacity: params.opacity,
-        wireframe: params.wireframe,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        depthWrite: false 
     });
 
-    const movingMaterial = new THREE.MeshPhysicalMaterial({
+    const movingMaterial = new THREE.MeshStandardMaterial({
         color: 0xff3333,
-        metalness: 0.1,
         roughness: 0.5,
-        transmission: 0.6,
-        thickness: 1.0,
+        metalness: 0.1,
         transparent: true,
-        opacity: 0.8,
-        wireframe: false,
-        side: THREE.DoubleSide
+        opacity: 2 * params.opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false 
     });
 
     const geometryGroup = new THREE.Group();
@@ -162,7 +157,6 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'count', 10, 200, 10).name('Static Points').onChange(initPoints);
     gui.add(params, 'speed', 0, 3).name('Speed');
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
-    gui.add(params, 'wireframe').onChange((v: boolean) => material.wireframe = v);
 
     function animate() {
         if (!app.isConnected) return;

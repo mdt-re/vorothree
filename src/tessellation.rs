@@ -3,6 +3,8 @@ use crate::cell::Cell;
 use crate::wall::Wall;
 use wasm_bindgen::prelude::*;
 use rayon::prelude::*;
+use rand::prelude::*;
+use rand::rngs::StdRng;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_rayon::init_thread_pool;
@@ -225,6 +227,43 @@ impl Tessellation {
 
         ix + iy * nx + iz * nx * ny
     }
+
+    pub fn random_generators(&mut self, count: usize) {
+        // TODO: implement generator radii, to others and to walls. Use octree like website_infinity.
+        let mut rng = StdRng::seed_from_u64(get_seed());
+        let mut points = Vec::with_capacity(count * 3);
+        let w = self.bounds.max_x - self.bounds.min_x;
+        let h = self.bounds.max_y - self.bounds.min_y;
+        let d = self.bounds.max_z - self.bounds.min_z;
+        
+        let mut found = 0;
+        let max_attempts = count * 1000; // Safety limit
+        let mut attempts = 0;
+
+        while found < count && attempts < max_attempts {
+            attempts += 1;
+            let x = self.bounds.min_x + rng.r#gen::<f64>() * w;
+            let y = self.bounds.min_y + rng.r#gen::<f64>() * h;
+            let z = self.bounds.min_z + rng.r#gen::<f64>() * d;
+
+            let mut inside = true;
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    inside = false;
+                    break;
+                }
+            }
+
+            if inside {
+                points.push(x);
+                points.push(y);
+                points.push(z);
+                found += 1;
+            }
+        }
+        
+        self.set_generators(&points);
+    }
 }
 
 #[cfg(test)]
@@ -321,5 +360,16 @@ mod tests {
             let expected = std::f64::consts::PI * 4.0f64.powi(2) * 10.0;
             assert!((vol - expected).abs() / expected < 0.05, "Cylinder wall volume incorrect: got {}, expected {}", vol, expected);
         }
+    }
+}
+
+fn get_seed() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        (js_sys::Math::random() * 4294967296.0) as u64
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        123456789 // Fixed seed for tests
     }
 }

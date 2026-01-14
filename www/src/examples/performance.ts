@@ -6,49 +6,45 @@ import { Tessellation, BoundingBox } from 'vorothree';
 export async function run(app: HTMLElement) {
     app.innerHTML = ''; // Clear existing content
 
-    // --- UI for Stats ---
-    const statsDiv = document.createElement('div');
-    statsDiv.style.position = 'absolute';
-    statsDiv.style.top = '10px';
-    statsDiv.style.left = '10px';
-    statsDiv.style.color = 'white';
-    statsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    statsDiv.style.padding = '10px';
-    statsDiv.style.fontFamily = 'monospace';
-    statsDiv.style.pointerEvents = 'none';
-    statsDiv.style.userSelect = 'none';
-    app.appendChild(statsDiv);
-
-    const gui = new GUI({ container: app });
-    gui.domElement.style.position = 'absolute';
-    gui.domElement.style.top = '10px';
-    gui.domElement.style.right = '10px';
-
-    const params = {
-        count: 200,
-        opacity: 0.3,
-        wireframe: false,
-        autoRotate: true
-    };
+    // --- UI for Results ---
+    const resultsDiv = document.createElement('div');
+    resultsDiv.style.position = 'absolute';
+    resultsDiv.style.bottom = '10px';
+    resultsDiv.style.right = '10px';
+    resultsDiv.style.color = 'white';
+    resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    resultsDiv.style.padding = '10px';
+    resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.pointerEvents = 'none';
+    resultsDiv.style.userSelect = 'none';
+    resultsDiv.style.display = 'none';
+    app.appendChild(resultsDiv);
 
     // --- Three.js Setup ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x242424);
+    scene.background = new THREE.Color(0x111111);
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(80, 80, 80);
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 60;
+
+    const persCamera = new THREE.PerspectiveCamera(60, aspect, 0.1, 500);
+    persCamera.position.set(28, 21, 28);
+
+    const orthoCamera = new THREE.OrthographicCamera(
+        frustumSize * aspect / -2, frustumSize * aspect / 2,
+        frustumSize / 2, frustumSize / -2,
+        0.1, 1000
+    );
+    orthoCamera.position.set(28, 21, 28);
+
+    let activeCamera: THREE.Camera = persCamera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
     app.appendChild(renderer.domElement);
 
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    const controls = new OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(activeCamera, renderer.domElement);
     controls.enableDamping = true;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 1.0;
@@ -57,176 +53,231 @@ export async function run(app: HTMLElement) {
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(50, 100, 50);
+    dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
-    // --- Vorothree Setup ---
-    const boxSize = 100;
-    const bounds = new BoundingBox(-boxSize / 2, -boxSize / 2, -boxSize / 2, boxSize / 2, boxSize / 2, boxSize / 2);
-    const tess = new Tessellation(bounds, 10, 10, 10);
+    // Visualization Group
+    const visGroup = new THREE.Group();
+    scene.add(visGroup);
 
-    // Number of points
-    let points: Float64Array;
-    let velocities: Float64Array;
+    // --- Benchmark Logic ---
+    const params = {
+        cameraType: 'Perspective',
+        count: 1000,
+        boxSize: 20,
+        n: 10,
+        render: true,
+        run: () => runBenchmark(),
+        download: () => downloadResults()
+    };
 
-    function initPoints() {
-        points = new Float64Array(params.count * 3);
-        velocities = new Float64Array(params.count * 3);
+    let lastResults: any = null;
 
-        for (let i = 0; i < params.count; i++) {
-            points[i * 3] = (Math.random() - 0.5) * boxSize;
-            points[i * 3 + 1] = (Math.random() - 0.5) * boxSize;
-            points[i * 3 + 2] = (Math.random() - 0.5) * boxSize;
+    const gui = new GUI({ container: app });
+    gui.domElement.style.position = 'absolute';
+    gui.domElement.style.top = '10px';
+    gui.domElement.style.right = '10px';
 
-            velocities[i * 3] = (Math.random() - 0.5) * 0.5;
-            velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
-            velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+    gui.add(params, 'cameraType', ['Perspective', 'Orthographic']).name('Camera').onChange((val: string) => {
+        const prevCamera = activeCamera;
+        if (val === 'Perspective') {
+            activeCamera = persCamera;
+        } else {
+            activeCamera = orthoCamera;
         }
-        tess.set_generators(points);
-        tess.calculate();
-    }
-    initPoints();
-
-    // --- Visualization ---
-    const material = new THREE.MeshPhysicalMaterial({
-        color: 0x00aaff,
-        metalness: 0.1,
-        roughness: 0.5,
-        transmission: 0.6,
-        thickness: 1.0,
-        transparent: true,
-        opacity: params.opacity,
-        wireframe: params.wireframe,
-        side: THREE.DoubleSide
+        activeCamera.position.copy(prevCamera.position);
+        activeCamera.rotation.copy(prevCamera.rotation);
+        controls.object = activeCamera;
     });
+    gui.add(params, 'count', 100, 50000, 100).name('Particle Count');
+    gui.add(params, 'boxSize', 10, 100).name('Box Size');
+    gui.add(params, 'n', 1, 50, 1).name('Grid Size (n)');
+    gui.add(params, 'render').name('Render Result');
+    gui.add(params, 'run').name('Run Benchmark');
+    gui.add(params, 'download').name('Download CSV');
 
-    gui.add(params, 'count', 10, 1000, 10).name('Point Count').onChange(initPoints);
-    gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
-    gui.add(params, 'wireframe').onChange((v: boolean) => material.wireframe = v);
-    gui.add(params, 'autoRotate').onChange((v: boolean) => controls.autoRotate = v);
-
-    const geometryGroup = new THREE.Group();
-    scene.add(geometryGroup);
-
-    // Helper to visualize bounds
-    const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-    const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
-    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
-    boxMesh.position.set(0, 0, 0);
-    scene.add(boxMesh);
-
-    let lastTime = performance.now();
-    let frameCount = 0;
-    let calcTimeTotal = 0;
-    let renderTimeTotal = 0;
-
-    function updateVisualization() {
-        // Dispose old geometries
-        for (let i = geometryGroup.children.length - 1; i >= 0; i--) {
-            const child = geometryGroup.children[i] as THREE.Mesh;
-            if (child.geometry) child.geometry.dispose();
-            geometryGroup.remove(child);
+    function runBenchmark() {
+        if (resultsDiv) {
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerText = 'Running...';
         }
 
-        const cellCount = tess.count_cells;
-        
-        for (let i = 0; i < cellCount; i++) {
-            const cell = tess.get(i);
-            if (!cell) continue;
+        // Use setTimeout to allow UI to update before heavy processing
+        setTimeout(() => {
+            try {
+                // 1. Data Generation (JS Side)
+                const t0 = performance.now();
+                const points = new Float64Array(params.count * 3);
 
-            const vertices = cell.vertices;
-            const faces = cell.faces();
-            const positions: number[] = [];
-
-            for (const face of faces) {
-                if (face.length < 3) continue;
-                const v0Idx = face[0];
-                const v0x = vertices[v0Idx * 3];
-                const v0y = vertices[v0Idx * 3 + 1];
-                const v0z = vertices[v0Idx * 3 + 2];
-
-                for (let k = 1; k < face.length - 1; k++) {
-                    const v1Idx = face[k];
-                    const v2Idx = face[k + 1];
-                    positions.push(v0x, v0y, v0z);
-                    positions.push(vertices[v1Idx * 3], vertices[v1Idx * 3 + 1], vertices[v1Idx * 3 + 2]);
-                    positions.push(vertices[v2Idx * 3], vertices[v2Idx * 3 + 1], vertices[v2Idx * 3 + 2]);
+                for(let i=0; i<params.count; i++) {
+                    points[i * 3] = (Math.random() - 0.5) * params.boxSize;
+                    points[i * 3 + 1] = (Math.random() - 0.5) * params.boxSize;
+                    points[i * 3 + 2] = (Math.random() - 0.5) * params.boxSize;
                 }
-            }
+                const tGen = performance.now() - t0;
 
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            geometry.computeVertexNormals();
-            geometry.scale(0.9, 0.9, 0.9);
-            
-            // Re-center for scaling effect
-            geometry.computeBoundingBox();
-            if (geometry.boundingBox) {
-                const center = new THREE.Vector3();
-                geometry.boundingBox.getCenter(center);
-                const offset = center.clone().multiplyScalar(1 - 0.9);
-                geometry.translate(offset.x, offset.y, offset.z);
-            }
+                // 2. Context Initialization & Insertion
+                const t1 = performance.now();
+                const half = params.boxSize / 2;
+                const bounds = new BoundingBox(-half, -half, -half, half, half, half);
+                const tess = new Tessellation(bounds, params.n, params.n, params.n);
+                
+                tess.set_generators(points);
+                const tInsert = performance.now() - t1;
 
-            const mesh = new THREE.Mesh(geometry, material);
-            geometryGroup.add(mesh);
-        }
+                // 3. Computation
+                const t2 = performance.now();
+                tess.calculate();
+                const tCompute = performance.now() - t2;
+
+                // 4. Relaxation
+                const tRelaxStart = performance.now();
+                tess.relax();
+                tess.calculate();
+                const tRelax = performance.now() - tRelaxStart;
+
+                // 5. Extraction (iterating cells)
+                const t3 = performance.now();
+                const cellCount = tess.count_cells;
+                let totalVertices = 0;
+                for(let i = 0; i < cellCount; i++) {
+                    const cell = tess.get(i);
+                    if (cell) {
+                        totalVertices += cell.vertices.length;
+                    }
+                }
+                const tExtract = performance.now() - t3;
+
+                // 5. Visualization (Optional)
+                visGroup.clear();
+                if (params.render) {
+                    if (params.count > 50000) {
+                        // Render points only for performance
+                        const geo = new THREE.BufferGeometry();
+                        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
+                        const mat = new THREE.PointsMaterial({ color: 0x00ff88, size: 0.2 });
+                        visGroup.add(new THREE.Points(geo, mat));
+                    } else {
+                        // Render wireframe cells
+                        const vertices: number[] = [];
+                        for(let i = 0; i < cellCount; i++) {
+                            const cell = tess.get(i);
+                            if (!cell) continue;
+                            
+                            const cVerts = cell.vertices;
+                            const faces = cell.faces();
+                            
+                            for (const face of faces) {
+                                for (let j = 0; j < face.length; j++) {
+                                    const idx1 = face[j];
+                                    const idx2 = face[(j + 1) % face.length];
+                                    
+                                    vertices.push(cVerts[idx1 * 3], cVerts[idx1 * 3 + 1], cVerts[idx1 * 3 + 2]);
+                                    vertices.push(cVerts[idx2 * 3], cVerts[idx2 * 3 + 1], cVerts[idx2 * 3 + 2]);
+                                }
+                            }
+                        }
+                        
+                        const geo = new THREE.BufferGeometry();
+                        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                        const mat = new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.3 });
+                        visGroup.add(new THREE.LineSegments(geo, mat));
+                    }
+                }
+
+                // Report
+                const total = tGen + tInsert + tCompute + tRelax + tExtract;
+                const particlesPerBox = params.count / (params.n * params.n * params.n);
+
+                lastResults = {
+                    count: params.count,
+                    boxSize: params.boxSize,
+                    n: params.n,
+                    particlesPerBox: particlesPerBox,
+                    gen: tGen,
+                    insert: tInsert,
+                    compute: tCompute,
+                    relax: tRelax,
+                    extract: tExtract,
+                    total: total
+                };
+
+                if (resultsDiv) {
+                    resultsDiv.innerText = 
+                        `particles:    ${params.count}\n` +
+                        `box Size:     ${params.boxSize}\n` +
+                        `grid (nxnxn): ${params.n}x${params.n}x${params.n}\n` +
+                        `part/box:     ${particlesPerBox.toFixed(2)}\n` +
+                        `------------------------\n` +
+                        `gentors init: ${tGen.toFixed(2)} ms\n` +
+                        `gentors ins:  ${tInsert.toFixed(2)} ms\n` +
+                        `compute:      ${tCompute.toFixed(2)} ms\n` +
+                        `relax:        ${tRelax.toFixed(2)} ms\n` +
+                        `extract:      ${tExtract.toFixed(2)} ms\n` +
+                        `------------------------\n` +
+                        `Total:        ${total.toFixed(2)} ms\n` +
+                        `FPS (equiv):  ${(1000/total).toFixed(1)}`;
+                }
+
+            } catch (e: any) {
+                console.error(e);
+                if (resultsDiv) resultsDiv.innerText = "Error: " + e.message;
+            }
+        }, 10);
     }
 
+    function downloadResults() {
+        if (!lastResults) {
+            alert("No results to download. Run the benchmark first.");
+            return;
+        }
+
+        const headers = "Particles,Box Size,Grid N,Part/Box,JS Gen (ms),Insertion (ms),Compute (ms),Relax (ms),Extract (ms),Total (ms)\n";
+        const row = `${lastResults.count},${lastResults.boxSize},${lastResults.n},${lastResults.particlesPerBox.toFixed(2)},${lastResults.gen.toFixed(2)},${lastResults.insert.toFixed(2)},${lastResults.compute.toFixed(2)},${lastResults.relax.toFixed(2)},${lastResults.extract.toFixed(2)},${lastResults.total.toFixed(2)}`;
+
+        const blob = new Blob([headers + row], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "voro_benchmark_results.csv";
+        link.click();
+    }
+
+    // Animation Loop
     function animate() {
         if (!app.isConnected) return;
         requestAnimationFrame(animate);
-
-        const now = performance.now();
-        
-        // Update positions
-        for (let i = 0; i < params.count; i++) {
-            points[i * 3] += velocities[i * 3];
-            points[i * 3 + 1] += velocities[i * 3 + 1];
-            points[i * 3 + 2] += velocities[i * 3 + 2];
-
-            // Bounce
-            const halfSize = boxSize / 2;
-            if (points[i * 3] < -halfSize || points[i * 3] > halfSize) velocities[i * 3] *= -1;
-            if (points[i * 3 + 1] < -halfSize || points[i * 3 + 1] > halfSize) velocities[i * 3 + 1] *= -1;
-            if (points[i * 3 + 2] < -halfSize || points[i * 3 + 2] > halfSize) velocities[i * 3 + 2] *= -1;
-        }
-
-        // Calculate Voronoi
-        const t0 = performance.now();
-        tess.set_generators(points);
-        tess.calculate();
-        const t1 = performance.now();
-        calcTimeTotal += (t1 - t0);
-
-        // Render
-        const t2 = performance.now();
-        updateVisualization();
-        const t3 = performance.now();
-        renderTimeTotal += (t3 - t2);
-
         controls.update();
-        renderer.render(scene, camera);
-
-        frameCount++;
-        if (now - lastTime >= 1000) {
-            const avgCalcTime = calcTimeTotal / frameCount;
-            const avgRenderTime = renderTimeTotal / frameCount;
-            const fps = frameCount;
-            
-            statsDiv.innerHTML = `
-                <strong>Vorothree Performance</strong><br>
-                Points: ${params.count}<br>
-                FPS: ${fps}<br>
-                Calc Time: ${avgCalcTime.toFixed(2)} ms<br>
-                Mesh Gen Time: ${avgRenderTime.toFixed(2)} ms
-            `;
-            
-            frameCount = 0;
-            calcTimeTotal = 0;
-            renderTimeTotal = 0;
-            lastTime = now;
-        }
+        renderer.render(scene, activeCamera);
     }
     animate();
+
+    // Resize
+    window.addEventListener('resize', () => {
+        const aspect = window.innerWidth / window.innerHeight;
+        
+        persCamera.aspect = aspect;
+        persCamera.updateProjectionMatrix();
+
+        orthoCamera.left = -frustumSize * aspect / 2;
+        orthoCamera.right = frustumSize * aspect / 2;
+        orthoCamera.top = frustumSize / 2;
+        orthoCamera.bottom = -frustumSize / 2;
+        orthoCamera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Handle screenshot
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'p') {
+            renderer.render(scene, activeCamera);
+            const link = document.createElement('a');
+            link.download = 'voro_performance.png';
+            link.href = renderer.domElement.toDataURL('image/png');
+            link.click();
+        }
+    });
+
+    // Auto-run once
+    runBenchmark();
 }

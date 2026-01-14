@@ -6,25 +6,19 @@ import { Tessellation, BoundingBox } from 'vorothree';
 export async function run(app: HTMLElement) {
     app.innerHTML = '';
 
-    // --- UI ---
-    const ui = document.createElement('div');
-    ui.style.position = 'absolute';
-    ui.style.top = '10px';
-    ui.style.right = '10px';
-    ui.style.padding = '15px';
-    ui.style.background = 'rgba(0,0,0,0.6)';
-    ui.style.color = 'white';
-    ui.style.borderRadius = '8px';
-    ui.style.fontFamily = 'sans-serif';
-    ui.style.pointerEvents = 'auto';
-    ui.innerHTML = `
-        <h3 style="margin: 0 0 10px 0;">Lloyd's Relaxation</h3>
-        <p style="font-size: 0.9em; margin-bottom: 15px;">
-            Iteratively moves generators to cell centroids.<br>
-            Cells become more uniform (honeycomb-like).
-        </p>
-    `;
-    app.appendChild(ui);
+    // --- UI for Results ---
+    const resultsDiv = document.createElement('div');
+    resultsDiv.style.position = 'absolute';
+    resultsDiv.style.bottom = '10px';
+    resultsDiv.style.right = '10px';
+    resultsDiv.style.color = 'white';
+    resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    resultsDiv.style.padding = '10px';
+    resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.pointerEvents = 'none';
+    resultsDiv.style.userSelect = 'none';
+    resultsDiv.innerText = 'Ready';
+    app.appendChild(resultsDiv);
 
     const gui = new GUI({ container: app });
     gui.domElement.style.position = 'absolute';
@@ -35,8 +29,11 @@ export async function run(app: HTMLElement) {
         count: 100,
         autoRelax: true,
         relax: () => {
+            const t0 = performance.now();
             tess.relax();
             tess.calculate();
+            const dt = performance.now() - t0;
+            resultsDiv.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
             updateMesh();
         },
         reset: () => resetGenerators()
@@ -101,6 +98,7 @@ export async function run(app: HTMLElement) {
         tess.set_generators(points);
         tess.calculate();
         updateMesh();
+        resultsDiv.innerText = 'Ready';
     }
 
     function updateMesh() {
@@ -156,8 +154,11 @@ export async function run(app: HTMLElement) {
 
         // Relax every 30 frames to visualize the steps
         if(params.autoRelax && frame % 30 === 0) {
+            const t0 = performance.now();
             tess.relax();
             tess.calculate();
+            const dt = performance.now() - t0;
+            resultsDiv.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
             updateMesh();
         }
 

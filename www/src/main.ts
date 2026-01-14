@@ -2,8 +2,8 @@ import './style.css';
 import init from 'vorothree';
 
 const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promise<void> }>> = {
-    'sphere': () => import('./examples/moving_cell'),
-    'trefoil': () => import('./examples/walls'),
+    'moving_cell': () => import('./examples/moving_cell'),
+    'walls': () => import('./examples/walls'),
     'performance': () => import('./examples/performance'),
     'relaxation': () => import('./examples/relaxation'),
 };
@@ -31,7 +31,7 @@ async function run() {
         // Add a "Back" button
         const backBtn = document.createElement('a');
         backBtn.href = '/';
-        backBtn.textContent = '← Back to Examples';
+        backBtn.textContent = '← back to examples';
         backBtn.style.position = 'absolute';
         backBtn.style.top = '10px';
         backBtn.style.left = '10px';
@@ -46,11 +46,11 @@ async function run() {
         await module.run(app);
     } else {
         app.innerHTML = `
-            <h1>Vorothree Examples</h1>
+            <h1>vorothree examples</h1>
             <ul style="list-style: none; padding: 0;">
                 ${Object.keys(examples).map(key => `
                     <li style="margin: 10px;">
-                        <a href="?example=${key}" style="font-size: 1.2em; color: #646cff;">${key.charAt(0).toUpperCase() + key.slice(1)} Example</a>
+                        <a href="?example=${key}" style="font-size: 1.2em; color: #646cff;">${key} example</a>
                     </li>
                 `).join('')}
             </ul>

@@ -19,8 +19,8 @@ export async function run(app: HTMLElement) {
         scale: 12.0,
         count: 2000,
         opacity: 0.3,
-        wireframe: false
-    };
+
+            };
 
     // --- Three.js Setup ---
     const scene = new THREE.Scene();
@@ -73,69 +73,22 @@ export async function run(app: HTMLElement) {
                 break;
         }
 
-        // Generate Random Points
-        const points = new Float64Array(params.count * 3);
-        for (let i = 0; i < points.length; i++) {
-            points[i] = (Math.random() - 0.5) * 100;
-        }
-        tess.set_generators(points);
+        tess.random_generators(params.count);
         tess.calculate();
         updateVisualization();
     }
 
     // --- Visualization ---
     
-    // 1. Visualize the Sphere "Ghost" (Wireframe)
-    let ghostMesh: THREE.Mesh;
-    function updateGhost() {
-        if (ghostMesh) scene.remove(ghostMesh);
-        
-        let geometry;
-        switch (params.wallType) {
-            case 'cylinder':
-                geometry = new THREE.CylinderGeometry(params.radius, params.radius, params.height, 32);
-                break;
-            case 'torus':
-                geometry = new THREE.TorusGeometry(params.radius, params.tube, 16, 100);
-                break;
-            case 'trefoil':
-                const knotCurve = new THREE.Curve<THREE.Vector3>();
-                knotCurve.getPoint = function(t: number) {
-                    const angle = t * Math.PI * 2;
-                    const x = Math.sin(angle) + 2.0 * Math.sin(2.0 * angle);
-                    const y = Math.cos(angle) - 2.0 * Math.cos(2.0 * angle);
-                    const z = -Math.sin(3.0 * angle);
-                    const s = params.scale;
-                    return new THREE.Vector3(x * s, y * s, z * s);
-                };
-                geometry = new THREE.TubeGeometry(knotCurve, 200, params.tube, 16, true);
-                break;
-            case 'sphere':
-            default:
-                geometry = new THREE.SphereGeometry(params.radius, 32, 32);
-        }
-
-        const mat = new THREE.MeshBasicMaterial({ 
-            color: 0xff0000, 
-            wireframe: true, 
-            transparent: true, 
-            opacity: 0.1 
-        });
-        ghostMesh = new THREE.Mesh(geometry, mat);
-        scene.add(ghostMesh);
-    }
-
     // 2. Create Meshes for Cells
-    const material = new THREE.MeshPhysicalMaterial({
-        color: 0x00aaff,
-        metalness: 0.1,
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
         roughness: 0.5,
-        transmission: 0.6, // Glass-like
-        thickness: 1.0,
+        metalness: 0.1,
         transparent: true,
         opacity: params.opacity,
-        wireframe: params.wireframe,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        depthWrite: false // Helps with transparency
     });
 
     const geometryGroup = new THREE.Group();
@@ -189,23 +142,15 @@ export async function run(app: HTMLElement) {
     }
 
     initTessellation();
-    updateGhost();
 
-    gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil']).name('Wall Type').onChange(() => {
-        initTessellation();
-        updateGhost();
-    });
-    gui.add(params, 'radius', 5, 45).name('Radius (Sph/Cyl/Tor)').onChange(() => {
-        initTessellation();
-        updateGhost();
-    });
-    gui.add(params, 'height', 10, 100).name('Height (Cyl)').onChange(() => { if(params.wallType === 'cylinder') { initTessellation(); updateGhost(); }});
-    gui.add(params, 'tube', 1, 20).name('Tube (Tor/Tref)').onChange(() => { if(params.wallType === 'torus' || params.wallType === 'trefoil') { initTessellation(); updateGhost(); }});
-    gui.add(params, 'scale', 1, 20).name('Scale (Tref)').onChange(() => { if(params.wallType === 'trefoil') { initTessellation(); updateGhost(); }});
+    gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil']).name('Wall Type').onChange(initTessellation);
+    gui.add(params, 'radius', 5, 45).name('Radius (Sph/Cyl/Tor)').onChange(initTessellation);
+    gui.add(params, 'height', 10, 100).name('Height (Cyl)').onChange(() => { if(params.wallType === 'cylinder') initTessellation(); });
+    gui.add(params, 'tube', 1, 20).name('Tube (Tor/Tref)').onChange(() => { if(params.wallType === 'torus' || params.wallType === 'trefoil') initTessellation(); });
+    gui.add(params, 'scale', 1, 20).name('Scale (Tref)').onChange(() => { if(params.wallType === 'trefoil') initTessellation(); });
 
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
-    gui.add(params, 'wireframe').onChange((v: boolean) => material.wireframe = v);
 
     // Animation Loop
     function animate() {
