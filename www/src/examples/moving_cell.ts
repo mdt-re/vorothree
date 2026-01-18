@@ -96,9 +96,9 @@ export async function run(app: HTMLElement) {
 
     // Helper to visualize bounds
     const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-    const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
-    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
-    scene.add(boxMesh);
+    const boxEdges = new THREE.EdgesGeometry(boxGeo);
+    const boxLines = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({ color: 0x888888 }));
+    scene.add(boxLines);
 
     // Helper for the moving point position
     const pointGeo = new THREE.SphereGeometry(1, 16, 16);

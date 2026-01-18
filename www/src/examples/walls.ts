@@ -71,6 +71,14 @@ export async function run(app: HTMLElement) {
             case 'trefoil':
                 tess.add_wall(Wall.new_trefoil(0.0, 0.0, 0.0, params.scale, params.tube, 200, -15));
                 break;
+            case 'dodecahedron':
+                // @ts-ignore
+                tess.add_wall(Wall.new_dodecahedron(0.0, 0.0, 0.0, params.radius, -15));
+                break;
+            case 'icosahedron':
+                // @ts-ignore
+                tess.add_wall(Wall.new_icosahedron(0.0, 0.0, 0.0, params.radius, -15));
+                break;
         }
 
         tess.random_generators(params.count);
@@ -143,7 +151,7 @@ export async function run(app: HTMLElement) {
 
     initTessellation();
 
-    gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil']).name('Wall Type').onChange(initTessellation);
+    gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'dodecahedron', 'icosahedron']).name('Wall Type').onChange(initTessellation);
     gui.add(params, 'radius', 5, 45).name('Radius (Sph/Cyl/Tor)').onChange(initTessellation);
     gui.add(params, 'height', 10, 100).name('Height (Cyl)').onChange(() => { if(params.wallType === 'cylinder') initTessellation(); });
     gui.add(params, 'tube', 1, 20).name('Tube (Tor/Tref)').onChange(() => { if(params.wallType === 'torus' || params.wallType === 'trefoil') initTessellation(); });

@@ -18,11 +18,18 @@
 mod bounds;
 mod cell;
 pub mod geometries;
+mod kdtree;
+mod moctree;
 mod tessellation;
+mod tessellation_moctree;
+mod tessellation_kdtree;
 mod wall;
+
 
 pub use bounds::BoundingBox;
 pub use cell::Cell;
 pub use tessellation::Tessellation;
+pub use tessellation_moctree::TessellationMoctree;
+pub use tessellation_kdtree::TessellationKdTree;
 pub use wall::Wall;
 pub use wall::WallGeometry;

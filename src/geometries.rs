@@ -22,7 +22,7 @@ impl WallGeometry for ConeGeometry {
         h >= 0.0 && r <= h * self.angle.tan()
     }
 
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         let dx = generator[0] - self.tip[0];
         let dy = generator[1] - self.tip[1];
         let dz = generator[2] - self.tip[2];
@@ -34,7 +34,7 @@ impl WallGeometry for ConeGeometry {
         let r = (px*px + py*py + pz*pz).sqrt();
         
         if r == 0.0 {
-            return None;
+            return;
         }
         
         let r_dir_x = px / r;
@@ -51,8 +51,8 @@ impl WallGeometry for ConeGeometry {
         
         if p2d_h < 0.0 {
             let dist_tip = (dx*dx + dy*dy + dz*dz).sqrt();
-            if dist_tip == 0.0 { return None; }
-            return Some((self.tip, [dx/dist_tip, dy/dist_tip, dz/dist_tip]));
+            if dist_tip == 0.0 { return; }
+            return callback(self.tip, [dx/dist_tip, dy/dist_tip, dz/dist_tip]);
         }
         
         let surf_x = self.tip[0] + p2d_h * self.axis[0] + p2d_r * r_dir_x;
@@ -63,7 +63,7 @@ impl WallGeometry for ConeGeometry {
         let norm_y = cos_a * r_dir_y - sin_a * self.axis[1];
         let norm_z = cos_a * r_dir_z - sin_a * self.axis[2];
         
-        Some(([surf_x, surf_y, surf_z], [norm_x, norm_y, norm_z]))
+        callback([surf_x, surf_y, surf_z], [norm_x, norm_y, norm_z]);
     }
 }
 
@@ -134,12 +134,37 @@ impl WallGeometry for TrefoilKnotGeometry {
         dist_sq <= self.tube_radius.powi(2)
     }
 
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         let closest = self.get_closest_point(generator);
         let dist = ((generator[0] - closest[0]).powi(2) + (generator[1] - closest[1]).powi(2) + (generator[2] - closest[2]).powi(2)).sqrt();
-        if dist == 0.0 { return None; }
+        if dist == 0.0 { return; }
         let normal = [(generator[0] - closest[0]) / dist, (generator[1] - closest[1]) / dist, (generator[2] - closest[2]) / dist];
         let surface_point = [closest[0] + normal[0] * self.tube_radius, closest[1] + normal[1] * self.tube_radius, closest[2] + normal[2] * self.tube_radius];
-        Some((surface_point, normal))
+        callback(surface_point, normal);
+    }
+}
+
+#[derive(Debug)]
+pub struct ConvexPolyhedronGeometry {
+    pub planes: Vec<([f64; 3], [f64; 3])>, // (point, normal) where normal points OUT of the valid region
+}
+
+impl WallGeometry for ConvexPolyhedronGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        for (p, n) in &self.planes {
+            let dx = point[0] - p[0];
+            let dy = point[1] - p[1];
+            let dz = point[2] - p[2];
+            if dx * n[0] + dy * n[1] + dz * n[2] > 0.0 {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn cut(&self, _generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        for (p, n) in &self.planes {
+            callback(*p, *n);
+        }
     }
 }

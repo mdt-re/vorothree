@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { Tessellation, BoundingBox } from 'vorothree';
+import { Tessellation, TessellationMoctree, BoundingBox } from 'vorothree';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = ''; // Clear existing content
@@ -66,6 +66,7 @@ export async function run(app: HTMLElement) {
         count: 1000,
         boxSize: 20,
         n: 10,
+        capacity: 8,
         render: true,
         run: () => runBenchmark(),
         download: () => downloadResults()
@@ -92,6 +93,7 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'count', 100, 50000, 100).name('Particle Count');
     gui.add(params, 'boxSize', 10, 100).name('Box Size');
     gui.add(params, 'n', 1, 50, 1).name('Grid Size (n)');
+    gui.add(params, 'capacity', 4, 20, 1).name('Octree Cap');
     gui.add(params, 'render').name('Render Result');
     gui.add(params, 'run').name('Run Benchmark');
     gui.add(params, 'download').name('Download CSV');
@@ -116,7 +118,7 @@ export async function run(app: HTMLElement) {
                 }
                 const tGen = performance.now() - t0;
 
-                // 2. Context Initialization & Insertion
+                // 2. Grid Benchmark
                 const t1 = performance.now();
                 const half = params.boxSize / 2;
                 const bounds = new BoundingBox(-half, -half, -half, half, half, half);
@@ -125,18 +127,18 @@ export async function run(app: HTMLElement) {
                 tess.set_generators(points);
                 const tInsert = performance.now() - t1;
 
-                // 3. Computation
+                // Computation
                 const t2 = performance.now();
                 tess.calculate();
                 const tCompute = performance.now() - t2;
 
-                // 4. Relaxation
+                // Relaxation
                 const tRelaxStart = performance.now();
                 tess.relax();
                 tess.calculate();
                 const tRelax = performance.now() - tRelaxStart;
 
-                // 5. Extraction (iterating cells)
+                // Extraction (iterating cells)
                 const t3 = performance.now();
                 const cellCount = tess.count_cells;
                 let totalVertices = 0;
@@ -147,8 +149,37 @@ export async function run(app: HTMLElement) {
                     }
                 }
                 const tExtract = performance.now() - t3;
+                const totalGrid = tInsert + tCompute + tRelax + tExtract;
 
-                // 5. Visualization (Optional)
+                // 3. Moctree Benchmark
+                const t1m = performance.now();
+                const boundsMoc = new BoundingBox(-half, -half, -half, half, half, half);
+                const tessMoc = new TessellationMoctree(boundsMoc, params.capacity);
+                
+                tessMoc.set_generators(points);
+                const tInsertMoc = performance.now() - t1m;
+
+                const t2m = performance.now();
+                tessMoc.calculate();
+                const tComputeMoc = performance.now() - t2m;
+
+                const tRelaxStartMoc = performance.now();
+                tessMoc.relax();
+                tessMoc.calculate();
+                const tRelaxMoc = performance.now() - tRelaxStartMoc;
+
+                const t3m = performance.now();
+                const cellCountMoc = tessMoc.count_cells;
+                for(let i = 0; i < cellCountMoc; i++) {
+                    const cell = tessMoc.get(i);
+                    if (cell) {
+                        const _ = cell.vertices.length;
+                    }
+                }
+                const tExtractMoc = performance.now() - t3m;
+                const totalMoc = tInsertMoc + tComputeMoc + tRelaxMoc + tExtractMoc;
+
+                // 4. Visualization (using Grid result)
                 visGroup.clear();
                 if (params.render) {
                     if (params.count > 50000) {
@@ -186,37 +217,33 @@ export async function run(app: HTMLElement) {
                 }
 
                 // Report
-                const total = tGen + tInsert + tCompute + tRelax + tExtract;
-                const particlesPerBox = params.count / (params.n * params.n * params.n);
-
                 lastResults = {
                     count: params.count,
                     boxSize: params.boxSize,
                     n: params.n,
-                    particlesPerBox: particlesPerBox,
+                    capacity: params.capacity,
                     gen: tGen,
-                    insert: tInsert,
-                    compute: tCompute,
-                    relax: tRelax,
-                    extract: tExtract,
-                    total: total
+                    grid: { insert: tInsert, compute: tCompute, relax: tRelax, extract: tExtract, total: totalGrid },
+                    moctree: { insert: tInsertMoc, compute: tComputeMoc, relax: tRelaxMoc, extract: tExtractMoc, total: totalMoc }
                 };
 
                 if (resultsDiv) {
                     resultsDiv.innerText = 
-                        `particles:    ${params.count}\n` +
-                        `box Size:     ${params.boxSize}\n` +
-                        `grid (nxnxn): ${params.n}x${params.n}x${params.n}\n` +
-                        `part/box:     ${particlesPerBox.toFixed(2)}\n` +
-                        `------------------------\n` +
-                        `gentors init: ${tGen.toFixed(2)} ms\n` +
-                        `gentors ins:  ${tInsert.toFixed(2)} ms\n` +
-                        `compute:      ${tCompute.toFixed(2)} ms\n` +
-                        `relax:        ${tRelax.toFixed(2)} ms\n` +
-                        `extract:      ${tExtract.toFixed(2)} ms\n` +
-                        `------------------------\n` +
-                        `Total:        ${total.toFixed(2)} ms\n` +
-                        `FPS (equiv):  ${(1000/total).toFixed(1)}`;
+                        `Particles:    ${params.count}\n` +
+                        `Box Size:     ${params.boxSize}\n` +
+                        `Grid N:       ${params.n}\n` +
+                        `Octree Cap:   ${params.capacity}\n` +
+                        `JS Gen:       ${tGen.toFixed(2)} ms\n` +
+                        `--------------------------------------\n` +
+                        `Metric        | Grid (ms) | Octree (ms)\n` +
+                        `--------------------------------------\n` +
+                        `Insert        | ${tInsert.toFixed(2).padStart(9)} | ${tInsertMoc.toFixed(2).padStart(11)}\n` +
+                        `Compute       | ${tCompute.toFixed(2).padStart(9)} | ${tComputeMoc.toFixed(2).padStart(11)}\n` +
+                        `Relax         | ${tRelax.toFixed(2).padStart(9)} | ${tRelaxMoc.toFixed(2).padStart(11)}\n` +
+                        `Extract       | ${tExtract.toFixed(2).padStart(9)} | ${tExtractMoc.toFixed(2).padStart(11)}\n` +
+                        `--------------------------------------\n` +
+                        `Total         | ${totalGrid.toFixed(2).padStart(9)} | ${totalMoc.toFixed(2).padStart(11)}\n` +
+                        `FPS (equiv)   | ${(1000/totalGrid).toFixed(1).padStart(9)} | ${(1000/totalMoc).toFixed(1).padStart(11)}`;
                 }
 
             } catch (e: any) {
@@ -232,8 +259,10 @@ export async function run(app: HTMLElement) {
             return;
         }
 
-        const headers = "Particles,Box Size,Grid N,Part/Box,JS Gen (ms),Insertion (ms),Compute (ms),Relax (ms),Extract (ms),Total (ms)\n";
-        const row = `${lastResults.count},${lastResults.boxSize},${lastResults.n},${lastResults.particlesPerBox.toFixed(2)},${lastResults.gen.toFixed(2)},${lastResults.insert.toFixed(2)},${lastResults.compute.toFixed(2)},${lastResults.relax.toFixed(2)},${lastResults.extract.toFixed(2)},${lastResults.total.toFixed(2)}`;
+        const headers = "Particles,Box Size,Grid N,Octree Cap,JS Gen (ms),Grid Insert,Grid Compute,Grid Relax,Grid Extract,Grid Total,Moc Insert,Moc Compute,Moc Relax,Moc Extract,Moc Total\n";
+        const row = `${lastResults.count},${lastResults.boxSize},${lastResults.n},${lastResults.capacity},${lastResults.gen.toFixed(2)},` +
+                    `${lastResults.grid.insert.toFixed(2)},${lastResults.grid.compute.toFixed(2)},${lastResults.grid.relax.toFixed(2)},${lastResults.grid.extract.toFixed(2)},${lastResults.grid.total.toFixed(2)},` +
+                    `${lastResults.moctree.insert.toFixed(2)},${lastResults.moctree.compute.toFixed(2)},${lastResults.moctree.relax.toFixed(2)},${lastResults.moctree.extract.toFixed(2)},${lastResults.moctree.total.toFixed(2)}`;
 
         const blob = new Blob([headers + row], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");

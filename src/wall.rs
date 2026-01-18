@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use js_sys::{Reflect, Function, Array};
-use crate::geometries::TrefoilKnotGeometry;
+use crate::geometries::{TrefoilKnotGeometry, ConvexPolyhedronGeometry};
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_CONSTANTS: &'static str = r#"
@@ -18,7 +18,7 @@ pub trait WallGeometry: Send + Sync + std::fmt::Debug {
     /// Calculates the clipping plane for a given generator.
     /// Returns a tuple (point_on_plane, plane_normal).
     /// The normal should point OUT of the valid region (towards the region to be clipped).
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])>;
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3]));
 }
 
 #[derive(Debug)]
@@ -35,10 +35,10 @@ impl WallGeometry for PlaneGeometry {
         (dx * self.normal[0] + dy * self.normal[1] + dz * self.normal[2]) >= 0.0
     }
 
-    fn cut(&self, _generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, _generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         // For a plane wall, the cut is the plane itself.
         // Our normal points IN, but clip expects normal pointing OUT.
-        Some((self.point, [-self.normal[0], -self.normal[1], -self.normal[2]]))
+        callback(self.point, [-self.normal[0], -self.normal[1], -self.normal[2]]);
     }
 }
 
@@ -56,13 +56,13 @@ impl WallGeometry for SphereGeometry {
         (dx * dx + dy * dy + dz * dz) <= self.radius * self.radius
     }
 
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         let dx = generator[0] - self.center[0];
         let dy = generator[1] - self.center[1];
         let dz = generator[2] - self.center[2];
         let dist = (dx * dx + dy * dy + dz * dz).sqrt();
 
-        if dist == 0.0 { return None; }
+        if dist == 0.0 { return; }
 
         // Project generator to sphere surface
         let scale = self.radius / dist;
@@ -75,7 +75,7 @@ impl WallGeometry for SphereGeometry {
         let ny = dy / dist;
         let nz = dz / dist;
 
-        Some(([px, py, pz], [nx, ny, nz]))
+        callback([px, py, pz], [nx, ny, nz]);
     }
 }
 
@@ -100,7 +100,7 @@ impl WallGeometry for CylinderGeometry {
         (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z) <= self.radius * self.radius
     }
 
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         let dx = generator[0] - self.center[0];
         let dy = generator[1] - self.center[1];
         let dz = generator[2] - self.center[2];
@@ -111,7 +111,7 @@ impl WallGeometry for CylinderGeometry {
         let perp_z = dz - dot * self.axis[2];
         
         let dist = (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z).sqrt();
-        if dist == 0.0 { return None; }
+        if dist == 0.0 { return; }
 
         // Project to cylinder surface
         let scale = self.radius / dist;
@@ -124,7 +124,7 @@ impl WallGeometry for CylinderGeometry {
         let ny = perp_y / dist;
         let nz = perp_z / dist;
 
-        Some(([px, py, pz], [nx, ny, nz]))
+        callback([px, py, pz], [nx, ny, nz]);
     }
 }
 
@@ -155,7 +155,7 @@ impl WallGeometry for TorusGeometry {
         dist_tube <= self.minor_radius
     }
 
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         let dx = generator[0] - self.center[0];
         let dy = generator[1] - self.center[1];
         let dz = generator[2] - self.center[2];
@@ -177,7 +177,7 @@ impl WallGeometry for TorusGeometry {
             let ay = ty - t_dot * self.axis[1];
             let az = tz - t_dot * self.axis[2];
             let len = (ax*ax + ay*ay + az*az).sqrt();
-            if len == 0.0 { return None; }
+            if len == 0.0 { return; }
             (ax/len, ay/len, az/len)
         } else {
             (perp_x / dist_perp, perp_y / dist_perp, perp_z / dist_perp)
@@ -194,7 +194,7 @@ impl WallGeometry for TorusGeometry {
         let v_cz = generator[2] - cz;
         let dist_c = (v_cx*v_cx + v_cy*v_cy + v_cz*v_cz).sqrt();
 
-        if dist_c == 0.0 { return None; }
+        if dist_c == 0.0 { return; }
 
         // Normal pointing OUT (away from C)
         let nx = v_cx / dist_c;
@@ -206,7 +206,7 @@ impl WallGeometry for TorusGeometry {
         let py = cy + ny * self.minor_radius;
         let pz = cz + nz * self.minor_radius;
 
-        Some(([px, py, pz], [nx, ny, nz]))
+        callback([px, py, pz], [nx, ny, nz]);
     }
 }
 
@@ -237,25 +237,34 @@ impl WallGeometry for JsWallGeometry {
         false
     }
 
-    fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
         if let Ok(func) = Reflect::get(&self.val, &"cut".into()).and_then(|f| f.dyn_into::<Function>()) {
             let args = Array::of3(&generator[0].into(), &generator[1].into(), &generator[2].into());
             if let Ok(res) = func.apply(&self.val, &args) {
-                if res.is_null() || res.is_undefined() { return None; }
+                if res.is_null() || res.is_undefined() { return; }
                 
-                let get_arr = |key: &str| -> Option<[f64; 3]> {
-                    let v = Reflect::get(&res, &key.into()).ok()?;
-                    let arr: Array = v.dyn_into().ok()?;
-                    Some([arr.get(0).as_f64()?, arr.get(1).as_f64()?, arr.get(2).as_f64()?])
-                };
-
-                let p = get_arr("point")?;
-                let n = get_arr("normal")?;
-                return Some((p, n));
+                if Array::is_array(&res) {
+                    let arr: Array = res.dyn_into().unwrap();
+                    for i in 0..arr.length() {
+                        let item = arr.get(i);
+                        if let Some((p, n)) = parse_js_cut_result(&item) {
+                            callback(p, n);
+                        }
+                    }
+                } else {
+                    if let Some((p, n)) = parse_js_cut_result(&res) {
+                        callback(p, n);
+                    }
+                }
             }
         }
-        None
     }
+}
+
+fn parse_js_cut_result(val: &JsValue) -> Option<([f64; 3], [f64; 3])> {
+    let p = Reflect::get(val, &"point".into()).ok().and_then(|v| v.dyn_into::<Array>().ok())?;
+    let n = Reflect::get(val, &"normal".into()).ok().and_then(|v| v.dyn_into::<Array>().ok())?;
+    Some(([p.get(0).as_f64()?, p.get(1).as_f64()?, p.get(2).as_f64()?], [n.get(0).as_f64()?, n.get(1).as_f64()?, n.get(2).as_f64()?]))
 }
 
 #[wasm_bindgen]
@@ -335,6 +344,118 @@ impl Wall {
         }
     }
 
+    pub fn new_dodecahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
+        if id > WALL_ID_START {
+            panic!("Wall ID must be <= {}", WALL_ID_START);
+        }
+        
+        let phi = (1.0 + 5.0f64.sqrt()) / 2.0;
+        // Distance from center to face for a dodecahedron with circumradius R
+        // r = R * xi, where xi = sqrt((5 + 2*sqrt(5)) / 15)
+        let xi = ((5.0 + 2.0 * 5.0f64.sqrt()) / 15.0).sqrt();
+        let dist = radius * xi;
+
+        // Base normals (unnormalized)
+        let base_normals = [
+            [0.0, phi, 1.0], [0.0, -phi, 1.0], [0.0, phi, -1.0], [0.0, -phi, -1.0],
+            [1.0, 0.0, phi], [1.0, 0.0, -phi], [-1.0, 0.0, phi], [-1.0, 0.0, -phi],
+            [phi, 1.0, 0.0], [phi, -1.0, 0.0], [-phi, 1.0, 0.0], [-phi, -1.0, 0.0],
+        ];
+
+        let mut planes = Vec::with_capacity(12);
+        for n in base_normals {
+            let len = (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]).sqrt();
+            let nx = n[0] / len;
+            let ny = n[1] / len;
+            let nz = n[2] / len;
+            
+            let px = cx + nx * dist;
+            let py = cy + ny * dist;
+            let pz = cz + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Wall { id, inner: Box::new(ConvexPolyhedronGeometry { planes }) }
+    }
+
+    pub fn new_icosahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
+        if id > WALL_ID_START {
+            panic!("Wall ID must be <= {}", WALL_ID_START);
+        }
+        
+        let phi = (1.0 + 5.0f64.sqrt()) / 2.0;
+        // Ratio of inradius to circumradius for Icosahedron: sqrt((7 + 3*sqrt(5)) / 24)
+        let xi = ((7.0 + 3.0 * 5.0f64.sqrt()) / 24.0).sqrt();
+        let dist = radius * xi;
+
+        // Normals are vertices of a Dodecahedron
+        let one_over_phi = 1.0 / phi;
+        let mut base_normals = Vec::with_capacity(20);
+        
+        // (±1, ±1, ±1)
+        for x in [-1.0, 1.0] {
+            for y in [-1.0, 1.0] {
+                for z in [-1.0, 1.0] {
+                    base_normals.push([x, y, z]);
+                }
+            }
+        }
+        // (0, ±phi, ±1/phi)
+        for y in [-1.0, 1.0] {
+            for z in [-1.0, 1.0] {
+                base_normals.push([0.0, y * phi, z * one_over_phi]);
+            }
+        }
+        // (±1/phi, 0, ±phi)
+        for x in [-1.0, 1.0] {
+            for z in [-1.0, 1.0] {
+                base_normals.push([x * one_over_phi, 0.0, z * phi]);
+            }
+        }
+        // (±phi, ±1/phi, 0)
+        for x in [-1.0, 1.0] {
+            for y in [-1.0, 1.0] {
+                base_normals.push([x * phi, y * one_over_phi, 0.0]);
+            }
+        }
+
+        let mut planes = Vec::with_capacity(20);
+        for n in base_normals {
+            let len = (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]).sqrt();
+            let nx = n[0] / len;
+            let ny = n[1] / len;
+            let nz = n[2] / len;
+            
+            let px = cx + nx * dist;
+            let py = cy + ny * dist;
+            let pz = cz + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Wall { id, inner: Box::new(ConvexPolyhedronGeometry { planes }) }
+    }
+
+    pub fn new_convex_polyhedron(points: &[f64], normals: &[f64], id: i32) -> Wall {
+        if id > WALL_ID_START {
+            panic!("Wall ID must be <= {}", WALL_ID_START);
+        }
+        if points.len() != normals.len() || points.len() % 3 != 0 {
+            panic!("Points and normals must have same length and be multiple of 3");
+        }
+        
+        let count = points.len() / 3;
+        let mut planes = Vec::with_capacity(count);
+        
+        for i in 0..count {
+            planes.push((
+                [points[i*3], points[i*3+1], points[i*3+2]],
+                [normals[i*3], normals[i*3+1], normals[i*3+2]]
+            ));
+        }
+        
+        Wall { id, inner: Box::new(ConvexPolyhedronGeometry { planes }) }
+    }
+
     #[wasm_bindgen(js_name = newCustom)]
     pub fn new_custom(val: JsValue, id: i32) -> Wall {
         if id > WALL_ID_START {
@@ -357,7 +478,7 @@ impl Wall {
 }
 
 impl Wall {
-    pub fn cut(&self, generator: &[f64; 3]) -> Option<([f64; 3], [f64; 3])> {
-        self.inner.cut(generator)
+    pub fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        self.inner.cut(generator, callback)
     }
 }

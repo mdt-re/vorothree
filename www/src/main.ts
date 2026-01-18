@@ -6,6 +6,7 @@ const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promis
     'walls': () => import('./examples/walls'),
     'performance': () => import('./examples/performance'),
     'relaxation': () => import('./examples/relaxation'),
+    'transition': () => import('./examples/transition'),
 };
 
 async function run() {

@@ -34,14 +34,26 @@ rand = "0.8"
 gltf = "1.4"
 
 [[bench]]
+name = "cell"
+harness = false
+path = "benches/cell.rs"
+
+[[bench]]
+name = "compare"
+harness = false
+path = "benches/compare.rs"
+
+[[bench]]
+name = "scaling"
+harness = false
+path = "benches/scaling.rs"
+
+[[bench]]
 name = "tessellation"
 harness = false
 path = "benches/tessellation.rs"
 
 [[bench]]
-name = "cell"
-harness = false
-
-[[bench]]
 name = "wall"
 harness = false
+path = "benches/wall.rs"

@@ -15,6 +15,8 @@ pub fn init_threads(n: usize) -> js_sys::Promise {
     init_thread_pool(n)
 }
 
+const MAX_PRECALC_RADIUS: usize = 6;
+
 #[wasm_bindgen]
 pub struct Tessellation {
     bounds: BoundingBox,
@@ -33,6 +35,8 @@ pub struct Tessellation {
     grid_limit_z: f64,
     grid_bins: Vec<Vec<usize>>,
     generator_bin_ids: Vec<usize>,
+    bin_search_order: Vec<(isize, isize, isize)>,
+    bin_search_radius: usize,
 }
 
 #[wasm_bindgen]
@@ -42,6 +46,19 @@ impl Tessellation {
         let sx = (nx as f64) / (bounds.max_x - bounds.min_x);
         let sy = (ny as f64) / (bounds.max_y - bounds.min_y);
         let sz = (nz as f64) / (bounds.max_z - bounds.min_z);
+
+        let max_dim = nx.max(ny).max(nz);
+        let bin_search_radius = max_dim.min(MAX_PRECALC_RADIUS);
+        let mut bin_search_order = Vec::with_capacity((2 * bin_search_radius + 1).pow(3));
+        let r = bin_search_radius as isize;
+        for z in -r..=r {
+            for y in -r..=r {
+                for x in -r..=r {
+                    bin_search_order.push((x, y, z));
+                }
+            }
+        }
+        bin_search_order.sort_unstable_by_key(|(x, y, z)| x*x + y*y + z*z);
 
         Tessellation {
             bounds,
@@ -59,11 +76,17 @@ impl Tessellation {
             grid_limit_z: (nz as f64) - 1e-5,
             grid_bins: vec![Vec::new(); nx * ny * nz],
             generator_bin_ids: Vec::new(),
+            bin_search_order,
+            bin_search_radius,
         }
     }
 
     pub fn add_wall(&mut self, wall: Wall) {
         self.walls.push(wall);
+    }
+
+    pub fn clear_walls(&mut self) {
+        self.walls.clear();
     }
 
     #[wasm_bindgen(getter)]
@@ -87,6 +110,16 @@ impl Tessellation {
         let generators = &self.generators;
         let bounds = &self.bounds;
         let walls = &self.walls;
+        let grid_res_x = self.grid_res_x;
+        let grid_res_y = self.grid_res_y;
+        let grid_res_z = self.grid_res_z;
+        let grid_scale_x = self.grid_scale_x;
+        let grid_scale_y = self.grid_scale_y;
+        let grid_scale_z = self.grid_scale_z;
+        let grid_bins = &self.grid_bins;
+        let generator_bin_ids = &self.generator_bin_ids;
+        let bin_search_order = &self.bin_search_order;
+        let bin_search_radius = self.bin_search_radius;
 
         self.cells = (0..count).into_par_iter().map(|i| {
             let gx: f64 = generators[i * 3];
@@ -98,28 +131,118 @@ impl Tessellation {
 
             // Apply walls
             for wall in walls {
-                if let Some((point, normal)) = wall.cut(&[gx, gy, gz]) {
+                wall.cut(&[gx, gy, gz], &mut |point, normal| {
                     cell.clip(&point, &normal, wall.id());
-                }
+                });
             }
 
-            // TODO: implement the smarter logic to use the grid and its bins.
-            for j in 0..count {
-                if i == j { continue; }
+            let bin_idx = generator_bin_ids[i];
+            let idx_z = bin_idx / (grid_res_x * grid_res_y);
+            let rem_z = bin_idx % (grid_res_x * grid_res_y);
+            let idx_y = rem_z / grid_res_x;
+            let idx_x = rem_z % grid_res_x;
 
-                let ox: f64 = generators[j * 3];
-                let oy: f64 = generators[j * 3 + 1];
-                let oz: f64 = generators[j * 3 + 2];
+            let get_max_radius_sq = |cell: &Cell| -> f64 {
+                let mut max_d2 = 0.0;
+                for k in 0..cell.vertices.len() / 3 {
+                    let vx = cell.vertices[k * 3];
+                    let vy = cell.vertices[k * 3 + 1];
+                    let vz = cell.vertices[k * 3 + 2];
+                    let d2 = (vx - gx).powi(2) + (vy - gy).powi(2) + (vz - gz).powi(2);
+                    if d2 > max_d2 {
+                        max_d2 = d2;
+                    }
+                }
+                max_d2
+            };
 
-                let dx: f64 = ox - gx;
-                let dy: f64 = oy - gy;
-                let dz: f64 = oz - gz;
+            let mut current_max_dist_sq = get_max_radius_sq(&cell);
+            let max_search_radius = grid_res_x.max(grid_res_y).max(grid_res_z);
 
-                let mx: f64 = gx + dx * 0.5;
-                let my: f64 = gy + dy * 0.5;
-                let mz: f64 = gz + dz * 0.5;
+            // Helper closure to process a bin at relative offset (dx, dy, dz)
+            let process_bin = |dx: isize, dy: isize, dz: isize, current_max_dist_sq: &mut f64, cell: &mut Cell| {
+                let bx = idx_x as isize + dx;
+                let by = idx_y as isize + dy;
+                let bz = idx_z as isize + dz;
 
-                cell.clip(&[mx, my, mz], &[dx, dy, dz], j as i32);
+                if bx >= 0 && bx < grid_res_x as isize &&
+                   by >= 0 && by < grid_res_y as isize &&
+                   bz >= 0 && bz < grid_res_z as isize {
+                    
+                    let bx = bx as usize;
+                    let by = by as usize;
+                    let bz = bz as usize;
+
+                    let bin_min_x = bounds.min_x + (bx as f64) / grid_scale_x;
+                    let bin_max_x = bounds.min_x + ((bx + 1) as f64) / grid_scale_x;
+                    let bin_min_y = bounds.min_y + (by as f64) / grid_scale_y;
+                    let bin_max_y = bounds.min_y + ((by + 1) as f64) / grid_scale_y;
+                    let bin_min_z = bounds.min_z + (bz as f64) / grid_scale_z;
+                    let bin_max_z = bounds.min_z + ((bz + 1) as f64) / grid_scale_z;
+
+                    let dx_bin = if gx < bin_min_x { bin_min_x - gx } else if gx > bin_max_x { gx - bin_max_x } else { 0.0 };
+                    let dy_bin = if gy < bin_min_y { bin_min_y - gy } else if gy > bin_max_y { gy - bin_max_y } else { 0.0 };
+                    let dz_bin = if gz < bin_min_z { bin_min_z - gz } else if gz > bin_max_z { gz - bin_max_z } else { 0.0 };
+                    
+                    if dx_bin * dx_bin + dy_bin * dy_bin + dz_bin * dz_bin <= 4.0 * *current_max_dist_sq {
+                        let bin_index = bx + by * grid_res_x + bz * grid_res_x * grid_res_y;
+                        for &j in &grid_bins[bin_index] {
+                            if i == j { continue; }
+                            let ox = generators[j * 3];
+                            let oy = generators[j * 3 + 1];
+                            let oz = generators[j * 3 + 2];
+                            let dx = ox - gx;
+                            let dy = oy - gy;
+                            let dz = oz - gz;
+                            let dist_sq = dx * dx + dy * dy + dz * dz;
+                            if dist_sq > 4.0 * *current_max_dist_sq { continue; }
+                            cell.clip(&[gx + dx * 0.5, gy + dy * 0.5, gz + dz * 0.5], &[dx, dy, dz], j as i32);
+                            *current_max_dist_sq = get_max_radius_sq(cell);
+                        }
+                        return true; // Found bin in range
+                    }
+                }
+                false
+            };
+
+            // Phase 1: Iterate using pre-calculated sorted offsets (Spherical stepping)
+            for &(dx, dy, dz) in bin_search_order {
+                process_bin(dx, dy, dz, &mut current_max_dist_sq, &mut cell);
+            }
+
+            // Phase 2: Continue with shells if the grid is larger than our precalc radius
+            for search_radius in (bin_search_radius + 1)..=max_search_radius {
+                let mut found_bin_in_range = false;
+
+                let min_x = if idx_x >= search_radius { idx_x - search_radius } else { 0 };
+                let max_x = if idx_x + search_radius < grid_res_x { idx_x + search_radius } else { grid_res_x - 1 };
+                let min_y = if idx_y >= search_radius { idx_y - search_radius } else { 0 };
+                let max_y = if idx_y + search_radius < grid_res_y { idx_y + search_radius } else { grid_res_y - 1 };
+                let min_z = if idx_z >= search_radius { idx_z - search_radius } else { 0 };
+                let max_z = if idx_z + search_radius < grid_res_z { idx_z + search_radius } else { grid_res_z - 1 };
+
+                for z in min_z..=max_z {
+                    for y in min_y..=max_y {
+                        for x in min_x..=max_x {
+                            let dist_x = if x > idx_x { x - idx_x } else { idx_x - x };
+                            let dist_y = if y > idx_y { y - idx_y } else { idx_y - y };
+                            let dist_z = if z > idx_z { z - idx_z } else { idx_z - z };
+                            
+                            if dist_x.max(dist_y).max(dist_z) != search_radius {
+                                continue;
+                            }
+
+                            let dx = x as isize - idx_x as isize;
+                            let dy = y as isize - idx_y as isize;
+                            let dz = z as isize - idx_z as isize;
+                            
+                            if process_bin(dx, dy, dz, &mut current_max_dist_sq, &mut cell) {
+                                found_bin_in_range = true;
+                            }
+                        }
+                    }
+                }
+                if !found_bin_in_range && search_radius > 0 { break; }
             }
             cell
         }).collect();
@@ -207,6 +330,21 @@ impl Tessellation {
         self.grid_limit_x = (nx as f64) - 1e-5;
         self.grid_limit_y = (ny as f64) - 1e-5;
         self.grid_limit_z = (nz as f64) - 1e-5;
+        
+        let max_dim = nx.max(ny).max(nz);
+        self.bin_search_radius = max_dim.min(MAX_PRECALC_RADIUS);
+        self.bin_search_order.clear();
+        self.bin_search_order.reserve((2 * self.bin_search_radius + 1).pow(3));
+        let r = self.bin_search_radius as isize;
+        for z in -r..=r {
+            for y in -r..=r {
+                for x in -r..=r {
+                    self.bin_search_order.push((x, y, z));
+                }
+            }
+        }
+        self.bin_search_order.sort_unstable_by_key(|(x, y, z)| x*x + y*y + z*z);
+
         // Re-bin existing generators
         // We can simply call set_generators with the current data to rebuild
         let current_gens = self.generators.clone();
