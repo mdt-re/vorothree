@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, TessellationMoctree, TessellationKdTree};
+use vorothree::{BoundingBox, Tessellation, TessellationMoctree};
 
 fn benchmark_scaling(c: &mut Criterion) {
     let sizes = [10, 100, 1000, 10000, 100000];
@@ -23,14 +23,6 @@ fn benchmark_scaling(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("moctree", size), &size, |b, &s| {
             let mut tess = TessellationMoctree::new(bounds, 8);
-            tess.random_generators(s);
-            b.iter(|| {
-                tess.calculate();
-            })
-        });
-
-        group.bench_with_input(BenchmarkId::new("kdtree", size), &size, |b, &s| {
-            let mut tess = TessellationKdTree::new(bounds);
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();

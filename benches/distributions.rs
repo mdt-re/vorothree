@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, TessellationMoctree, TessellationKdTree, Wall};
+use vorothree::{BoundingBox, Tessellation, TessellationMoctree, Wall};
 
 fn benchmark_distributions(c: &mut Criterion) {
     let sizes = [10_000, 100_000];
@@ -30,14 +30,6 @@ fn benchmark_distributions(c: &mut Criterion) {
             })
         });
 
-        group.bench_with_input(BenchmarkId::new("uniform/kdtree", size), &size, |b, &s| {
-            let mut tess = TessellationKdTree::new(bounds);
-            tess.random_generators(s);
-            b.iter(|| {
-                tess.calculate();
-            })
-        });
-
         // Trefoil Knot Distribution
         let cx = (bounds.min_x + bounds.max_x) / 2.0;
         let cy = (bounds.min_y + bounds.max_y) / 2.0;
@@ -56,15 +48,6 @@ fn benchmark_distributions(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("trefoil/moctree", size), &size, |b, &s| {
             let mut tess = TessellationMoctree::new(bounds, 8);
-            tess.add_wall(Wall::new_trefoil(cx, cy, cz, scale, tube_radius, 100, -10));
-            tess.random_generators(s);
-            b.iter(|| {
-                tess.calculate();
-            })
-        });
-
-        group.bench_with_input(BenchmarkId::new("trefoil/kdtree", size), &size, |b, &s| {
-            let mut tess = TessellationKdTree::new(bounds);
             tess.add_wall(Wall::new_trefoil(cx, cy, cz, scale, tube_radius, 100, -10));
             tess.random_generators(s);
             b.iter(|| {

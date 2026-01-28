@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
 use std::collections::BTreeMap;
 use rand::Rng;
 use vorothree::{BoundingBox, Tessellation, Wall};

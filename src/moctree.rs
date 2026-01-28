@@ -58,11 +58,11 @@ impl Moctree {
         self.children = None;
     }
 
-    pub fn query(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> Vec<usize> {
-        let mut results = Vec::new();
-        self.query_recursive(min_x, min_y, min_z, max_x, max_y, max_z, &mut results);
-        results
-    }
+    // pub fn query(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> Vec<usize> {
+    //     let mut results = Vec::new();
+    //     self.query_recursive(min_x, min_y, min_z, max_x, max_y, max_z, &mut results);
+    //     results
+    // }
 
     pub fn nearest_iter(&self, x: f64, y: f64, z: f64) -> NearestIterator<'_> {
         let mut queue = BinaryHeap::new();
@@ -84,31 +84,31 @@ impl Moctree {
         }
     }
 
-    fn query_recursive(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, results: &mut Vec<usize>) {
-        if !self.intersects_range(min_x, min_y, min_z, max_x, max_y, max_z) {
-            return;
-        }
+    // fn query_recursive(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, results: &mut Vec<usize>) {
+    //     if !self.intersects_range(min_x, min_y, min_z, max_x, max_y, max_z) {
+    //         return;
+    //     }
 
-        for p in &self.points {
-            if p.x >= min_x && p.x <= max_x &&
-               p.y >= min_y && p.y <= max_y &&
-               p.z >= min_z && p.z <= max_z {
-                results.push(p.index);
-            }
-        }
+    //     for p in &self.points {
+    //         if p.x >= min_x && p.x <= max_x &&
+    //            p.y >= min_y && p.y <= max_y &&
+    //            p.z >= min_z && p.z <= max_z {
+    //             results.push(p.index);
+    //         }
+    //     }
 
-        if let Some(children) = &self.children {
-            for child in children.iter() {
-                child.query_recursive(min_x, min_y, min_z, max_x, max_y, max_z, results);
-            }
-        }
-    }
+    //     if let Some(children) = &self.children {
+    //         for child in children.iter() {
+    //             child.query_recursive(min_x, min_y, min_z, max_x, max_y, max_z, results);
+    //         }
+    //     }
+    // }
 
-    fn intersects_range(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> bool {
-        self.bounds.max_x >= min_x && self.bounds.min_x <= max_x &&
-        self.bounds.max_y >= min_y && self.bounds.min_y <= max_y &&
-        self.bounds.max_z >= min_z && self.bounds.min_z <= max_z
-    }
+    // fn intersects_range(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> bool {
+    //     self.bounds.max_x >= min_x && self.bounds.min_x <= max_x &&
+    //     self.bounds.max_y >= min_y && self.bounds.min_y <= max_y &&
+    //     self.bounds.max_z >= min_z && self.bounds.min_z <= max_z
+    // }
 
     fn contains(&self, x: f64, y: f64, z: f64) -> bool {
         x >= self.bounds.min_x && x <= self.bounds.max_x &&
