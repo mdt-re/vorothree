@@ -42,8 +42,6 @@ fn test_neighbor_reciprocity_random() {
     tess.calculate();
 
     let count = tess.count_cells();
-    assert_eq!(count, 27);
-
     for i in 0..count {
         let cell = tess.get(i).unwrap();
         let neighbors = cell.face_neighbors();
@@ -96,8 +94,105 @@ fn test_neighbor_reciprocity_half_sphere() {
     tess.calculate();
 
     let count = tess.count_cells();
-    assert_eq!(count, 50);
+    for i in 0..count {
+        let cell = tess.get(i).unwrap();
+        
+        // Skip empty cells (fully clipped by walls)
+        if cell.vertices().is_empty() {
+            continue;
+        }
 
+        let neighbors = cell.face_neighbors();
+        println!("Cell {}: neighbors {:?}", i, neighbors);
+
+        for &n_id in &neighbors {
+            if n_id >= 0 {
+                let n_idx = n_id as usize;
+                let neighbor_cell = tess.get(n_idx).unwrap();
+                let neighbor_neighbors = neighbor_cell.face_neighbors();
+
+                if !neighbor_neighbors.contains(&(i as i32)) {
+                    println!("Reciprocity fail: Cell {} with neighbors {:?} claims neighbor {}, but {} has neighbors {:?}", i, neighbors, n_id, n_id, neighbor_neighbors);
+                }
+
+                assert!(
+                    neighbor_neighbors.contains(&(i as i32)),
+                    "Cell {} claims neighbor {}, but {} does not claim {}",
+                    i, n_id, n_id, i
+                );
+            } else {
+                // Boundary or wall
+                assert!(n_id < 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_neighbor_reciprocity_sphere_small() {
+    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 20.0, 20.0, 20.0);
+    let mut tess = Tessellation::new(bounds, 5, 5, 5);
+
+    // Sphere wall: center (10, 10, 10), radius 8. ID -10.
+    tess.add_wall(Wall::new_sphere(10.0, 10.0, 10.0, 8.0, -10));
+
+    // Generate 10 random points inside the valid region
+    tess.random_generators(40);
+
+    tess.calculate();
+
+    let count = tess.count_cells();
+    for i in 0..count {
+        let cell = tess.get(i).unwrap();
+        
+        // Skip empty cells (fully clipped by walls)
+        if cell.vertices().is_empty() {
+            continue;
+        }
+
+        let neighbors = cell.face_neighbors();
+        println!("Cell {}: neighbors {:?}", i, neighbors);
+
+        for &n_id in &neighbors {
+            if n_id >= 0 {
+                let n_idx = n_id as usize;
+                let neighbor_cell = tess.get(n_idx).unwrap();
+                let neighbor_neighbors = neighbor_cell.face_neighbors();
+
+                assert!(
+                    neighbor_neighbors.contains(&(i as i32)),
+                    "Cell {} claims neighbor {}, but {} does not claim {}",
+                    i, n_id, n_id, i
+                );
+            } else {
+                assert!(n_id < 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_neighbor_reciprocity_trefoil_knot() {
+    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
+    let mut tess = Tessellation::new(bounds, 5, 5, 5);
+
+    // 100 random points
+    let mut rng = rand::thread_rng();
+    let mut generators = Vec::new();
+    for _ in 0..100 {
+        generators.push(rng.gen_range(0.0..30.0));
+        generators.push(rng.gen_range(0.0..30.0));
+        generators.push(rng.gen_range(0.0..30.0));
+    }
+
+    tess.set_generators(&generators);
+    
+    // Trefoil knot centered in box
+    tess.add_wall(Wall::new_trefoil(15.0, 15.0, 15.0, 4.0, 2.0, 100, -15));
+
+    tess.calculate();
+
+    let count = tess.count_cells();
     for i in 0..count {
         let cell = tess.get(i).unwrap();
         

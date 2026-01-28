@@ -1,5 +1,5 @@
 use crate::bounds::BoundingBox;
-use crate::cell::Cell;
+use crate::cell::{Cell, ClipScratch};
 use crate::wall::Wall;
 use crate::kdtree::KdTree;
 use wasm_bindgen::prelude::*;
@@ -53,13 +53,41 @@ impl TessellationKdTree {
     }
 
     pub fn set_generators(&mut self, generators: &[f64]) {
-        self.generators = generators.to_vec();
+        let mut valid_generators = Vec::with_capacity(generators.len());
+        let count = generators.len() / 3;
+
+        for i in 0..count {
+            let x = generators[i * 3];
+            let y = generators[i * 3 + 1];
+            let z = generators[i * 3 + 2];
+
+            let mut inside = true;
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    inside = false;
+                    break;
+                }
+            }
+
+            if inside {
+                valid_generators.push(x);
+                valid_generators.push(y);
+                valid_generators.push(z);
+            }
+        }
+        self.generators = valid_generators;
         self.tree.build(&self.generators);
     }
 
     pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
         let offset = index * 3;
         if offset + 2 < self.generators.len() {
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    return;
+                }
+            }
+
             self.generators[offset] = x;
             self.generators[offset + 1] = y;
             self.generators[offset + 2] = z;
@@ -88,29 +116,16 @@ impl TessellationKdTree {
 
             // Initialize a new cell from the bounding box
             let mut cell: Cell = Cell::new(i, bounds.clone());
+            let mut scratch = ClipScratch::default();
 
             // Apply walls
             for wall in walls {
                 wall.cut(&[gx, gy, gz], &mut |point, normal| {
-                    cell.clip(&point, &normal, wall.id());
+                    cell.clip_with_scratch(&point, &normal, wall.id(), &mut scratch, None);
                 });
             }
 
-            let get_max_radius_sq = |cell: &Cell| -> f64 {
-                let mut max_d2 = 0.0;
-                for k in 0..cell.vertices.len() / 3 {
-                    let vx = cell.vertices[k * 3];
-                    let vy = cell.vertices[k * 3 + 1];
-                    let vz = cell.vertices[k * 3 + 2];
-                    let d2 = (vx - gx).powi(2) + (vy - gy).powi(2) + (vz - gz).powi(2);
-                    if d2 > max_d2 {
-                        max_d2 = d2;
-                    }
-                }
-                max_d2
-            };
-
-            let current_max_dist_sq = get_max_radius_sq(&cell);
+            let current_max_dist_sq = cell.max_radius_sq(&[gx, gy, gz]);
 
             // Query KdTree for neighbors
             tree.query([gx, gy, gz], current_max_dist_sq, generators, &mut |j, limit_sq| {
@@ -128,10 +143,12 @@ impl TessellationKdTree {
                 let dist_sq = dx * dx + dy * dy + dz * dz;
                 if dist_sq > 4.0 * limit_sq { return limit_sq; }
 
-                cell.clip(&[gx + dx * 0.5, gy + dy * 0.5, gz + dz * 0.5], &[dx, dy, dz], j as i32);
-                
-                // Update the radius after clipping
-                get_max_radius_sq(&cell)
+                if let (true, new_radius) = cell.clip_with_scratch(&[gx + dx * 0.5, gy + dy * 0.5, gz + dz * 0.5], &[dx, dy, dz], j as i32, &mut scratch, Some(&[gx, gy, gz])) {
+                    // Update the radius after clipping
+                    new_radius
+                } else {
+                    limit_sq
+                }
             });
 
             cell
@@ -191,6 +208,37 @@ impl TessellationKdTree {
         }
         
         self.set_generators(&points);
+    }
+
+    /// Removes generators that are not inside the defined walls.
+    /// Note: This changes the indices of the remaining generators.
+    pub fn prune_outside_generators(&mut self) {
+        let mut new_generators = Vec::with_capacity(self.generators.len());
+        let count = self.generators.len() / 3;
+        
+        for i in 0..count {
+            let x = self.generators[i * 3];
+            let y = self.generators[i * 3 + 1];
+            let z = self.generators[i * 3 + 2];
+            
+            let mut inside = true;
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    inside = false;
+                    break;
+                }
+            }
+            
+            if inside {
+                new_generators.push(x);
+                new_generators.push(y);
+                new_generators.push(z);
+            }
+        }
+        
+        if new_generators.len() != self.generators.len() {
+            self.set_generators(&new_generators);
+        }
     }
 }
 

@@ -18,10 +18,11 @@ npm install vorothree
 ## Usage
 
 ```typescript
-import init, { Tessellation, BoundingBox, Wall } from 'vorothree';
+import init, { initThreadPool, Tessellation, BoundingBox, Wall } from 'vorothree';
 
 async function run() {
     await init();
+    await initThreadPool(navigator.hardwareConcurrency);
 
     // 1. Define bounds
     const bounds = new BoundingBox(0, 0, 0, 100, 100, 100);
@@ -44,8 +45,9 @@ async function run() {
     tess.calculate();
 
     // 6. Access results
+    console.log(`Calculated ${tess.count_cells} cells`);
     const cell = tess.get(0);
-    // ...
+    console.log(cell);
 }
 
 run();

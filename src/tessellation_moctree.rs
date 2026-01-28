@@ -1,5 +1,5 @@
 use crate::bounds::BoundingBox;
-use crate::cell::Cell;
+use crate::cell::{Cell, ClipScratch};
 use crate::wall::Wall;
 use crate::moctree::Moctree;
 use wasm_bindgen::prelude::*;
@@ -65,12 +65,16 @@ impl TessellationMoctree {
             let gz: f64 = generators[i * 3 + 2];
 
             let mut cell: Cell = Cell::new(i, bounds.clone());
+            let mut scratch = ClipScratch::default();
 
             for wall in walls {
                 wall.cut(&[gx, gy, gz], &mut |point, normal| {
-                    cell.clip(&point, &normal, wall.id());
+                    cell.clip_with_scratch(&point, &normal, wall.id(), &mut scratch, None);
                 });
             }
+
+            // Calculate initial max_dist_sq after walls
+            let mut current_max_dist_sq = cell.max_radius_sq(&[gx, gy, gz]);
 
             for j in octree.nearest_iter(gx, gy, gz) {
                 if i == j { continue; }
@@ -84,19 +88,7 @@ impl TessellationMoctree {
                 let dz: f64 = oz - gz;
                 let dist_sq = dx * dx + dy * dy + dz * dz;
 
-                // Optimization: check if we can stop
-                let mut max_dist_sq = 0.0;
-                for k in 0..cell.vertices.len() / 3 {
-                    let vx = cell.vertices[k * 3] - gx;
-                    let vy = cell.vertices[k * 3 + 1] - gy;
-                    let vz = cell.vertices[k * 3 + 2] - gz;
-                    let d2 = vx * vx + vy * vy + vz * vz;
-                    if d2 > max_dist_sq {
-                        max_dist_sq = d2;
-                    }
-                }
-
-                if dist_sq > 4.0 * max_dist_sq {
+                if dist_sq > 4.0 * current_max_dist_sq {
                     break;
                 }
 
@@ -104,7 +96,9 @@ impl TessellationMoctree {
                 let my: f64 = gy + dy * 0.5;
                 let mz: f64 = gz + dz * 0.5;
 
-                cell.clip(&[mx, my, mz], &[dx, dy, dz], j as i32);
+                if let (true, new_radius) = cell.clip_with_scratch(&[mx, my, mz], &[dx, dy, dz], j as i32, &mut scratch, Some(&[gx, gy, gz])) {
+                    current_max_dist_sq = new_radius;
+                }
             }
             cell
         }).collect();
@@ -130,7 +124,29 @@ impl TessellationMoctree {
     }
 
     pub fn set_generators(&mut self, generators: &[f64]) {
-        self.generators = generators.to_vec();
+        let mut valid_generators = Vec::with_capacity(generators.len());
+        let count = generators.len() / 3;
+
+        for i in 0..count {
+            let x = generators[i * 3];
+            let y = generators[i * 3 + 1];
+            let z = generators[i * 3 + 2];
+
+            let mut inside = true;
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    inside = false;
+                    break;
+                }
+            }
+
+            if inside {
+                valid_generators.push(x);
+                valid_generators.push(y);
+                valid_generators.push(z);
+            }
+        }
+        self.generators = valid_generators;
         
         self.octree.clear();
         let count = self.generators.len() / 3;
@@ -142,6 +158,12 @@ impl TessellationMoctree {
     pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
         let offset = index * 3;
         if offset + 2 < self.generators.len() {
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    return;
+                }
+            }
+
             self.generators[offset] = x;
             self.generators[offset + 1] = y;
             self.generators[offset + 2] = z;
@@ -193,6 +215,37 @@ impl TessellationMoctree {
         }
         
         self.set_generators(&points);
+    }
+
+    /// Removes generators that are not inside the defined walls.
+    /// Note: This changes the indices of the remaining generators.
+    pub fn prune_outside_generators(&mut self) {
+        let mut new_generators = Vec::with_capacity(self.generators.len());
+        let count = self.generators.len() / 3;
+        
+        for i in 0..count {
+            let x = self.generators[i * 3];
+            let y = self.generators[i * 3 + 1];
+            let z = self.generators[i * 3 + 2];
+            
+            let mut inside = true;
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    inside = false;
+                    break;
+                }
+            }
+            
+            if inside {
+                new_generators.push(x);
+                new_generators.push(y);
+                new_generators.push(z);
+            }
+        }
+        
+        if new_generators.len() != self.generators.len() {
+            self.set_generators(&new_generators);
+        }
     }
 }
 

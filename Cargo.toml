@@ -44,6 +44,11 @@ harness = false
 path = "benches/compare.rs"
 
 [[bench]]
+name = "distributions"
+harness = false
+path = "benches/distributions.rs"
+
+[[bench]]
 name = "scaling"
 harness = false
 path = "benches/scaling.rs"
@@ -57,3 +62,6 @@ path = "benches/tessellation.rs"
 name = "wall"
 harness = false
 path = "benches/wall.rs"
+
+[profile.release]
+debug = true
