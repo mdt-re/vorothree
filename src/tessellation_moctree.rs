@@ -7,6 +7,13 @@ use rayon::prelude::*;
 use rand::prelude::*;
 use rand::rngs::StdRng;
 
+/// A Voronoi tessellation container that uses an Octree for spatial partitioning.
+///
+/// This struct manages:
+/// - The **bounding box** of the simulation.
+/// - The **generators** (points) that define the Voronoi cells.
+/// - The **walls** that clip the cells.
+/// - The **octree** used for accelerating nearest-neighbor searches.
 #[wasm_bindgen]
 pub struct TessellationMoctree {
     bounds: BoundingBox,
@@ -18,6 +25,12 @@ pub struct TessellationMoctree {
 
 #[wasm_bindgen]
 impl TessellationMoctree {
+    /// Creates a new `TessellationMoctree` instance with the specified bounds and octree node capacity.
+    ///
+    /// # Arguments
+    ///
+    /// * `bounds` - The spatial boundaries of the tessellation.
+    /// * `capacity` - The maximum number of points in a leaf node before subdivision occurs.
     #[wasm_bindgen(constructor)]
     pub fn new(bounds: BoundingBox, capacity: usize) -> TessellationMoctree {
         TessellationMoctree {
@@ -29,29 +42,37 @@ impl TessellationMoctree {
         }
     }
 
+    /// Adds a wall to the tessellation to clip the Voronoi cells.
     pub fn add_wall(&mut self, wall: Wall) {
         self.walls.push(wall);
     }
 
+    /// Removes all walls from the tessellation.
     pub fn clear_walls(&mut self) {
         self.walls.clear();
     }
 
+    /// Returns the number of cells in the tessellation.
     #[wasm_bindgen(getter)]
     pub fn count_cells(&self) -> usize {
         self.cells.len()
     }
 
+    /// Returns a flat array of all generator coordinates [x, y, z, x, y, z, ...].
     #[wasm_bindgen(getter)]
     pub fn generators(&self) -> Vec<f64> {
         self.generators.clone()
     }
 
+    /// Returns the number of generators.
     #[wasm_bindgen(getter)]
     pub fn count_generators(&self) -> usize {
         self.generators.len() / 3
     }
 
+    /// Calculates all cells based on the current generators.
+    ///
+    /// This method uses the internal octree to efficiently find the closest generators.
     pub fn calculate(&mut self) {
         let count = self.generators.len() / 3;
         let generators = &self.generators;
@@ -104,6 +125,10 @@ impl TessellationMoctree {
         }).collect();
     }
 
+    /// Performs one step of Lloyd's relaxation.
+    ///
+    /// This moves each generator to the centroid of its calculated Voronoi cell,
+    /// which tends to make the cells more uniform in size and shape.
     pub fn relax(&mut self) {
         if self.cells.len() != self.generators.len() / 3 {
             return;
@@ -123,6 +148,10 @@ impl TessellationMoctree {
         self.set_generators(&new_generators);
     }
 
+    /// Update all generators at once.
+    ///
+    /// # Arguments
+    /// * `generators` - A flat array of coordinates `[x, y, z, x, y, z, ...]`.
     pub fn set_generators(&mut self, generators: &[f64]) {
         let mut valid_generators = Vec::with_capacity(generators.len());
         let count = generators.len() / 3;
@@ -155,6 +184,7 @@ impl TessellationMoctree {
         }
     }
 
+    /// Update the position of a single generator by index.
     pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
         let offset = index * 3;
         if offset + 2 < self.generators.len() {
@@ -177,10 +207,12 @@ impl TessellationMoctree {
         }
     }
 
+    /// Retrieves a calculated cell by index.
     pub fn get(&self, index: usize) -> Option<Cell> {
         self.cells.get(index).cloned()
     }
 
+    /// Generates random points within the bounds and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
         let mut rng = StdRng::seed_from_u64(get_seed());
         let mut points = Vec::with_capacity(count * 3);

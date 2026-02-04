@@ -5,7 +5,7 @@ use rand::Rng;
 use vorothree::{BoundingBox, Tessellation, Wall};
 use gltf::json;
 use gltf::json::validation::{Checked, USize64};
-use vorothree::geometries::{ConeGeometry, TrefoilKnotGeometry};
+use vorothree::geometries::{ConeGeometry, TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
 
 struct GltfBuilder {
     positions: Vec<[f32; 3]>,
@@ -504,10 +504,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
 
-        tess.add_wall(Wall::new_plane(
-            40.0, 40.0, 40.0, // Point
-            1.0, 1.0, 1.0,    // Normal
-            -10               // Wall ID
+        tess.add_wall(Wall::new(
+            -10,
+            Box::new(PlaneGeometry::new([40.0, 40.0, 40.0], [1.0, 1.0, 1.0]))
         ));
         tess.calculate();
         generate_gltf(&tess, &generators, "wall_plane.glb")?;
@@ -517,7 +516,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
-        tess.add_wall(Wall::new_sphere(50.0, 50.0, 50.0, 40.0, -11));
+        tess.add_wall(Wall::new(-11, Box::new(SphereGeometry::new([50.0, 50.0, 50.0], 40.0))));
         tess.calculate();
         generate_gltf(&tess, &generators, "wall_sphere.glb")?;
     }
@@ -526,7 +525,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
-        tess.add_wall(Wall::new_cylinder(50.0, 50.0, 50.0, 0.0, 0.0, 1.0, 40.0, -12));
+        tess.add_wall(Wall::new(-12, Box::new(CylinderGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 40.0))));
         tess.calculate();
         generate_gltf(&tess, &generators, "wall_cylinder.glb")?;
     }
@@ -535,7 +534,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
-        tess.add_wall(Wall::new_torus(50.0, 50.0, 50.0, 0.0, 0.0, 1.0, 35.0, 10.0, -13));
+        tess.add_wall(Wall::new(-13, Box::new(TorusGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 35.0, 10.0))));
         tess.calculate();
         generate_gltf(&tess, &generators, "wall_torus.glb")?;
     }
@@ -544,11 +543,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
-        tess.add_wall(Wall::new(-14, Box::new(ConeGeometry {
-            tip: [50.0, 50.0, 10.0],
-            axis: [0.0, 0.0, 1.0],
-            angle: 30.0f64.to_radians(),
-        })));
+        tess.add_wall(Wall::new(-14, Box::new(ConeGeometry::new(
+            [50.0, 50.0, 10.0],
+            [0.0, 0.0, 1.0],
+            30.0f64.to_radians(),
+        ))));
         tess.calculate();
         generate_gltf(&tess, &generators, "wall_cone.glb")?;
     }

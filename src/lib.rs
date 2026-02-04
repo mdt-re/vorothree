@@ -14,6 +14,10 @@
 //! ## Example
 //!
 //! See the `examples/` directory for usage with SVG plotting and GLTF export.
+//!
+//! ## Main Interface
+//!
+//! The primary entry point is the [`Tessellation`] struct, which manages the grid and generators.
 
 mod bounds;
 mod cell;

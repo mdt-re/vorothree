@@ -1,10 +1,197 @@
-use crate::WallGeometry;
+use crate::wall::WallGeometry;
 
+/// A wall defined by a plane.
+///
+/// The plane partitions space into two regions: valid (inside) and invalid (outside).
+/// The normal vector points towards the valid region.
+#[derive(Debug)]
+pub struct PlaneGeometry {
+    /// A point on the plane.
+    pub point: [f64; 3],
+    /// The normal vector of the plane, pointing towards the valid region.
+    pub normal: [f64; 3], // Points IN (towards valid region)
+}
+
+impl PlaneGeometry {
+    /// Creates a new `PlaneGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `point` - A point on the plane.
+    /// * `normal` - The normal vector of the plane, pointing towards the valid region.
+    ///              It will be normalized.
+    pub fn new(point: [f64; 3], normal: [f64; 3]) -> Self {
+        let len = (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
+        let n = if len == 0.0 { [0.0, 0.0, 1.0] } else { [normal[0] / len, normal[1] / len, normal[2] / len] };
+        Self { point, normal: n }
+    }
+}
+
+impl WallGeometry for PlaneGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        let dx = point[0] - self.point[0];
+        let dy = point[1] - self.point[1];
+        let dz = point[2] - self.point[2];
+        (dx * self.normal[0] + dy * self.normal[1] + dz * self.normal[2]) >= 0.0
+    }
+
+    fn cut(&self, _generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        // For a plane wall, the cut is the plane itself.
+        // Our normal points IN, but clip expects normal pointing OUT.
+        callback(self.point, [-self.normal[0], -self.normal[1], -self.normal[2]]);
+    }
+}
+
+/// A wall defined by a sphere.
+///
+/// The valid region is inside the sphere.
+#[derive(Debug)]
+pub struct SphereGeometry {
+    /// The center of the sphere.
+    pub center: [f64; 3],
+    /// The radius of the sphere.
+    pub radius: f64,
+}
+
+impl SphereGeometry {
+    /// Creates a new `SphereGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the sphere.
+    /// * `radius` - The radius of the sphere.
+    pub fn new(center: [f64; 3], radius: f64) -> Self {
+        Self { center, radius }
+    }
+}
+
+impl WallGeometry for SphereGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        let dx = point[0] - self.center[0];
+        let dy = point[1] - self.center[1];
+        let dz = point[2] - self.center[2];
+        (dx * dx + dy * dy + dz * dz) <= self.radius * self.radius
+    }
+
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        let dx = generator[0] - self.center[0];
+        let dy = generator[1] - self.center[1];
+        let dz = generator[2] - self.center[2];
+        let dist = (dx * dx + dy * dy + dz * dz).sqrt();
+
+        if dist == 0.0 { return; }
+
+        // Project generator to sphere surface
+        let scale = self.radius / dist;
+        let px = self.center[0] + dx * scale;
+        let py = self.center[1] + dy * scale;
+        let pz = self.center[2] + dz * scale;
+
+        // Normal at surface pointing OUT of sphere (away from center)
+        let nx = dx / dist;
+        let ny = dy / dist;
+        let nz = dz / dist;
+
+        callback([px, py, pz], [nx, ny, nz]);
+    }
+}
+
+/// A wall defined by an infinite cylinder.
+///
+/// The valid region is inside the cylinder.
+#[derive(Debug)]
+pub struct CylinderGeometry {
+    /// A point on the cylinder's axis.
+    pub center: [f64; 3],
+    /// The direction of the cylinder's axis.
+    pub axis: [f64; 3],
+    /// The radius of the cylinder.
+    pub radius: f64,
+}
+
+impl CylinderGeometry {
+    /// Creates a new `CylinderGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - A point on the cylinder's axis.
+    /// * `axis` - The direction of the cylinder's axis. It will be normalized.
+    /// * `radius` - The radius of the cylinder.
+    pub fn new(center: [f64; 3], axis: [f64; 3], radius: f64) -> Self {
+        let len = (axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]).sqrt();
+        let a = if len == 0.0 { [0.0, 0.0, 1.0] } else { [axis[0] / len, axis[1] / len, axis[2] / len] };
+        Self { center, axis: a, radius }
+    }
+}
+
+impl WallGeometry for CylinderGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        let dx = point[0] - self.center[0];
+        let dy = point[1] - self.center[1];
+        let dz = point[2] - self.center[2];
+        
+        let dot = dx * self.axis[0] + dy * self.axis[1] + dz * self.axis[2];
+        let perp_x = dx - dot * self.axis[0];
+        let perp_y = dy - dot * self.axis[1];
+        let perp_z = dz - dot * self.axis[2];
+        
+        (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z) <= self.radius * self.radius
+    }
+
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        let dx = generator[0] - self.center[0];
+        let dy = generator[1] - self.center[1];
+        let dz = generator[2] - self.center[2];
+
+        let dot = dx * self.axis[0] + dy * self.axis[1] + dz * self.axis[2];
+        let perp_x = dx - dot * self.axis[0];
+        let perp_y = dy - dot * self.axis[1];
+        let perp_z = dz - dot * self.axis[2];
+        
+        let dist = (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z).sqrt();
+        if dist == 0.0 { return; }
+
+        // Project to cylinder surface
+        let scale = self.radius / dist;
+        let px = self.center[0] + dot * self.axis[0] + perp_x * scale;
+        let py = self.center[1] + dot * self.axis[1] + perp_y * scale;
+        let pz = self.center[2] + dot * self.axis[2] + perp_z * scale;
+
+        // Normal pointing OUT (away from axis)
+        let nx = perp_x / dist;
+        let ny = perp_y / dist;
+        let nz = perp_z / dist;
+
+        callback([px, py, pz], [nx, ny, nz]);
+    }
+}
+
+/// A wall defined by an infinite cone.
+///
+/// The valid region is inside the cone.
 #[derive(Debug)]
 pub struct ConeGeometry {
+    /// The tip (apex) of the cone.
     pub tip: [f64; 3],
+    /// The direction of the cone's axis (pointing into the cone).
     pub axis: [f64; 3],
+    /// The half-angle of the cone in radians.
     pub angle: f64,
+}
+
+impl ConeGeometry {
+    /// Creates a new `ConeGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `tip` - The tip (apex) of the cone.
+    /// * `axis` - The direction of the cone's axis. It will be normalized.
+    /// * `angle` - The half-angle of the cone in radians.
+    pub fn new(tip: [f64; 3], axis: [f64; 3], angle: f64) -> Self {
+        let len = (axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]).sqrt();
+        let a = if len == 0.0 { [0.0, 0.0, 1.0] } else { [axis[0] / len, axis[1] / len, axis[2] / len] };
+        Self { tip, axis: a, angle }
+    }
 }
 
 impl WallGeometry for ConeGeometry {
@@ -67,15 +254,135 @@ impl WallGeometry for ConeGeometry {
     }
 }
 
+/// A wall defined by a torus.
+///
+/// The valid region is inside the torus tube.
+#[derive(Debug)]
+pub struct TorusGeometry {
+    /// The center of the torus.
+    pub center: [f64; 3],
+    /// The axis of the torus (perpendicular to the major circle).
+    pub axis: [f64; 3],
+    /// The radius of the major circle (distance from center to tube center).
+    pub major_radius: f64,
+    /// The radius of the tube.
+    pub minor_radius: f64,
+}
+
+impl TorusGeometry {
+    /// Creates a new `TorusGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the torus.
+    /// * `axis` - The axis of the torus. It will be normalized.
+    /// * `major_radius` - The radius of the major circle.
+    /// * `minor_radius` - The radius of the tube.
+    pub fn new(center: [f64; 3], axis: [f64; 3], major_radius: f64, minor_radius: f64) -> Self {
+        let len = (axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]).sqrt();
+        let a = if len == 0.0 { [0.0, 0.0, 1.0] } else { [axis[0] / len, axis[1] / len, axis[2] / len] };
+        Self { center, axis: a, major_radius, minor_radius }
+    }
+}
+
+impl WallGeometry for TorusGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        let dx = point[0] - self.center[0];
+        let dy = point[1] - self.center[1];
+        let dz = point[2] - self.center[2];
+        
+        let dot = dx * self.axis[0] + dy * self.axis[1] + dz * self.axis[2];
+        let perp_x = dx - dot * self.axis[0];
+        let perp_y = dy - dot * self.axis[1];
+        let perp_z = dz - dot * self.axis[2];
+        
+        let dist_perp = (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z).sqrt();
+        
+        // Distance to the tube center (which is at distance major_radius from axis)
+        let dist_tube = ((dist_perp - self.major_radius).powi(2) + dot.powi(2)).sqrt();
+        
+        dist_tube <= self.minor_radius
+    }
+
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        let dx = generator[0] - self.center[0];
+        let dy = generator[1] - self.center[1];
+        let dz = generator[2] - self.center[2];
+
+        let dot = dx * self.axis[0] + dy * self.axis[1] + dz * self.axis[2];
+        let perp_x = dx - dot * self.axis[0];
+        let perp_y = dy - dot * self.axis[1];
+        let perp_z = dz - dot * self.axis[2];
+        
+        let dist_perp = (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z).sqrt();
+        
+        // Determine direction from axis to projected point
+        let (dir_x, dir_y, dir_z) = if dist_perp < 1e-9 {
+            // Singularity on axis: pick an arbitrary perpendicular vector
+            let mut tx = 1.0; let mut ty = 0.0; let tz = 0.0;
+            if self.axis[0].abs() > 0.9 { tx = 0.0; ty = 1.0; }
+            let t_dot = tx * self.axis[0] + ty * self.axis[1] + tz * self.axis[2];
+            let ax = tx - t_dot * self.axis[0];
+            let ay = ty - t_dot * self.axis[1];
+            let az = tz - t_dot * self.axis[2];
+            let len = (ax*ax + ay*ay + az*az).sqrt();
+            if len == 0.0 { return; }
+            (ax/len, ay/len, az/len)
+        } else {
+            (perp_x / dist_perp, perp_y / dist_perp, perp_z / dist_perp)
+        };
+
+        // Closest point on the major circle
+        let cx = self.center[0] + dir_x * self.major_radius;
+        let cy = self.center[1] + dir_y * self.major_radius;
+        let cz = self.center[2] + dir_z * self.major_radius;
+
+        // Vector from C to Generator
+        let v_cx = generator[0] - cx;
+        let v_cy = generator[1] - cy;
+        let v_cz = generator[2] - cz;
+        let dist_c = (v_cx*v_cx + v_cy*v_cy + v_cz*v_cz).sqrt();
+
+        if dist_c == 0.0 { return; }
+
+        // Normal pointing OUT (away from C)
+        let nx = v_cx / dist_c;
+        let ny = v_cy / dist_c;
+        let nz = v_cz / dist_c;
+
+        // Point on surface
+        let px = cx + nx * self.minor_radius;
+        let py = cy + ny * self.minor_radius;
+        let pz = cz + nz * self.minor_radius;
+
+        callback([px, py, pz], [nx, ny, nz]);
+    }
+}
+
+/// A wall defined by a trefoil knot tube.
+///
+/// The valid region is inside the tube following the knot path.
 #[derive(Debug)]
 pub struct TrefoilKnotGeometry {
+    /// The center of the knot.
     pub center: [f64; 3],
+    /// The scale of the knot.
     pub scale: f64,
+    /// The radius of the tube.
     pub tube_radius: f64,
+    /// Sample points along the knot curve.
     pub samples: Vec<[f64; 3]>,
 }
 
 impl TrefoilKnotGeometry {
+    /// Creates a new `TrefoilKnotGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the knot.
+    /// * `scale` - The scale of the knot.
+    /// * `tube_radius` - The radius of the tube.
+    /// * `resolution` - The number of sample points along the curve.
     pub fn new(center: [f64; 3], scale: f64, tube_radius: f64, resolution: usize) -> Self {
         let mut samples = Vec::with_capacity(resolution);
         for i in 0..resolution {
@@ -144,9 +451,135 @@ impl WallGeometry for TrefoilKnotGeometry {
     }
 }
 
+/// A wall defined by a convex polyhedron.
+///
+/// The valid region is inside the polyhedron, defined by the intersection of half-spaces.
 #[derive(Debug)]
 pub struct ConvexPolyhedronGeometry {
+    /// The planes defining the faces of the polyhedron.
+    /// Each tuple contains a point on the plane and the normal vector pointing OUT of the valid region.
     pub planes: Vec<([f64; 3], [f64; 3])>, // (point, normal) where normal points OUT of the valid region
+}
+
+impl ConvexPolyhedronGeometry {
+    /// Creates a new `ConvexPolyhedronGeometry` from a list of points and normals.
+    ///
+    /// # Arguments
+    ///
+    /// * `points` - A flat array of points on the planes [x1, y1, z1, x2, y2, z2, ...].
+    /// * `normals` - A flat array of normal vectors for the planes [nx1, ny1, nz1, ...].
+    ///               Normals should point OUT of the valid region.
+    pub fn new(points: &[f64], normals: &[f64]) -> Self {
+        if points.len() != normals.len() || points.len() % 3 != 0 {
+            panic!("Points and normals must have same length and be multiple of 3");
+        }
+        
+        let count = points.len() / 3;
+        let mut planes = Vec::with_capacity(count);
+        
+        for i in 0..count {
+            planes.push((
+                [points[i*3], points[i*3+1], points[i*3+2]],
+                [normals[i*3], normals[i*3+1], normals[i*3+2]]
+            ));
+        }
+        Self { planes }
+    }
+
+    /// Creates a regular dodecahedron wall.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the dodecahedron.
+    /// * `radius` - The circumradius of the dodecahedron.
+    pub fn new_dodecahedron(center: [f64; 3], radius: f64) -> Self {
+        let phi = (1.0 + 5.0f64.sqrt()) / 2.0;
+        // Distance from center to face for a dodecahedron with circumradius R
+        // r = R * xi, where xi = sqrt((5 + 2*sqrt(5)) / 15)
+        let xi = ((5.0 + 2.0 * 5.0f64.sqrt()) / 15.0).sqrt();
+        let dist = radius * xi;
+
+        // Base normals (unnormalized)
+        let base_normals = [
+            [0.0, phi, 1.0], [0.0, -phi, 1.0], [0.0, phi, -1.0], [0.0, -phi, -1.0],
+            [1.0, 0.0, phi], [1.0, 0.0, -phi], [-1.0, 0.0, phi], [-1.0, 0.0, -phi],
+            [phi, 1.0, 0.0], [phi, -1.0, 0.0], [-phi, 1.0, 0.0], [-phi, -1.0, 0.0],
+        ];
+
+        let mut planes = Vec::with_capacity(12);
+        for n in base_normals {
+            let len = (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]).sqrt();
+            let nx = n[0] / len;
+            let ny = n[1] / len;
+            let nz = n[2] / len;
+            
+            let px = center[0] + nx * dist;
+            let py = center[1] + ny * dist;
+            let pz = center[2] + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Self { planes }
+    }
+
+    /// Creates a regular icosahedron wall.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the icosahedron.
+    /// * `radius` - The circumradius of the icosahedron.
+    pub fn new_icosahedron(center: [f64; 3], radius: f64) -> Self {
+        let phi = (1.0 + 5.0f64.sqrt()) / 2.0;
+        // Ratio of inradius to circumradius for Icosahedron: sqrt((7 + 3*sqrt(5)) / 24)
+        let xi = ((7.0 + 3.0 * 5.0f64.sqrt()) / 24.0).sqrt();
+        let dist = radius * xi;
+
+        // Normals are vertices of a Dodecahedron
+        let one_over_phi = 1.0 / phi;
+        let mut base_normals = Vec::with_capacity(20);
+        
+        // (±1, ±1, ±1)
+        for x in [-1.0, 1.0] {
+            for y in [-1.0, 1.0] {
+                for z in [-1.0, 1.0] {
+                    base_normals.push([x, y, z]);
+                }
+            }
+        }
+        // (0, ±phi, ±1/phi)
+        for y in [-1.0, 1.0] {
+            for z in [-1.0, 1.0] {
+                base_normals.push([0.0, y * phi, z * one_over_phi]);
+            }
+        }
+        // (±1/phi, 0, ±phi)
+        for x in [-1.0, 1.0] {
+            for z in [-1.0, 1.0] {
+                base_normals.push([x * one_over_phi, 0.0, z * phi]);
+            }
+        }
+        // (±phi, ±1/phi, 0)
+        for x in [-1.0, 1.0] {
+            for y in [-1.0, 1.0] {
+                base_normals.push([x * phi, y * one_over_phi, 0.0]);
+            }
+        }
+
+        let mut planes = Vec::with_capacity(20);
+        for n in base_normals {
+            let len = (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]).sqrt();
+            let nx = n[0] / len;
+            let ny = n[1] / len;
+            let nz = n[2] / len;
+            
+            let px = center[0] + nx * dist;
+            let py = center[1] + ny * dist;
+            let pz = center[2] + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Self { planes }
+    }
 }
 
 impl WallGeometry for ConvexPolyhedronGeometry {

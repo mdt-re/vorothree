@@ -15,6 +15,13 @@ pub fn init_threads(n: usize) -> js_sys::Promise {
     init_thread_pool(n)
 }
 
+/// The main container for performing 3D Voronoi tessellations.
+///
+/// This struct manages:
+/// - The **bounding box** of the simulation.
+/// - The **generators** (points) that define the Voronoi cells.
+/// - The **walls** that clip the cells.
+/// - The **grid** used for spatial partitioning acceleration.
 #[wasm_bindgen]
 pub struct Tessellation {
     bounds: BoundingBox,
@@ -38,6 +45,17 @@ pub struct Tessellation {
 
 #[wasm_bindgen]
 impl Tessellation {
+    /// Creates a new `Tessellation` instance with the specified bounds and grid resolution.
+    ///
+    /// The grid resolution (`nx`, `ny`, `nz`) determines the performance of the spatial lookup.
+    /// A heuristic of `cbrt(N)` (cube root of the number of points) is often a good starting point.
+    ///
+    /// # Arguments
+    ///
+    /// * `bounds` - The spatial boundaries of the tessellation.
+    /// * `nx` - Number of grid bins along the X axis.
+    /// * `ny` - Number of grid bins along the Y axis.
+    /// * `nz` - Number of grid bins along the Z axis.
     #[wasm_bindgen(constructor)]
     pub fn new(bounds: BoundingBox, nx: usize, ny: usize, nz: usize) -> Tessellation {
         let sx = (nx as f64) / (bounds.max_x - bounds.min_x);
@@ -81,11 +99,13 @@ impl Tessellation {
         }
     }
 
+    /// Adds a wall to the tessellation to clip the Voronoi cells.
     pub fn add_wall(&mut self, wall: Wall) {
         self.walls.push(wall);
         self.prune_outside_generators();
     }
 
+    /// Removes all walls from the tessellation.
     pub fn clear_walls(&mut self) {
         self.walls.clear();
     }
@@ -106,6 +126,10 @@ impl Tessellation {
     }
 
     /// Calculates all cells based on the current generators.
+    ///
+    /// This method uses the internal grid to efficiently find the closest generators
+    /// and clips the cells against the bounding box and any added walls.
+    /// It runs in parallel if the `rayon` feature is enabled (which is default).
     pub fn calculate(&mut self) {
         let count = self.generators.len() / 3;
         let generators = &self.generators;
@@ -222,7 +246,9 @@ impl Tessellation {
     }
 
     /// Performs one step of Lloyd's relaxation.
-    /// Moves each generator to the centroid of its cell.
+    ///
+    /// This moves each generator to the centroid of its calculated Voronoi cell,
+    /// which tends to make the cells more uniform in size and shape (centroidal Voronoi tessellation).
     pub fn relax(&mut self) {
         if self.cells.len() != self.generators.len() / 3 {
             return;
@@ -243,7 +269,9 @@ impl Tessellation {
     }
 
     /// Update all generators at once.
-    /// Expects a flat array [x, y, z, x, y, z, ...]
+    ///
+    /// # Arguments
+    /// * `generators` - A flat array of coordinates `[x, y, z, x, y, z, ...]`.
     pub fn set_generators(&mut self, generators: &[f64]) {
         let mut valid_generators = Vec::with_capacity(generators.len());
         let count = generators.len() / 3;
@@ -290,7 +318,7 @@ impl Tessellation {
         }
     }
 
-    /// Update a single generator by index.
+    /// Update the position of a single generator by index.
     pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
         let offset = index * 3;
         if offset + 2 < self.generators.len() {
@@ -321,6 +349,7 @@ impl Tessellation {
         }
     }
 
+    /// Resizes the internal spatial partitioning grid.
     pub fn set_grid_shape(&mut self, nx: usize, ny: usize, nz: usize) {
         self.grid_res_x = nx;
         self.grid_res_y = ny;
@@ -355,6 +384,7 @@ impl Tessellation {
         self.set_generators(&current_gens);
     }
 
+    /// Retrieves a calculated cell by index.
     pub fn get(&self, index: usize) -> Option<Cell> {
         self.cells.get(index).cloned()
     }
@@ -370,6 +400,7 @@ impl Tessellation {
         ix + iy * nx + iz * nx * ny
     }
 
+    /// Generates random points within the bounds and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
         // TODO: implement generator radii, to others and to walls. Use octree like website_infinity.
         let mut rng = StdRng::seed_from_u64(get_seed());
@@ -449,6 +480,7 @@ fn get_min_dist_sq(dx: isize, dy: isize, dz: isize, cx: f64, cy: f64, cz: f64) -
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geometries::{PlaneGeometry, SphereGeometry, CylinderGeometry, ConeGeometry};
 
     // Helper to create a simple bounding box for testing
     fn mock_bounds() -> BoundingBox {
@@ -508,7 +540,7 @@ mod tests {
             let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
             tess.set_generators(&generators);
             // Keep x > 5.0
-            tess.add_wall(Wall::new_plane(5.0, 0.0, 0.0, 1.0, 0.0, 0.0, -11));
+            tess.add_wall(Wall::new(-11, Box::new(PlaneGeometry::new([5.0, 0.0, 0.0], [1.0, 0.0, 0.0]))));
             tess.calculate();
             let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
             assert!((vol - 500.0).abs() < 1e-3, "Plane wall volume incorrect: {}", vol);
@@ -519,7 +551,7 @@ mod tests {
             let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
             tess.set_generators(&generators);
             // Sphere at center, radius 4. Volume = 4/3 * pi * 4^3 = 268.08257
-            tess.add_wall(Wall::new_sphere(5.0, 5.0, 5.0, 4.0, -11));
+            tess.add_wall(Wall::new(-11, Box::new(SphereGeometry::new([5.0, 5.0, 5.0], 4.0))));
             tess.calculate();
             let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
             let expected = 4.0 / 3.0 * std::f64::consts::PI * 4.0f64.powi(3);
@@ -534,11 +566,25 @@ mod tests {
             let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
             tess.set_generators(&generators);
             // Cylinder along Z, radius 4. Volume = pi * r^2 * h = pi * 16 * 10 = 502.6548
-            tess.add_wall(Wall::new_cylinder(5.0, 5.0, 5.0, 0.0, 0.0, 1.0, 4.0, -11));
+            tess.add_wall(Wall::new(-11, Box::new(CylinderGeometry::new([5.0, 5.0, 5.0], [0.0, 0.0, 1.0], 4.0))));
             tess.calculate();
             let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
             let expected = std::f64::consts::PI * 4.0f64.powi(2) * 10.0;
             assert!((vol - expected).abs() / expected < 0.05, "Cylinder wall volume incorrect: got {}, expected {}", vol, expected);
+        }
+
+        // Test Cone Wall
+        {
+            let mut tess = Tessellation::new(bounds.clone(), 5, 5, 5);
+            tess.set_generators(&generators);
+            // Cone at 5,5,2, axis Z, angle atan(0.5).
+            // h = z - 2. r = h * 0.5. At z=10, h=8, r=4. Fits in 10x10 box.
+            // Volume = 1/3 * pi * r^2 * h = 1/3 * pi * 16 * 8 = 128/3 * pi.
+            tess.add_wall(Wall::new(-11, Box::new(ConeGeometry::new([5.0, 5.0, 2.0], [0.0, 0.0, 1.0], 0.5f64.atan()))));
+            tess.calculate();
+            let vol: f64 = (0..tess.count_cells()).map(|i| tess.get(i).unwrap().volume()).sum();
+            let expected = 128.0 / 3.0 * std::f64::consts::PI;
+            assert!((vol - expected).abs() / expected < 0.05, "Cone wall volume incorrect: got {}, expected {}", vol, expected);
         }
     }
 }

@@ -1,4 +1,5 @@
 use vorothree::{BoundingBox, Tessellation, Wall};
+use vorothree::geometries::{SphereGeometry, PlaneGeometry, TrefoilKnotGeometry};
 use rand::Rng;
 
 #[test]
@@ -86,10 +87,10 @@ fn test_neighbor_reciprocity_half_sphere() {
     tess.set_generators(&generators);
     
     // Sphere wall: center (15, 15, 15), radius 12. ID -10.
-    tess.add_wall(Wall::new_sphere(15.0, 15.0, 15.0, 12.0, -10));
+    tess.add_wall(Wall::new(-10, Box::new(SphereGeometry::new([15.0, 15.0, 15.0], 12.0))));
     
     // Plane wall: point (15, 15, 15), normal (1, 0, 0). Keeps x >= 15. ID -11.
-    tess.add_wall(Wall::new_plane(15.0, 15.0, 15.0, 1.0, 0.0, 0.0, -11));
+    tess.add_wall(Wall::new(-11, Box::new(PlaneGeometry::new([15.0, 15.0, 15.0], [1.0, 0.0, 0.0]))));
 
     tess.calculate();
 
@@ -134,7 +135,7 @@ fn test_neighbor_reciprocity_sphere_small() {
     let mut tess = Tessellation::new(bounds, 5, 5, 5);
 
     // Sphere wall: center (10, 10, 10), radius 8. ID -10.
-    tess.add_wall(Wall::new_sphere(10.0, 10.0, 10.0, 8.0, -10));
+    tess.add_wall(Wall::new(-10, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
 
     // Generate 10 random points inside the valid region
     tess.random_generators(40);
@@ -188,7 +189,7 @@ fn test_neighbor_reciprocity_trefoil_knot() {
     tess.set_generators(&generators);
     
     // Trefoil knot centered in box
-    tess.add_wall(Wall::new_trefoil(15.0, 15.0, 15.0, 4.0, 2.0, 100, -15));
+    tess.add_wall(Wall::new(-15, Box::new(TrefoilKnotGeometry::new([15.0, 15.0, 15.0], 4.0, 2.0, 100))));
 
     tess.calculate();
 

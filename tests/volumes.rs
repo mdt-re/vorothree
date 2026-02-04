@@ -1,4 +1,5 @@
 use vorothree::{BoundingBox, Tessellation, Wall};
+use vorothree::geometries::{SphereGeometry, CylinderGeometry};
 
 fn generate_grid(n: usize, size: f64) -> Vec<f64> {
     let mut generators = Vec::with_capacity(n * n * n * 3);
@@ -29,7 +30,7 @@ fn test_sphere_volume() {
 
     let r = 4.0;
     // Sphere centered in the box
-    tess.add_wall(Wall::new_sphere(size/2.0, size/2.0, size/2.0, r, -1));
+    tess.add_wall(Wall::new(-1, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));
     tess.calculate();
 
     let total_volume: f64 = (0..tess.count_cells())
@@ -55,7 +56,7 @@ fn test_cylinder_volume() {
 
     let r = 4.0;
     // Cylinder centered, axis Z
-    tess.add_wall(Wall::new_cylinder(size/2.0, size/2.0, size/2.0, 0.0, 0.0, 1.0, r, -2));
+    tess.add_wall(Wall::new(-2, Box::new(CylinderGeometry::new([size/2.0, size/2.0, size/2.0], [0.0, 0.0, 1.0], r))));
     tess.calculate();
 
     let total_volume: f64 = (0..tess.count_cells())

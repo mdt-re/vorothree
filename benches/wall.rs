@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use vorothree::{BoundingBox, Tessellation, Wall};
+use vorothree::geometries::{PlaneGeometry, SphereGeometry, CylinderGeometry};
 
 const NUM_POINTS: usize = 1000;
 
@@ -16,7 +17,7 @@ fn benchmark_wall_plane(c: &mut Criterion) {
 
     let mut tess = Tessellation::new(bounds, 10, 10, 10);
     tess.set_generators(&generators);
-    tess.add_wall(Wall::new_plane(50.0, 50.0, 50.0, 1.0, 1.0, 1.0, -11));
+    tess.add_wall(Wall::new(-11, Box::new(PlaneGeometry::new([50.0, 50.0, 50.0], [1.0, 1.0, 1.0]))));
 
     c.bench_function(&format!("calculate_wall_plane_{}_points", NUM_POINTS), |b| {
         b.iter(|| {
@@ -38,7 +39,7 @@ fn benchmark_wall_sphere(c: &mut Criterion) {
 
     let mut tess = Tessellation::new(bounds, 10, 10, 10);
     tess.set_generators(&generators);
-    tess.add_wall(Wall::new_sphere(50.0, 50.0, 50.0, 40.0, -11));
+    tess.add_wall(Wall::new(-11, Box::new(SphereGeometry::new([50.0, 50.0, 50.0], 40.0))));
 
     c.bench_function(&format!("calculate_wall_sphere_{}_points", NUM_POINTS), |b| {
         b.iter(|| {
@@ -60,7 +61,7 @@ fn benchmark_wall_cylinder(c: &mut Criterion) {
 
     let mut tess = Tessellation::new(bounds, 10, 10, 10);
     tess.set_generators(&generators);
-    tess.add_wall(Wall::new_cylinder(50.0, 50.0, 50.0, 0.0, 0.0, 1.0, 40.0, -11));
+    tess.add_wall(Wall::new(-11, Box::new(CylinderGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 40.0))));
 
     c.bench_function(&format!("calculate_wall_cylinder_{}_points", NUM_POINTS), |b| {
         b.iter(|| {
