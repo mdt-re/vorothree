@@ -486,6 +486,107 @@ impl ConvexPolyhedronGeometry {
         Self { planes }
     }
 
+    /// Creates a regular tetrahedron wall.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the tetrahedron.
+    /// * `radius` - The circumradius of the tetrahedron.
+    pub fn new_tetrahedron(center: [f64; 3], radius: f64) -> Self {
+        // Inradius r = R / 3
+        let dist = radius / 3.0;
+        
+        // Normals (unnormalized) pointing OUT of the faces
+        // Corresponds to faces opposite to vertices (1,1,1), (1,-1,-1), (-1,1,-1), (-1,-1,1)
+        let base_normals: [[f64; 3]; 4] = [
+            [-1.0, -1.0, -1.0],
+            [-1.0, 1.0, 1.0],
+            [1.0, -1.0, 1.0],
+            [1.0, 1.0, -1.0],
+        ];
+
+        let mut planes = Vec::with_capacity(4);
+        for n in base_normals {
+            let len = (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]).sqrt();
+            let nx = n[0] / len;
+            let ny = n[1] / len;
+            let nz = n[2] / len;
+            
+            let px = center[0] + nx * dist;
+            let py = center[1] + ny * dist;
+            let pz = center[2] + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Self { planes }
+    }
+
+    /// Creates a regular hexahedron (cube) wall.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the hexahedron.
+    /// * `radius` - The circumradius of the hexahedron.
+    pub fn new_hexahedron(center: [f64; 3], radius: f64) -> Self {
+        // Inradius r = R / sqrt(3)
+        let dist = radius / 3.0f64.sqrt();
+
+        let base_normals = [
+            [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0], [0.0, -1.0, 0.0],
+            [0.0, 0.0, 1.0], [0.0, 0.0, -1.0],
+        ];
+
+        let mut planes = Vec::with_capacity(6);
+        for n in base_normals {
+            let nx = n[0];
+            let ny = n[1];
+            let nz = n[2];
+            
+            let px = center[0] + nx * dist;
+            let py = center[1] + ny * dist;
+            let pz = center[2] + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Self { planes }
+    }
+
+    /// Creates a regular octahedron wall.
+    ///
+    /// # Arguments
+    ///
+    /// * `center` - The center of the octahedron.
+    /// * `radius` - The circumradius of the octahedron.
+    pub fn new_octahedron(center: [f64; 3], radius: f64) -> Self {
+        // Inradius r = R / sqrt(3)
+        let dist = radius / 3.0f64.sqrt();
+
+        let mut base_normals: Vec<[f64; 3]> = Vec::with_capacity(8);
+        for x in [-1.0, 1.0] {
+            for y in [-1.0, 1.0] {
+                for z in [-1.0, 1.0] {
+                    base_normals.push([x, y, z]);
+                }
+            }
+        }
+
+        let mut planes = Vec::with_capacity(8);
+        for n in base_normals {
+            let len = (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]).sqrt();
+            let nx = n[0] / len;
+            let ny = n[1] / len;
+            let nz = n[2] / len;
+            
+            let px = center[0] + nx * dist;
+            let py = center[1] + ny * dist;
+            let pz = center[2] + nz * dist;
+            planes.push(([px, py, pz], [nx, ny, nz]));
+        }
+
+        Self { planes }
+    }
+
     /// Creates a regular dodecahedron wall.
     ///
     /// # Arguments

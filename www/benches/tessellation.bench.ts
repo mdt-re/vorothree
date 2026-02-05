@@ -6,6 +6,10 @@ import path from 'path';
 if (typeof self === 'undefined') {
     // @ts-ignore
     global.self = global;
+    // @ts-ignore
+    global.self.addEventListener = () => {};
+    // @ts-ignore
+    global.self.removeEventListener = () => {};
 }
 
 const { default: init, Tessellation, BoundingBox } = await import('vorothree');

@@ -28,7 +28,7 @@ pub trait WallGeometry: Send + Sync + std::fmt::Debug {
 ///
 /// A `Wall` is a container for a `WallGeometry` implementation, giving it a unique
 /// integer ID. This ID will be reported in the `face_neighbors` array of a `Cell`
-/// for faces that lie on this wall.
+/// for faces that have been clipped by this wall.
 #[wasm_bindgen]
 pub struct Wall {
     id: i32,
@@ -109,6 +109,18 @@ impl Wall {
 
     pub fn new_convex_polyhedron(points: &[f64], normals: &[f64], id: i32) -> Wall {
         Wall::new(id, Box::new(ConvexPolyhedronGeometry::new(points, normals)))
+    }
+
+    pub fn new_tetrahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
+        Wall::new(id, Box::new(ConvexPolyhedronGeometry::new_tetrahedron([cx, cy, cz], radius)))
+    }
+
+    pub fn new_hexahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
+        Wall::new(id, Box::new(ConvexPolyhedronGeometry::new_hexahedron([cx, cy, cz], radius)))
+    }
+
+    pub fn new_octahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
+        Wall::new(id, Box::new(ConvexPolyhedronGeometry::new_octahedron([cx, cy, cz], radius)))
     }
 
     pub fn new_dodecahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
