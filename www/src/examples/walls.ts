@@ -14,20 +14,22 @@ export async function run(app: HTMLElement) {
     const params = {
         wallType: 'sphere',
         radius: 40.0,
+        radiusA: 40.0,
+        radiusB: 30.0,
+        radiusC: 20.0,
         height: 60.0,
         tube: 10.0,
         scale: 12.0,
         count: 2000,
         opacity: 0.3,
-
-            };
+    };
 
     // --- Three.js Setup ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x242424);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(150, 150, 150);
+    camera.position.set(100, 100, 100);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -78,6 +80,49 @@ export async function run(app: HTMLElement) {
             case 'icosahedron':
                 // @ts-ignore
                 tess.add_wall(Wall.new_icosahedron(0.0, 0.0, 0.0, params.radius, -15));
+                break;
+            case 'ellipsoid':
+                // Custom JS implementation of an Ellipsoid
+                // x^2/a^2 + y^2/b^2 + z^2/c^2 <= 1
+                const ra = params.radiusA;
+                const rb = params.radiusB;
+                const rc = params.radiusC;
+
+                const jsWall = {
+                    contains: (x: number, y: number, z: number) => {
+                        return (x*x)/(ra*ra) + (y*y)/(rb*rb) + (z*z)/(rc*rc) <= 1.0;
+                    },
+                    cut: (x: number, y: number, z: number) => {
+                        // Simple radial projection approximation for the cut point.
+                        // This is not the exact closest point, but sufficient for convex walls in many cases.
+                        
+                        // 1. Map to unit sphere space
+                        const mx = x / ra;
+                        const my = y / rb;
+                        const mz = z / rc;
+                        const len = Math.sqrt(mx*mx + my*my + mz*mz);
+                        
+                        if (len === 0) return null;
+
+                        // 2. Project to surface
+                        const px = (mx / len) * ra;
+                        const py = (my / len) * rb;
+                        const pz = (mz / len) * rc;
+
+                        // 3. Calculate normal at surface point (gradient of implicit function)
+                        let nx = px / (ra*ra);
+                        let ny = py / (rb*rb);
+                        let nz = pz / (rc*rc);
+                        const nLen = Math.sqrt(nx*nx + ny*ny + nz*nz);
+                        
+                        return {
+                            point: [px, py, pz],
+                            normal: [nx/nLen, ny/nLen, nz/nLen]
+                        };
+                    }
+                };
+                // @ts-ignore
+                tess.add_wall(Wall.newCustom(jsWall, -15));
                 break;
         }
 
@@ -151,14 +196,39 @@ export async function run(app: HTMLElement) {
 
     initTessellation();
 
-    gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'dodecahedron', 'icosahedron']).name('Wall Type').onChange(initTessellation);
-    gui.add(params, 'radius', 5, 45).name('Radius (Sph/Cyl/Tor)').onChange(initTessellation);
-    gui.add(params, 'height', 10, 100).name('Height (Cyl)').onChange(() => { if(params.wallType === 'cylinder') initTessellation(); });
-    gui.add(params, 'tube', 1, 20).name('Tube (Tor/Tref)').onChange(() => { if(params.wallType === 'torus' || params.wallType === 'trefoil') initTessellation(); });
-    gui.add(params, 'scale', 1, 20).name('Scale (Tref)').onChange(() => { if(params.wallType === 'trefoil') initTessellation(); });
-
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
+
+    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'dodecahedron', 'icosahedron', 'ellipsoid']).name('wall');
+
+    const radiusCtrl = gui.add(params, 'radius', 5, 45).name('radius').onChange(initTessellation);
+    const radiusACtrl = gui.add(params, 'radiusA', 5, 45).name('radius x').onChange(initTessellation);
+    const radiusBCtrl = gui.add(params, 'radiusB', 5, 45).name('radius y').onChange(initTessellation);
+    const radiusCCtrl = gui.add(params, 'radiusC', 5, 45).name('radius z').onChange(initTessellation);
+    const heightCtrl = gui.add(params, 'height', 10, 100).name('height').onChange(initTessellation);
+    const tubeCtrl = gui.add(params, 'tube', 1, 20).name('radius tube').onChange(initTessellation);
+    const scaleCtrl = gui.add(params, 'scale', 1, 20).name('scale').onChange(initTessellation);
+
+    const updateVisibility = () => {
+        const t = params.wallType;
+        if (t === 'trefoil' || t === 'ellipsoid') radiusCtrl.hide(); else radiusCtrl.show();
+
+        if (t === 'ellipsoid') {
+            radiusACtrl.show(); radiusBCtrl.show(); radiusCCtrl.show();
+        } else {
+            radiusACtrl.hide(); radiusBCtrl.hide(); radiusCCtrl.hide();
+        }
+
+        if (t === 'cylinder') heightCtrl.show(); else heightCtrl.hide();
+        if (t === 'torus' || t === 'trefoil') tubeCtrl.show(); else tubeCtrl.hide();
+        if (t === 'trefoil') scaleCtrl.show(); else scaleCtrl.hide();
+    };
+
+    wallTypeCtrl.onChange(() => {
+        updateVisibility();
+        initTessellation();
+    });
+    updateVisibility();
 
     // Animation Loop
     function animate() {
