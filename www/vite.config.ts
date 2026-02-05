@@ -2,9 +2,12 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   // Base relative path ensures assets work on GitHub Pages (e.g. user.github.io/repo/)
-  base: './', 
+  base: process.env.BASE_HREF || './', 
   build: {
     target: 'esnext' // Top-level await support
+  },
+  worker: {
+    format: 'es'
   },
   server: {
     fs: {
