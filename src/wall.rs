@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use js_sys::{Reflect, Function, Array};
-use crate::geometries::{PlaneGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, TorusGeometry, TrefoilKnotGeometry, ConvexPolyhedronGeometry};
+use crate::geometries::{PlaneGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, TorusGeometry, TrefoilKnotGeometry, ConvexPolyhedronGeometry, BezierGeometry};
 
 /// TypeScript constant definitions for wall IDs.
 #[wasm_bindgen(typescript_custom_section)]
@@ -129,6 +129,17 @@ impl Wall {
 
     pub fn new_icosahedron(cx: f64, cy: f64, cz: f64, radius: f64, id: i32) -> Wall {
         Wall::new(id, Box::new(ConvexPolyhedronGeometry::new_icosahedron([cx, cy, cz], radius)))
+    }
+
+    pub fn new_bezier(points: &[f64], radius: f64, resolution: usize, closed: bool, id: i32) -> Wall {
+        if points.len() % 3 != 0 {
+            panic!("Bezier curve control points must be a multiple of 3 coordinates");
+        }
+        let mut control_points = Vec::with_capacity(points.len() / 3);
+        for i in (0..points.len()).step_by(3) {
+            control_points.push([points[i], points[i+1], points[i+2]]);
+        }
+        Wall::new(id, Box::new(BezierGeometry::new(control_points, radius, resolution, closed)))
     }
 }
 

@@ -124,6 +124,16 @@ export async function run(app: HTMLElement) {
                 // @ts-ignore
                 tess.add_wall(Wall.newCustom(jsWall, -15));
                 break;
+            case 'bezier':
+                // Define 4 control points for a cubic bezier curve
+                const points = new Float64Array([
+                    -params.radius, -params.radius, -params.radius, // P0
+                    -params.radius/2, params.radius, 0,             // P1
+                    params.radius/2, -params.radius, 0,             // P2
+                    params.radius, params.radius, params.radius     // P3
+                ]);
+                tess.add_wall(Wall.new_bezier(points, params.tube, 100, false, -15));
+                break;
         }
 
         tess.random_generators(params.count);
@@ -199,7 +209,7 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
 
-    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'dodecahedron', 'icosahedron', 'ellipsoid']).name('wall');
+    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier']).name('wall');
 
     const radiusCtrl = gui.add(params, 'radius', 5, 45).name('radius').onChange(initTessellation);
     const radiusACtrl = gui.add(params, 'radiusA', 5, 45).name('radius x').onChange(initTessellation);
@@ -211,7 +221,7 @@ export async function run(app: HTMLElement) {
 
     const updateVisibility = () => {
         const t = params.wallType;
-        if (t === 'trefoil' || t === 'ellipsoid') radiusCtrl.hide(); else radiusCtrl.show();
+        if (t === 'trefoil' || t === 'ellipsoid' || t === 'bezier') radiusCtrl.hide(); else radiusCtrl.show();
 
         if (t === 'ellipsoid') {
             radiusACtrl.show(); radiusBCtrl.show(); radiusCCtrl.show();
@@ -220,7 +230,7 @@ export async function run(app: HTMLElement) {
         }
 
         if (t === 'cylinder') heightCtrl.show(); else heightCtrl.hide();
-        if (t === 'torus' || t === 'trefoil') tubeCtrl.show(); else tubeCtrl.hide();
+        if (t === 'torus' || t === 'trefoil' || t === 'bezier') tubeCtrl.show(); else tubeCtrl.hide();
         if (t === 'trefoil') scaleCtrl.show(); else scaleCtrl.hide();
     };
 

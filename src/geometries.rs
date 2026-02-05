@@ -702,3 +702,105 @@ impl WallGeometry for ConvexPolyhedronGeometry {
         }
     }
 }
+
+/// A wall defined by a tube around a Bezier curve.
+///
+/// The valid region is inside the tube following the curve.
+#[derive(Debug)]
+pub struct BezierGeometry {
+    /// Sample points along the curve.
+    pub samples: Vec<[f64; 3]>,
+    /// The radius of the tube.
+    pub tube_radius: f64,
+    /// Whether the tube is closed (loops back to start).
+    pub closed: bool,
+}
+
+impl BezierGeometry {
+    /// Creates a new `BezierGeometry`.
+    ///
+    /// # Arguments
+    ///
+    /// * `control_points` - The control points of the Bezier curve.
+    /// * `tube_radius` - The radius of the tube.
+    /// * `resolution` - The number of segments to approximate the curve.
+    /// * `closed` - Whether the tube should be closed (looping).
+    pub fn new(control_points: Vec<[f64; 3]>, tube_radius: f64, resolution: usize, closed: bool) -> Self {
+        let mut samples = Vec::with_capacity(resolution + 1);
+        if !control_points.is_empty() {
+            for i in 0..=resolution {
+                let t = i as f64 / resolution as f64;
+                samples.push(Self::calculate_bezier_point(&control_points, t));
+            }
+        }
+        Self { samples, tube_radius, closed }
+    }
+
+    fn calculate_bezier_point(points: &[[f64; 3]], t: f64) -> [f64; 3] {
+        // De Casteljau's algorithm
+        let mut temp_points = points.to_vec();
+        let n = temp_points.len();
+        for k in 1..n {
+            for i in 0..(n - k) {
+                temp_points[i][0] = (1.0 - t) * temp_points[i][0] + t * temp_points[i + 1][0];
+                temp_points[i][1] = (1.0 - t) * temp_points[i][1] + t * temp_points[i + 1][1];
+                temp_points[i][2] = (1.0 - t) * temp_points[i][2] + t * temp_points[i + 1][2];
+            }
+        }
+        temp_points[0]
+    }
+
+    fn get_closest_point(&self, point: &[f64; 3]) -> [f64; 3] {
+        if self.samples.is_empty() {
+            return [0.0, 0.0, 0.0];
+        }
+        let mut min_dist_sq = f64::MAX;
+        let mut closest_pt = self.samples[0];
+        let n = self.samples.len();
+        
+        // Iterate over segments
+        let limit = if self.closed { n } else { n - 1 };
+        
+        for i in 0..limit {
+            let p0 = self.samples[i];
+            let p1 = self.samples[(i + 1) % n];
+            
+            let v = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+            let w = [point[0] - p0[0], point[1] - p0[1], point[2] - p0[2]];
+            
+            let c1 = w[0]*v[0] + w[1]*v[1] + w[2]*v[2];
+            let c2 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+            
+            let t = if c2 <= 0.0 { 0.0 } else { (c1 / c2).clamp(0.0, 1.0) };
+            
+            let proj = [p0[0] + v[0] * t, p0[1] + v[1] * t, p0[2] + v[2] * t];
+            let dx = point[0] - proj[0];
+            let dy = point[1] - proj[1];
+            let dz = point[2] - proj[2];
+            let d2 = dx*dx + dy*dy + dz*dz;
+            
+            if d2 < min_dist_sq {
+                min_dist_sq = d2;
+                closest_pt = proj;
+            }
+        }
+        closest_pt
+    }
+}
+
+impl WallGeometry for BezierGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        let closest = self.get_closest_point(point);
+        let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2) + (point[2] - closest[2]).powi(2);
+        dist_sq <= self.tube_radius.powi(2)
+    }
+
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        let closest = self.get_closest_point(generator);
+        let dist = ((generator[0] - closest[0]).powi(2) + (generator[1] - closest[1]).powi(2) + (generator[2] - closest[2]).powi(2)).sqrt();
+        if dist == 0.0 { return; }
+        let normal = [(generator[0] - closest[0]) / dist, (generator[1] - closest[1]) / dist, (generator[2] - closest[2]) / dist];
+        let surface_point = [closest[0] + normal[0] * self.tube_radius, closest[1] + normal[1] * self.tube_radius, closest[2] + normal[2] * self.tube_radius];
+        callback(surface_point, normal);
+    }
+}
