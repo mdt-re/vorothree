@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use js_sys::{Reflect, Function, Array};
-use crate::geometries::{PlaneGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, TorusGeometry, TrefoilKnotGeometry, ConvexPolyhedronGeometry, BezierGeometry};
+use crate::geometries::{PlaneGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, TorusGeometry, TrefoilKnotGeometry, ConvexPolyhedronGeometry, CubicBezierGeometry, CatmullRomGeometry};
 
 /// TypeScript constant definitions for wall IDs.
 #[wasm_bindgen(typescript_custom_section)]
@@ -132,14 +132,25 @@ impl Wall {
     }
 
     pub fn new_bezier(points: &[f64], radius: f64, resolution: usize, closed: bool, id: i32) -> Wall {
+        if points.len() != 12 {
+            panic!("Cubic Bezier curve requires exactly 4 control points (12 coordinates)");
+        }
+        let p0 = [points[0], points[1], points[2]];
+        let p1 = [points[3], points[4], points[5]];
+        let p2 = [points[6], points[7], points[8]];
+        let p3 = [points[9], points[10], points[11]];
+        Wall::new(id, Box::new(CubicBezierGeometry::new(p0, p1, p2, p3, radius, resolution, closed)))
+    }
+
+    pub fn new_catmull_rom(points: &[f64], radius: f64, resolution: usize, closed: bool, id: i32) -> Wall {
         if points.len() % 3 != 0 {
-            panic!("Bezier curve control points must be a multiple of 3 coordinates");
+            panic!("Catmull-Rom curve points must be a multiple of 3 coordinates");
         }
         let mut control_points = Vec::with_capacity(points.len() / 3);
         for i in (0..points.len()).step_by(3) {
             control_points.push([points[i], points[i+1], points[i+2]]);
         }
-        Wall::new(id, Box::new(BezierGeometry::new(control_points, radius, resolution, closed)))
+        Wall::new(id, Box::new(CatmullRomGeometry::new(control_points, radius, resolution, closed)))
     }
 }
 

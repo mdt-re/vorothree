@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import Stats from 'three/examples/jsm/libs/stats.module';
 import { Tessellation, BoundingBox } from 'vorothree';
 
 export async function run(app: HTMLElement) {
@@ -17,13 +18,22 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.fontFamily = 'monospace';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
-    resultsDiv.innerText = 'Ready';
+
+    const infoText = document.createElement('div');
+    infoText.innerText = 'Ready';
+    infoText.style.marginBottom = '10px';
+    resultsDiv.appendChild(infoText);
     app.appendChild(resultsDiv);
 
     const gui = new GUI({ container: app });
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+
+    const stats = new Stats();
+    stats.dom.style.position = 'static';
+    stats.dom.style.pointerEvents = 'auto';
+    resultsDiv.appendChild(stats.dom);
 
     const params = {
         count: 100,
@@ -33,7 +43,7 @@ export async function run(app: HTMLElement) {
             tess.relax();
             tess.calculate();
             const dt = performance.now() - t0;
-            resultsDiv.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
+            infoText.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
             updateMesh();
         },
         reset: () => resetGenerators()
@@ -98,7 +108,7 @@ export async function run(app: HTMLElement) {
         tess.set_generators(points);
         tess.calculate();
         updateMesh();
-        resultsDiv.innerText = 'Ready';
+        infoText.innerText = 'Ready';
     }
 
     function updateMesh() {
@@ -152,13 +162,15 @@ export async function run(app: HTMLElement) {
         if(!app.isConnected) return;
         requestAnimationFrame(animate);
 
+        stats.update();
+
         // Relax every 30 frames to visualize the steps
         if(params.autoRelax && frame % 30 === 0) {
             const t0 = performance.now();
             tess.relax();
             tess.calculate();
             const dt = performance.now() - t0;
-            resultsDiv.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
+            infoText.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
             updateMesh();
         }
 

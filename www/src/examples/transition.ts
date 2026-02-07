@@ -160,7 +160,7 @@ export async function run(app: HTMLElement) {
 
     // Inradius factors
     const xi_dodec = Math.sqrt((5 + 2 * Math.sqrt(5)) / 15);
-    const xi_ico = Math.sqrt((7 + 3 * Math.sqrt(5)) / 24);
+    const xi_ico = Math.sqrt((5 + 2 * Math.sqrt(5)) / 15);
 
     function animate() {
         if (!app.isConnected) return;

@@ -3,6 +3,7 @@ import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import { Tessellation, BoundingBox, Wall } from 'vorothree';
+import RAPIER from '@dimforge/rapier3d-compat';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = '';
@@ -35,11 +36,14 @@ export async function run(app: HTMLElement) {
     resultsDiv.appendChild(stats.dom);
 
     const params = {
-        count: 1000,
+        count: 400,
         speed: 1.5,
         radius: 12,
         opacity: 0.6,
-        wireframe: false
+        wireframe: false,
+        particleRadius: 4.0,
+        showCells: true,
+        showParticles: true
     };
 
     // --- Three.js Setup ---
@@ -74,10 +78,8 @@ export async function run(app: HTMLElement) {
     pointLight.position.set(0, 20, 0);
     scene.add(pointLight);
 
-    // --- Vorothree Setup ---
-    const boxSize = 150;
-
     // --- Curve Definition ---
+    const boxSize = 150;
     const points: THREE.Vector3[] = [];
     const turns = 3;
     const helixRadius = 40;
@@ -87,6 +89,12 @@ export async function run(app: HTMLElement) {
     // Basis for helix
     const axis = new THREE.Vector3().subVectors(end, start);
     const axisNorm = axis.clone().normalize();
+    const axisLenSq = axis.lengthSq();
+
+    // --- Rapier Setup ---
+    await RAPIER.init();
+    const gravity = { x: axisNorm.x * 9.81, y: axisNorm.y * 9.81, z: axisNorm.z * 9.81 };
+    const world = new RAPIER.World(gravity);
 
     // Arbitrary vector not parallel to axis
     const tmpVec = new THREE.Vector3(0, 1, 0);
@@ -108,115 +116,95 @@ export async function run(app: HTMLElement) {
     }
     const curve = new THREE.CatmullRomCurve3(points);
 
+    // --- Physics Boundaries (Tube) ---
+    // Create a static mesh collider for the tube
+    const tubeGeo = new THREE.TubeGeometry(curve, 64, params.radius, 8, false);
+    
+    // Extract vertices and indices for Rapier
+    const tubeVerts = new Float32Array(tubeGeo.attributes.position.array);
+    const tubeIndices = new Uint32Array(tubeGeo.index!.array);
+    
+    const wallBodyDesc = RAPIER.RigidBodyDesc.fixed();
+    const wallBody = world.createRigidBody(wallBodyDesc);
+    // Trimesh collider for the tube walls
+    const wallColliderDesc = RAPIER.ColliderDesc.trimesh(tubeVerts, tubeIndices);
+    world.createCollider(wallColliderDesc, wallBody);
+
+    // --- Vorothree Setup ---
     const bounds = new BoundingBox(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
     const tess = new Tessellation(bounds, 15, 15, 15);
 
-    // --- 3D Grid ---
-    const gridVertices: number[] = [];
-    const step = 30;
-    const half = boxSize / 2;
-    for (let i = -half; i <= half; i += step) {
-        for (let j = -half; j <= half; j += step) {
-            gridVertices.push(-half, i, j, half, i, j);
-            gridVertices.push(i, -half, j, i, half, j);
-            gridVertices.push(i, j, -half, i, j, half);
-        }
-    }
-    const gridGeo = new THREE.BufferGeometry();
-    gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
-    const gridMat = new THREE.LineBasicMaterial({ color: 0x888888, transparent: true, opacity: 0.15 });
-    scene.add(new THREE.LineSegments(gridGeo, gridMat));
-
-    // Add the Catmull-Rom Tube Wall
+    // Add Vorothree Wall (for clipping cells)
     const wallPoints = new Float64Array(points.length * 3);
     for (let i = 0; i < points.length; i++) {
         wallPoints[i * 3] = points[i].x;
         wallPoints[i * 3 + 1] = points[i].y;
         wallPoints[i * 3 + 2] = points[i].z;
     }
-    
-    // We'll update the wall if radius changes, so we keep a reference to the ID
     const WALL_ID = -10;
     // @ts-ignore
     tess.add_wall(Wall.new_catmull_rom(wallPoints, params.radius, 200, false, WALL_ID));
 
-    // --- Particle System ---
+    // --- Particles ---
+    const bodies: RAPIER.RigidBody[] = [];
     let generators = new Float64Array(params.count * 3);
-    
-    // Particle state
-    interface Particle {
-        t: number;      // Position along curve (0..1)
-        r: number;      // Radial offset
-        theta: number;  // Angular offset
-        speed: number;  // Individual speed variance
-        hue: number;
+
+    // --- Particle Visualization (Spheres) ---
+    const particleGeo = new THREE.SphereGeometry(1, 16, 16);
+    const particleMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.4, metalness: 0.1 });
+    let particleMesh: THREE.InstancedMesh;
+    const dummy = new THREE.Object3D();
+
+    function initParticleMesh() {
+        if (particleMesh) {
+            scene.remove(particleMesh);
+            particleMesh.dispose();
+        }
+        particleMesh = new THREE.InstancedMesh(particleGeo, particleMat, params.count);
+        particleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        particleMesh.visible = params.showParticles;
+        scene.add(particleMesh);
     }
-    let particles: Particle[] = [];
-    let currentPhase = 0;
+    
+    function spawnParticle(t: number) {
+        const pos = curve.getPointAt(t);
+        // Random offset inside radius
+        const r = Math.sqrt(Math.random()) * (params.radius - params.particleRadius * 1.5);
+        const theta = Math.random() * Math.PI * 2;
+        
+        // Local frame at t
+        const tangent = curve.getTangentAt(t);
+        let normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0,1,0)).normalize();
+        if (normal.lengthSq() < 0.1) normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(1,0,0)).normalize();
+        const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+        
+        pos.addScaledVector(normal, r * Math.cos(theta));
+        pos.addScaledVector(binormal, r * Math.sin(theta));
+
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(pos.x, pos.y, pos.z)
+            .setLinearDamping(0.5); // Damping to stabilize flow
+        const body = world.createRigidBody(bodyDesc);
+        const colliderDesc = RAPIER.ColliderDesc.ball(params.particleRadius)
+            .setRestitution(0.5)
+            .setFriction(0.0); // Low friction for flow
+        world.createCollider(colliderDesc, body);
+        
+        return body;
+    }
 
     function initParticles() {
+        // Clear existing
+        for(const b of bodies) world.removeRigidBody(b);
+        bodies.length = 0;
         generators = new Float64Array(params.count * 3);
-        particles = [];
-        currentPhase = 0;
-        
+
+        initParticleMesh();
+
         for(let i = 0; i < params.count; i++) {
-            const t = Math.random();
-            particles.push({
-                t: t,
-                r: Math.sqrt(Math.random()) * (params.radius * 0.9), // Keep slightly inside
-                theta: Math.random() * Math.PI * 2,
-                speed: 0.9 + Math.random() * 0.1,
-                hue: (t < 0.5 ? t * 2 : (1 - t) * 2)
-            });
+            // Spread initial positions
+            bodies.push(spawnParticle(Math.random()));
         }
-        updateGenerators(0);
-    }
-
-    function updateGenerators(dt: number) {
-        const up = new THREE.Vector3(0, 1, 0);
-
-        // Update phase for rainbow effect
-        // Average speed factor is 0.75 (0.5 + 0.5/2)
-        const avgSpeed = params.speed * 0.75 * 0.1;
-        currentPhase -= dt * avgSpeed;
-        if (currentPhase < 0) currentPhase += 1;
-        
-        for(let i = 0; i < params.count; i++) {
-            const p = particles[i];
-            
-            // Advance particle
-            p.t += dt * params.speed * p.speed * 0.1;
-            if (p.t > 1.0) {
-                p.t -= 1.0;
-                p.hue = (currentPhase < 0.5 ? currentPhase * 2 : (1 - currentPhase) * 2);
-            }
-
-            // Calculate position on curve
-            const pos = curve.getPointAt(p.t);
-            const tangent = curve.getTangentAt(p.t);
-
-            // Calculate local frame (Normal and Binormal)
-            // N = T x Up (or Forward if T is Up)
-            let normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
-            if (normal.lengthSq() < 0.001) {
-                normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 0, 1)).normalize();
-            }
-            const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
-
-            // Apply radial offset
-            // P_final = P_curve + N * (r cos theta) + B * (r sin theta)
-            const r = p.r * (params.radius / 12); // Scale r if radius param changes (base 12)
-            
-            const offsetX = normal.x * r * Math.cos(p.theta) + binormal.x * r * Math.sin(p.theta);
-            const offsetY = normal.y * r * Math.cos(p.theta) + binormal.y * r * Math.sin(p.theta);
-            const offsetZ = normal.z * r * Math.cos(p.theta) + binormal.z * r * Math.sin(p.theta);
-
-            generators[i*3] = pos.x + offsetX;
-            generators[i*3+1] = pos.y + offsetY;
-            generators[i*3+2] = pos.z + offsetZ;
-        }
-
-        tess.set_generators(generators);
     }
 
     initParticles();
@@ -235,6 +223,11 @@ export async function run(app: HTMLElement) {
 
     const geometryGroup = new THREE.Group();
     scene.add(geometryGroup);
+
+    // Debug: Wireframe of tube
+    const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
+    const wireframeMesh = new THREE.Mesh(tubeGeo, wireframeMat);
+    scene.add(wireframeMesh);
 
     function updateVisualization() {
         // Clear previous
@@ -259,8 +252,16 @@ export async function run(app: HTMLElement) {
 
             volumes.push(cell.volume());
 
-            if (cell.id >= 0 && cell.id < particles.length) {
-                const hue = particles[cell.id].hue;
+            // Color based on position along curve
+            if (cell.id >= 0 && cell.id < bodies.length) {
+                const body = bodies[cell.id];
+                const pos = body.translation();
+                const v = new THREE.Vector3(pos.x, pos.y, pos.z).sub(start);
+                let t = v.dot(axis) / axisLenSq;
+                t = Math.max(0, Math.min(1, t));
+                
+                // Rainbow effect
+                const hue = (t < 0.5 ? t * 2 : (1 - t) * 2);
                 color.setHSL(hue, 1.0, 0.5);
             } else {
                 color.setHex(0xffffff);
@@ -299,23 +300,77 @@ export async function run(app: HTMLElement) {
         geometryGroup.add(mesh);
     }
 
-    gui.add(params, 'count', 100, 3000, 100).onChange(initParticles);
+    // GUI
+    gui.add(params, 'count', 50, 800, 10).onChange(initParticles);
     gui.add(params, 'speed', 0, 5);
-    gui.add(params, 'radius', 5, 25).onChange(() => {
-        tess.clear_walls();
-        // @ts-ignore
-        tess.add_wall(Wall.new_catmull_rom(wallPoints, params.radius, 200, false, WALL_ID));
-    });
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
     gui.add(material, 'wireframe');
+    gui.add(params, 'showCells').name('Show Cells').onChange((v: boolean) => geometryGroup.visible = v);
+    gui.add(params, 'showParticles').name('Show Particles').onChange((v: boolean) => { if(particleMesh) particleMesh.visible = v; });
 
     function animate() {
         if (!app.isConnected) return;
         requestAnimationFrame(animate);
 
         stats.update();
-        
-        updateGenerators(0.016); // Fixed dt for smoothness
+
+        // Remove bodies outside bounds
+        const halfBox = boxSize / 2;
+        for (let i = bodies.length - 1; i >= 0; i--) {
+            const body = bodies[i];
+            const pos = body.translation();
+            if (Math.abs(pos.x) > halfBox || Math.abs(pos.y) > halfBox || Math.abs(pos.z) > halfBox) {
+                world.removeRigidBody(body);
+                bodies.splice(i, 1);
+            }
+        }
+
+        // Physics Step
+        // Apply forces to drive flow along the curve
+        for (let i = 0; i < bodies.length; i++) {
+            const body = bodies[i];
+            const pos = body.translation();
+            const p = new THREE.Vector3(pos.x, pos.y, pos.z);
+            
+            // Estimate t based on projection onto helix axis
+            const v = new THREE.Vector3().subVectors(p, start);
+            let t = v.dot(axis) / axisLenSq;
+            
+            // Force along tangent
+            t = Math.max(0, Math.min(1, t));
+            const tangent = curve.getTangentAt(t);
+            
+            // Apply impulse to drive flow
+            const forceMag = params.speed * 160.0;
+            body.applyImpulse(tangent.multiplyScalar(forceMag * 0.016), true);
+        }
+
+        world.step();
+
+        // Update generators and visualization
+        if (generators.length !== bodies.length * 3) {
+            generators = new Float64Array(bodies.length * 3);
+        }
+        particleMesh.count = bodies.length;
+
+        for (let i = 0; i < bodies.length; i++) {
+            const body = bodies[i];
+            const pos = body.translation();
+
+            // Update particle mesh
+            dummy.position.set(pos.x, pos.y, pos.z);
+            dummy.scale.setScalar(params.particleRadius);
+            dummy.updateMatrix();
+            particleMesh.setMatrixAt(i, dummy.matrix);
+
+            // Update generator for Voronoi
+            generators[i*3] = pos.x;
+            generators[i*3+1] = pos.y;
+            generators[i*3+2] = pos.z;
+        }
+        particleMesh.instanceMatrix.needsUpdate = true;
+
+        tess.set_generators(generators);
         tess.calculate();
         updateVisualization();
 

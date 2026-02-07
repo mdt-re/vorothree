@@ -631,8 +631,8 @@ impl ConvexPolyhedronGeometry {
     /// * `radius` - The circumradius of the icosahedron.
     pub fn new_icosahedron(center: [f64; 3], radius: f64) -> Self {
         let phi = (1.0 + 5.0f64.sqrt()) / 2.0;
-        // Ratio of inradius to circumradius for Icosahedron: sqrt((7 + 3*sqrt(5)) / 24)
-        let xi = ((7.0 + 3.0 * 5.0f64.sqrt()) / 24.0).sqrt();
+        // Ratio of inradius to circumradius for Icosahedron: sqrt((5 + 2*sqrt(5)) / 15)
+        let xi = ((5.0 + 2.0 * 5.0f64.sqrt()) / 15.0).sqrt();
         let dist = radius * xi;
 
         // Normals are vertices of a Dodecahedron
@@ -703,11 +703,11 @@ impl WallGeometry for ConvexPolyhedronGeometry {
     }
 }
 
-/// A wall defined by a tube around a Bezier curve.
+/// A wall defined by a tube around a Cubic Bezier curve.
 ///
 /// The valid region is inside the tube following the curve.
 #[derive(Debug)]
-pub struct BezierGeometry {
+pub struct CubicBezierGeometry {
     /// Sample points along the curve.
     pub samples: Vec<[f64; 3]>,
     /// The radius of the tube.
@@ -716,38 +716,39 @@ pub struct BezierGeometry {
     pub closed: bool,
 }
 
-impl BezierGeometry {
-    /// Creates a new `BezierGeometry`.
+impl CubicBezierGeometry {
+    /// Creates a new `CubicBezierGeometry`.
     ///
     /// # Arguments
     ///
-    /// * `control_points` - The control points of the Bezier curve.
+    /// * `p0` - The start point.
+    /// * `p1` - The first control point.
+    /// * `p2` - The second control point.
+    /// * `p3` - The end point.
     /// * `tube_radius` - The radius of the tube.
     /// * `resolution` - The number of segments to approximate the curve.
     /// * `closed` - Whether the tube should be closed (looping).
-    pub fn new(control_points: Vec<[f64; 3]>, tube_radius: f64, resolution: usize, closed: bool) -> Self {
+    pub fn new(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3], tube_radius: f64, resolution: usize, closed: bool) -> Self {
         let mut samples = Vec::with_capacity(resolution + 1);
-        if !control_points.is_empty() {
-            for i in 0..=resolution {
-                let t = i as f64 / resolution as f64;
-                samples.push(Self::calculate_bezier_point(&control_points, t));
-            }
+        for i in 0..=resolution {
+            let t = i as f64 / resolution as f64;
+            samples.push(Self::calculate_cubic_bezier_point(p0, p1, p2, p3, t));
         }
         Self { samples, tube_radius, closed }
     }
 
-    fn calculate_bezier_point(points: &[[f64; 3]], t: f64) -> [f64; 3] {
-        // De Casteljau's algorithm
-        let mut temp_points = points.to_vec();
-        let n = temp_points.len();
-        for k in 1..n {
-            for i in 0..(n - k) {
-                temp_points[i][0] = (1.0 - t) * temp_points[i][0] + t * temp_points[i + 1][0];
-                temp_points[i][1] = (1.0 - t) * temp_points[i][1] + t * temp_points[i + 1][1];
-                temp_points[i][2] = (1.0 - t) * temp_points[i][2] + t * temp_points[i + 1][2];
-            }
-        }
-        temp_points[0]
+    fn calculate_cubic_bezier_point(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3], t: f64) -> [f64; 3] {
+        let t2 = t * t;
+        let t3 = t2 * t;
+        let mt = 1.0 - t;
+        let mt2 = mt * mt;
+        let mt3 = mt2 * mt;
+
+        [
+            mt3 * p0[0] + 3.0 * mt2 * t * p1[0] + 3.0 * mt * t2 * p2[0] + t3 * p3[0],
+            mt3 * p0[1] + 3.0 * mt2 * t * p1[1] + 3.0 * mt * t2 * p2[1] + t3 * p3[1],
+            mt3 * p0[2] + 3.0 * mt2 * t * p1[2] + 3.0 * mt * t2 * p2[2] + t3 * p3[2],
+        ]
     }
 
     fn get_closest_point(&self, point: &[f64; 3]) -> [f64; 3] {
@@ -788,7 +789,7 @@ impl BezierGeometry {
     }
 }
 
-impl WallGeometry for BezierGeometry {
+impl WallGeometry for CubicBezierGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let closest = self.get_closest_point(point);
         let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2) + (point[2] - closest[2]).powi(2);
@@ -803,4 +804,184 @@ impl WallGeometry for BezierGeometry {
         let surface_point = [closest[0] + normal[0] * self.tube_radius, closest[1] + normal[1] * self.tube_radius, closest[2] + normal[2] * self.tube_radius];
         callback(surface_point, normal);
     }
+}
+
+/// A wall defined by a tube around a Catmull-Rom spline.
+///
+/// The valid region is inside the tube following the curve.
+#[derive(Debug)]
+pub struct CatmullRomGeometry {
+    /// Sample points along the curve.
+    pub samples: Vec<[f64; 3]>,
+    /// The radius of the tube.
+    pub tube_radius: f64,
+    /// Whether the tube is closed (loops back to start).
+    pub closed: bool,
+}
+
+impl CatmullRomGeometry {
+    pub fn new(points: Vec<[f64; 3]>, tube_radius: f64, resolution: usize, closed: bool) -> Self {
+        let mut samples = Vec::with_capacity(resolution + 1);
+        if points.len() >= 2 {
+            for i in 0..=resolution {
+                let t = i as f64 / resolution as f64;
+                samples.push(Self::get_point(t, &points, closed));
+            }
+        }
+        Self { samples, tube_radius, closed }
+    }
+
+    fn get_point(t: f64, points: &[[f64; 3]], closed: bool) -> [f64; 3] {
+        let l = points.len();
+        let p = (l as f64 - if closed { 0.0 } else { 1.0 }) * t;
+        let mut int_point = p.floor() as isize;
+        let weight = p - int_point as f64;
+
+        if closed {
+            if int_point > 0 {
+                 int_point += 0;
+            } else {
+                 int_point += (int_point.abs() / l as isize + 1) * l as isize;
+            }
+        } else if weight == 0.0 && int_point == l as isize - 1 {
+            int_point = l as isize - 2;
+        }
+
+        let p0;
+        let p1;
+        let p2;
+        let p3;
+
+        if closed || int_point > 0 {
+             p0 = points[( (int_point - 1) % l as isize + l as isize) as usize % l];
+        } else {
+             p0 = [
+                 points[0][0] - (points[1][0] - points[0][0]),
+                 points[0][1] - (points[1][1] - points[0][1]),
+                 points[0][2] - (points[1][2] - points[0][2]),
+             ];
+        }
+
+        p1 = points[int_point as usize % l];
+        p2 = points[(int_point + 1) as usize % l];
+
+        if closed || int_point + 2 < l as isize {
+            p3 = points[(int_point + 2) as usize % l];
+        } else {
+            let last = points[l-1];
+            let prev = points[l-2];
+            p3 = [
+                last[0] - (prev[0] - last[0]),
+                last[1] - (prev[1] - last[1]),
+                last[2] - (prev[2] - last[2]),
+            ];
+        }
+
+        let pow = 0.25;
+        let mut dt0 = dist_sq(p0, p1).powf(pow);
+        let mut dt1 = dist_sq(p1, p2).powf(pow);
+        let mut dt2 = dist_sq(p2, p3).powf(pow);
+
+        if dt1 < 1e-4 { dt1 = 1.0; }
+        if dt0 < 1e-4 { dt0 = dt1; }
+        if dt2 < 1e-4 { dt2 = dt1; }
+
+        let px = init_nonuniform_catmull_rom(p0[0], p1[0], p2[0], p3[0], dt0, dt1, dt2);
+        let py = init_nonuniform_catmull_rom(p0[1], p1[1], p2[1], p3[1], dt0, dt1, dt2);
+        let pz = init_nonuniform_catmull_rom(p0[2], p1[2], p2[2], p3[2], dt0, dt1, dt2);
+
+        [
+            px.calc(weight),
+            py.calc(weight),
+            pz.calc(weight),
+        ]
+    }
+
+    fn get_closest_point(&self, point: &[f64; 3]) -> [f64; 3] {
+        if self.samples.is_empty() {
+            return [0.0, 0.0, 0.0];
+        }
+        let mut min_dist_sq = f64::MAX;
+        let mut closest_pt = self.samples[0];
+        let n = self.samples.len();
+        
+        // Iterate over segments
+        let limit = if self.closed { n } else { n - 1 };
+        
+        for i in 0..limit {
+            let p0 = self.samples[i];
+            let p1 = self.samples[(i + 1) % n];
+            
+            let v = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+            let w = [point[0] - p0[0], point[1] - p0[1], point[2] - p0[2]];
+            
+            let c1 = w[0]*v[0] + w[1]*v[1] + w[2]*v[2];
+            let c2 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+            
+            let t = if c2 <= 0.0 { 0.0 } else { (c1 / c2).clamp(0.0, 1.0) };
+            
+            let proj = [p0[0] + v[0] * t, p0[1] + v[1] * t, p0[2] + v[2] * t];
+            let dx = point[0] - proj[0];
+            let dy = point[1] - proj[1];
+            let dz = point[2] - proj[2];
+            let d2 = dx*dx + dy*dy + dz*dz;
+            
+            if d2 < min_dist_sq {
+                min_dist_sq = d2;
+                closest_pt = proj;
+            }
+        }
+        closest_pt
+    }
+}
+
+impl WallGeometry for CatmullRomGeometry {
+    fn contains(&self, point: &[f64; 3]) -> bool {
+        let closest = self.get_closest_point(point);
+        let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2) + (point[2] - closest[2]).powi(2);
+        dist_sq <= self.tube_radius.powi(2)
+    }
+
+    fn cut(&self, generator: &[f64; 3], callback: &mut dyn FnMut([f64; 3], [f64; 3])) {
+        let closest = self.get_closest_point(generator);
+        let dist = ((generator[0] - closest[0]).powi(2) + (generator[1] - closest[1]).powi(2) + (generator[2] - closest[2]).powi(2)).sqrt();
+        if dist == 0.0 { return; }
+        let normal = [(generator[0] - closest[0]) / dist, (generator[1] - closest[1]) / dist, (generator[2] - closest[2]) / dist];
+        let surface_point = [closest[0] + normal[0] * self.tube_radius, closest[1] + normal[1] * self.tube_radius, closest[2] + normal[2] * self.tube_radius];
+        callback(surface_point, normal);
+    }
+}
+
+fn dist_sq(a: [f64; 3], b: [f64; 3]) -> f64 {
+    let dx = a[0] - b[0];
+    let dy = a[1] - b[1];
+    let dz = a[2] - b[2];
+    dx * dx + dy * dy + dz * dz
+}
+
+struct CubicPoly {
+    c0: f64, c1: f64, c2: f64, c3: f64
+}
+
+impl CubicPoly {
+    fn calc(&self, t: f64) -> f64 {
+        let t2 = t * t;
+        let t3 = t2 * t;
+        self.c0 + self.c1 * t + self.c2 * t2 + self.c3 * t3
+    }
+}
+
+fn init_nonuniform_catmull_rom(x0: f64, x1: f64, x2: f64, x3: f64, dt0: f64, dt1: f64, dt2: f64) -> CubicPoly {
+    let mut t1 = (x1 - x0) / dt0 - (x2 - x0) / (dt0 + dt1) + (x2 - x1) / dt1;
+    let mut t2 = (x2 - x1) / dt1 - (x3 - x1) / (dt1 + dt2) + (x3 - x2) / dt2;
+
+    t1 *= dt1;
+    t2 *= dt1;
+
+    let c0 = x1;
+    let c1 = t1;
+    let c2 = -3.0 * x1 + 3.0 * x2 - 2.0 * t1 - t2;
+    let c3 = 2.0 * x1 - 2.0 * x2 + t1 + t2;
+
+    CubicPoly { c0, c1, c2, c3 }
 }

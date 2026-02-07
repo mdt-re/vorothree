@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import Stats from 'three/examples/jsm/libs/stats.module';
 import { Tessellation, BoundingBox, Wall } from 'vorothree';
 
 export async function run(app: HTMLElement) {
@@ -11,6 +12,28 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
 
+    // --- UI for Results ---
+    const resultsDiv = document.createElement('div');
+    resultsDiv.style.position = 'absolute';
+    resultsDiv.style.bottom = '10px';
+    resultsDiv.style.right = '10px';
+    resultsDiv.style.color = 'white';
+    resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    resultsDiv.style.padding = '10px';
+    resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.pointerEvents = 'none';
+    resultsDiv.style.userSelect = 'none';
+
+    const infoText = document.createElement('div');
+    infoText.style.marginBottom = '10px';
+    resultsDiv.appendChild(infoText);
+    app.appendChild(resultsDiv);
+
+    const stats = new Stats();
+    stats.dom.style.position = 'static';
+    stats.dom.style.pointerEvents = 'auto';
+    resultsDiv.appendChild(stats.dom);
+
     const params = {
         wallType: 'sphere',
         radius: 40.0,
@@ -19,7 +42,7 @@ export async function run(app: HTMLElement) {
         radiusC: 20.0,
         height: 60.0,
         tube: 10.0,
-        scale: 12.0,
+        scale: 15.0,
         count: 2000,
         opacity: 0.3,
     };
@@ -72,6 +95,18 @@ export async function run(app: HTMLElement) {
                 break;
             case 'trefoil':
                 tess.add_wall(Wall.new_trefoil(0.0, 0.0, 0.0, params.scale, params.tube, 200, -15));
+                break;
+            case 'tetrahedron':
+                // @ts-ignore
+                tess.add_wall(Wall.new_tetrahedron(0.0, 0.0, 0.0, params.radius, -15));
+                break;
+            case 'hexahedron':
+                // @ts-ignore
+                tess.add_wall(Wall.new_hexahedron(0.0, 0.0, 0.0, params.radius, -15));
+                break;
+            case 'octahedron':
+                // @ts-ignore
+                tess.add_wall(Wall.new_octahedron(0.0, 0.0, 0.0, params.radius, -15));
                 break;
             case 'dodecahedron':
                 // @ts-ignore
@@ -141,6 +176,72 @@ export async function run(app: HTMLElement) {
         updateVisualization();
     }
 
+    function getExpectedVolume() {
+        const p = params;
+        switch (p.wallType) {
+            case 'sphere':
+                return (4/3) * Math.PI * Math.pow(p.radius, 3);
+            case 'cylinder':
+                // Infinite cylinder clipped by 100x100x100 box
+                return Math.PI * Math.pow(p.radius, 2) * 100;
+            case 'torus':
+                return 2 * Math.pow(Math.PI, 2) * p.radius * Math.pow(p.tube, 2);
+            case 'tetrahedron':
+                return (8 / (9 * Math.sqrt(3))) * Math.pow(p.radius, 3);
+            case 'hexahedron':
+                return (8 / (3 * Math.sqrt(3))) * Math.pow(p.radius, 3);
+            case 'octahedron':
+                return (4 / 3) * Math.pow(p.radius, 3);
+            case 'ellipsoid':
+                return (4/3) * Math.PI * p.radiusA * p.radiusB * p.radiusC;
+            case 'dodecahedron':
+                const a_d = (4 * p.radius) / (Math.sqrt(3) * (1 + Math.sqrt(5)));
+                return ((15 + 7 * Math.sqrt(5)) / 4) * Math.pow(a_d, 3);
+            case 'icosahedron':
+                const a_i = (4 * p.radius) / Math.sqrt(10 + 2 * Math.sqrt(5));
+                return (5 * (3 + Math.sqrt(5)) / 12) * Math.pow(a_i, 3);
+            case 'trefoil':
+                return calculateTrefoilLength(p.scale) * Math.PI * Math.pow(p.tube, 2);
+            case 'bezier':
+                return calculateBezierLength(p.radius) * Math.PI * Math.pow(p.tube, 2);
+        }
+        return 0;
+    }
+
+    function calculateTrefoilLength(scale: number) {
+        const steps = 10000;
+        let len = 0;
+        const dt = (2 * Math.PI) / steps;
+        for(let i=0; i<steps; i++) {
+            const t = i * dt;
+            const dx = Math.cos(t) + 4 * Math.cos(2*t);
+            const dy = -Math.sin(t) + 4 * Math.sin(2*t);
+            const dz = -3 * Math.cos(3*t);
+            len += Math.sqrt(dx*dx + dy*dy + dz*dz) * dt;
+        }
+        return len * scale;
+    }
+
+    function calculateBezierLength(r: number) {
+        const p0 = new THREE.Vector3(-r, -r, -r);
+        const p1 = new THREE.Vector3(-r/2, r, 0);
+        const p2 = new THREE.Vector3(r/2, -r, 0);
+        const p3 = new THREE.Vector3(r, r, r);
+        const v0 = new THREE.Vector3().subVectors(p1, p0);
+        const v1 = new THREE.Vector3().subVectors(p2, p1);
+        const v2 = new THREE.Vector3().subVectors(p3, p2);
+        const steps = 100;
+        let len = 0;
+        const dt = 1.0 / steps;
+        for(let i=0; i<steps; i++) {
+            const t = i * dt;
+            const mt = 1-t;
+            const d = new THREE.Vector3().addScaledVector(v0, 3*mt*mt).addScaledVector(v1, 6*mt*t).addScaledVector(v2, 3*t*t);
+            len += d.length() * dt;
+        }
+        return len;
+    }
+
     // --- Visualization ---
     
     // 2. Create Meshes for Cells
@@ -166,10 +267,13 @@ export async function run(app: HTMLElement) {
         }
 
         const cellCount = tess.count_cells;
+        let totalVolume = 0;
 
         for (let i = 0; i < cellCount; i++) {
             const cell = tess.get(i);
             if (!cell) continue;
+
+            totalVolume += cell.volume();
 
             const vertices = cell.vertices;
             const faces = cell.faces();
@@ -202,6 +306,10 @@ export async function run(app: HTMLElement) {
             const mesh = new THREE.Mesh(geometry, material);
             geometryGroup.add(mesh);
         }
+
+        const expected = getExpectedVolume();
+        const deviation = expected > 0 ? ((totalVolume - expected) / expected) * 100 : 0;
+        infoText.innerText = `total volume: ${totalVolume.toFixed(2)}\nexpected volume:  ${expected.toFixed(2)}\ndeviation: ${deviation.toFixed(2)}%`;
     }
 
     initTessellation();
@@ -209,7 +317,7 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
 
-    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier']).name('wall');
+    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier']).name('wall');
 
     const radiusCtrl = gui.add(params, 'radius', 5, 45).name('radius').onChange(initTessellation);
     const radiusACtrl = gui.add(params, 'radiusA', 5, 45).name('radius x').onChange(initTessellation);
@@ -217,7 +325,7 @@ export async function run(app: HTMLElement) {
     const radiusCCtrl = gui.add(params, 'radiusC', 5, 45).name('radius z').onChange(initTessellation);
     const heightCtrl = gui.add(params, 'height', 10, 100).name('height').onChange(initTessellation);
     const tubeCtrl = gui.add(params, 'tube', 1, 20).name('radius tube').onChange(initTessellation);
-    const scaleCtrl = gui.add(params, 'scale', 1, 20).name('scale').onChange(initTessellation);
+    const scaleCtrl = gui.add(params, 'scale', 5, 20).name('scale').onChange(initTessellation);
 
     const updateVisibility = () => {
         const t = params.wallType;
@@ -244,6 +352,7 @@ export async function run(app: HTMLElement) {
     function animate() {
         if (!app.isConnected) return;
         requestAnimationFrame(animate);
+        stats.update();
         controls.update();
         renderer.render(scene, camera);
     }

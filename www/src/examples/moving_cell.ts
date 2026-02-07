@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import Stats from 'three/examples/jsm/libs/stats.module';
 import { Tessellation, BoundingBox } from 'vorothree';
 
 export async function run(app: HTMLElement) {
@@ -10,6 +11,28 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+
+    // --- UI for Results ---
+    const resultsDiv = document.createElement('div');
+    resultsDiv.style.position = 'absolute';
+    resultsDiv.style.bottom = '10px';
+    resultsDiv.style.right = '10px';
+    resultsDiv.style.color = 'white';
+    resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    resultsDiv.style.padding = '10px';
+    resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.pointerEvents = 'none';
+    resultsDiv.style.userSelect = 'none';
+
+    const infoText = document.createElement('div');
+    infoText.style.marginBottom = '10px';
+    resultsDiv.appendChild(infoText);
+    app.appendChild(resultsDiv);
+
+    const stats = new Stats();
+    stats.dom.style.position = 'static';
+    stats.dom.style.pointerEvents = 'auto';
+    resultsDiv.appendChild(stats.dom);
 
     const params = {
         count: 50,
@@ -116,6 +139,9 @@ export async function run(app: HTMLElement) {
 
         const cellCount = tess.count_cells;
         
+        let movingVolume = 0;
+        let otherVolume = 0;
+
         for (let i = 0; i < cellCount; i++) {
             const cell = tess.get(i);
             if (!cell) continue;
@@ -123,6 +149,13 @@ export async function run(app: HTMLElement) {
             // Identify if this is the moving cell.
             // The moving point is at index `params.count`.
             const isMoving = cell.id === params.count;
+            const vol = cell.volume();
+
+            if (isMoving) {
+                movingVolume = vol;
+            } else {
+                otherVolume += vol;
+            }
 
             const vertices = cell.vertices;
             const faces = cell.faces();
@@ -152,6 +185,9 @@ export async function run(app: HTMLElement) {
             const mesh = new THREE.Mesh(geometry, isMoving ? movingMaterial : material);
             geometryGroup.add(mesh);
         }
+
+        const totalVolume = movingVolume + otherVolume;
+        infoText.innerText = `Moving Vol: ${movingVolume.toFixed(2)}\nOther Vol:  ${otherVolume.toFixed(2)}\nTotal Vol:  ${totalVolume.toFixed(2)}`;
     }
 
     gui.add(params, 'count', 10, 200, 10).name('Static Points').onChange(initPoints);
@@ -161,6 +197,8 @@ export async function run(app: HTMLElement) {
     function animate() {
         if (!app.isConnected) return;
         requestAnimationFrame(animate);
+
+        stats.update();
 
         const time = performance.now() * 0.001 * params.speed;
         
