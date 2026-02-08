@@ -17,7 +17,7 @@ export async function run(app: HTMLElement) {
     const resultsDiv = document.createElement('div');
     resultsDiv.style.position = 'absolute';
     resultsDiv.style.bottom = '10px';
-    resultsDiv.style.left = '10px';
+    resultsDiv.style.right = '10px';
     resultsDiv.style.textAlign = 'left';
     resultsDiv.style.color = 'white';
     resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
@@ -38,6 +38,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.appendChild(stats.dom);
 
     const params = {
+        geometry: 'helix',
         count: 400,
         speed: 1.5,
         radius: 12,
@@ -80,7 +81,7 @@ export async function run(app: HTMLElement) {
     scene.add(pointLight);
 
     // --- Curve Definition ---
-    const boxSize = 150;
+    let boxSize = 150;
     const points: THREE.Vector3[] = [];
     const turns = 3;
     const helixRadius = 40;
@@ -94,8 +95,8 @@ export async function run(app: HTMLElement) {
 
     // --- Rapier Setup ---
     await RAPIER.init();
-    const gravity = { x: axisNorm.x * 9.81, y: axisNorm.y * 9.81, z: axisNorm.z * 9.81 };
-    const world = new RAPIER.World(gravity);
+    let gravity = { x: axisNorm.x * 9.81, y: axisNorm.y * 9.81, z: axisNorm.z * 9.81 };
+    let world = new RAPIER.World(gravity);
 
     // Arbitrary vector not parallel to axis
     const tmpVec = new THREE.Vector3(0, 1, 0);
@@ -115,36 +116,14 @@ export async function run(app: HTMLElement) {
         pos.add(offsetX).add(offsetY);
         points.push(pos);
     }
-    const curve = new THREE.CatmullRomCurve3(points);
+    let curve = new THREE.CatmullRomCurve3(points);
 
     // --- Physics Boundaries (Tube) ---
-    // Create a static mesh collider for the tube
-    const tubeGeo = new THREE.TubeGeometry(curve, 64, params.radius, 8, false);
-    
-    // Extract vertices and indices for Rapier
-    const tubeVerts = new Float32Array(tubeGeo.attributes.position.array);
-    const tubeIndices = new Uint32Array(tubeGeo.index!.array);
-    
-    const wallBodyDesc = RAPIER.RigidBodyDesc.fixed();
-    const wallBody = world.createRigidBody(wallBodyDesc);
-    // Trimesh collider for the tube walls
-    const wallColliderDesc = RAPIER.ColliderDesc.trimesh(tubeVerts, tubeIndices);
-    world.createCollider(wallColliderDesc, wallBody);
+    let wallBody: RAPIER.RigidBody;
 
     // --- Vorothree Setup ---
     const bounds = new BoundingBox(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
-    const tess = new Tessellation(bounds, 15, 15, 15);
-
-    // Add Vorothree Wall (for clipping cells)
-    const wallPoints = new Float64Array(points.length * 3);
-    for (let i = 0; i < points.length; i++) {
-        wallPoints[i * 3] = points[i].x;
-        wallPoints[i * 3 + 1] = points[i].y;
-        wallPoints[i * 3 + 2] = points[i].z;
-    }
-    const WALL_ID = -10;
-    // @ts-ignore
-    tess.add_wall(Wall.new_catmull_rom(wallPoints, params.radius, 200, false, WALL_ID));
+    let tess = new Tessellation(bounds, 15, 15, 15);
 
     // --- Particles ---
     const bodies: RAPIER.RigidBody[] = [];
@@ -167,20 +146,42 @@ export async function run(app: HTMLElement) {
         scene.add(particleMesh);
     }
     
+    const WALL_ID = -10;
+
     function spawnParticle(t: number, checkOverlap = false) {
-        const pos = curve.getPointAt(t);
-        // Random offset inside radius
-        const r = Math.sqrt(Math.random()) * (params.radius - params.particleRadius * 1.5);
-        const theta = Math.random() * Math.PI * 2;
+        let pos = new THREE.Vector3();
         
-        // Local frame at t
-        const tangent = curve.getTangentAt(t);
-        let normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0,1,0)).normalize();
-        if (normal.lengthSq() < 0.1) normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(1,0,0)).normalize();
-        const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
-        
-        pos.addScaledVector(normal, r * Math.cos(theta));
-        pos.addScaledVector(binormal, r * Math.sin(theta));
+        if (params.geometry === 'helix') {
+            pos = curve.getPointAt(t);
+            // Random offset inside radius
+            const r = Math.sqrt(Math.random()) * (params.radius - params.particleRadius * 1.5);
+            const theta = Math.random() * Math.PI * 2;
+            
+            // Local frame at t
+            const tangent = curve.getTangentAt(t);
+            let normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0,1,0)).normalize();
+            if (normal.lengthSq() < 0.1) normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(1,0,0)).normalize();
+            const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+            
+            pos.addScaledVector(normal, r * Math.cos(theta));
+            pos.addScaledVector(binormal, r * Math.sin(theta));
+        } else if (params.geometry === 'cone') {
+            // Spawn at top (+z)
+            const z = 75 - Math.random() * 10;
+            const rMax = 40 - params.particleRadius * 1.5;
+            const r = Math.sqrt(Math.random()) * rMax;
+            const theta = Math.random() * Math.PI * 2;
+            pos.set(r * Math.cos(theta), r * Math.sin(theta), z);
+        } else if (params.geometry === 'torus') {
+            // Spawn inside torus
+            const u = Math.random() * Math.PI * 2;
+            const v = Math.random() * Math.PI * 2;
+            const R = 60;
+            const r = Math.random() * (15 - params.particleRadius * 1.5);
+            pos.x = (R + r * Math.cos(v)) * Math.cos(u);
+            pos.y = (R + r * Math.cos(v)) * Math.sin(u);
+            pos.z = r * Math.sin(v);
+        }
 
         if (checkOverlap) {
             const thresholdSq = (params.particleRadius * 2.0) ** 2;
@@ -219,7 +220,126 @@ export async function run(app: HTMLElement) {
         }
     }
 
-    initParticles();
+    let wireframeMesh: THREE.Mesh;
+
+    function initScene() {
+        // Cleanup
+        if (world) {
+            bodies.forEach(b => world.removeRigidBody(b));
+            if (wallBody) world.removeRigidBody(wallBody);
+            world.free();
+        }
+        bodies.length = 0;
+        if (wireframeMesh) {
+            scene.remove(wireframeMesh);
+            wireframeMesh.geometry.dispose();
+        }
+        tess.clear_walls();
+
+        // Setup based on geometry type
+        if (params.geometry === 'helix') {
+            gravity = { x: axisNorm.x * 9.81, y: axisNorm.y * 9.81, z: axisNorm.z * 9.81 };
+            world = new RAPIER.World(gravity);
+
+            // Create a static mesh collider for the tube
+            const tubeGeo = new THREE.TubeGeometry(curve, 64, params.radius, 8, false);
+            const tubeVerts = new Float32Array(tubeGeo.attributes.position.array);
+            const tubeIndices = new Uint32Array(tubeGeo.index!.array);
+            
+            const wallBodyDesc = RAPIER.RigidBodyDesc.fixed();
+            wallBody = world.createRigidBody(wallBodyDesc);
+            const wallColliderDesc = RAPIER.ColliderDesc.trimesh(tubeVerts, tubeIndices);
+            world.createCollider(wallColliderDesc, wallBody);
+
+            // Vorothree Wall
+            const wallPoints = new Float64Array(points.length * 3);
+            for (let i = 0; i < points.length; i++) {
+                wallPoints[i * 3] = points[i].x;
+                wallPoints[i * 3 + 1] = points[i].y;
+                wallPoints[i * 3 + 2] = points[i].z;
+            }
+            // @ts-ignore
+            tess.add_wall(Wall.new_catmull_rom(wallPoints, params.radius, 200, false, WALL_ID));
+
+            // Visuals
+            const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
+            wireframeMesh = new THREE.Mesh(tubeGeo, wireframeMat);
+            scene.add(wireframeMesh);
+
+        } else if (params.geometry === 'cone') {
+            gravity = { x: 0, y: 0, z: -9.81 };
+            world = new RAPIER.World(gravity);
+
+            // Cone: R_small=20 at -z, R_big=40 at +z. Height 150.
+            // ThreeJS Cylinder is Y-up. We need to rotate it to align with Z.
+            const coneGeo = new THREE.CylinderGeometry(40, 20, 150, 32, 1, true);
+            coneGeo.rotateX(Math.PI / 2);
+
+            const coneVerts = new Float32Array(coneGeo.attributes.position.array);
+            const coneIndices = new Uint32Array(coneGeo.index!.array);
+
+            const wallBodyDesc = RAPIER.RigidBodyDesc.fixed();
+            wallBody = world.createRigidBody(wallBodyDesc);
+            const wallColliderDesc = RAPIER.ColliderDesc.trimesh(coneVerts, coneIndices);
+            world.createCollider(wallColliderDesc, wallBody);
+
+            // Custom Vorothree Wall for Cone
+            const coneWall = {
+                contains: (x: number, y: number, z: number) => {
+                    if (z < -75 || z > 75) return false;
+                    const t = (z + 75) / 150;
+                    const r = 20 + t * 20;
+                    return x*x + y*y < r*r;
+                },
+                cut: (x: number, y: number, z: number) => {
+                    const t = (z + 75) / 150;
+                    const r = 20 + t * 20;
+                    const d = Math.sqrt(x*x + y*y);
+                    if (d === 0) return null;
+                    const factor = r / d;
+                    // Normal pointing outwards
+                    const nx = x / d;
+                    const ny = y / d;
+                    const nz = -0.133; // Slope approx
+                    const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+                    return {
+                        point: [x * factor, y * factor, z],
+                        normal: [nx/len, ny/len, nz/len]
+                    };
+                }
+            };
+            // @ts-ignore
+            tess.add_wall(Wall.newCustom(coneWall, WALL_ID));
+
+            const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
+            wireframeMesh = new THREE.Mesh(coneGeo, wireframeMat);
+            scene.add(wireframeMesh);
+
+        } else if (params.geometry === 'torus') {
+            gravity = { x: 0, y: 0, z: 0 };
+            world = new RAPIER.World(gravity);
+
+            const torusGeo = new THREE.TorusGeometry(60, 15, 16, 64);
+            const torusVerts = new Float32Array(torusGeo.attributes.position.array);
+            const torusIndices = new Uint32Array(torusGeo.index!.array);
+
+            const wallBodyDesc = RAPIER.RigidBodyDesc.fixed();
+            wallBody = world.createRigidBody(wallBodyDesc);
+            const wallColliderDesc = RAPIER.ColliderDesc.trimesh(torusVerts, torusIndices);
+            world.createCollider(wallColliderDesc, wallBody);
+
+            // @ts-ignore
+            tess.add_wall(Wall.new_torus(0, 0, 0, 0, 0, 1, 60, 15, WALL_ID));
+
+            const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
+            wireframeMesh = new THREE.Mesh(torusGeo, wireframeMat);
+            scene.add(wireframeMesh);
+        }
+
+        initParticles();
+    }
+
+    initScene();
 
     // --- Visualization ---
     const material = new THREE.MeshPhysicalMaterial({
@@ -235,11 +355,6 @@ export async function run(app: HTMLElement) {
 
     const geometryGroup = new THREE.Group();
     scene.add(geometryGroup);
-
-    // Debug: Wireframe of tube
-    const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
-    const wireframeMesh = new THREE.Mesh(tubeGeo, wireframeMat);
-    scene.add(wireframeMesh);
 
     function updateVisualization() {
         // Clear previous
@@ -265,16 +380,26 @@ export async function run(app: HTMLElement) {
             volumes.push(cell.volume());
 
             // Color based on position along curve
-            if (cell.id >= 0 && cell.id < bodies.length) {
+            if (cell.id >= 0 && cell.id < bodies.length && bodies[cell.id]) {
                 const body = bodies[cell.id];
                 const pos = body.translation();
-                const v = new THREE.Vector3(pos.x, pos.y, pos.z).sub(start);
-                let t = v.dot(axis) / axisLenSq;
-                t = Math.max(0, Math.min(1, t));
+                let hue = 0;
+
+                if (params.geometry === 'helix') {
+                    const v = new THREE.Vector3(pos.x, pos.y, pos.z).sub(start);
+                    let t = v.dot(axis) / axisLenSq;
+                    t = Math.max(0, Math.min(1, t));
+                    hue = (t < 0.5 ? t * 2 : (1 - t) * 2);
+                } else if (params.geometry === 'cone') {
+                    // Color by Z height
+                    hue = (pos.z + 75) / 150;
+                } else if (params.geometry === 'torus') {
+                    // Color by angle around Z
+                    const angle = Math.atan2(pos.y, pos.x);
+                    hue = (angle + Math.PI) / (2 * Math.PI);
+                }
                 
-                // Rainbow effect
-                const hue = (t < 0.5 ? t * 2 : (1 - t) * 2);
-                color.setHSL(hue, 1.0, 0.5);
+                color.setHSL(hue, 1.0, 0.5); 
             } else {
                 color.setHex(0xffffff);
             }
@@ -313,6 +438,7 @@ export async function run(app: HTMLElement) {
     }
 
     // GUI
+    gui.add(params, 'geometry', ['helix', 'cone', 'torus']).onChange(initScene);
     gui.add(params, 'count', 50, 800, 10).onChange(initParticles);
     gui.add(params, 'speed', 0, 5);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
@@ -324,7 +450,7 @@ export async function run(app: HTMLElement) {
         if (event.key === 'p') {
             renderer.render(scene, camera);
             const link = document.createElement('a');
-            link.download = 'granular_rapier.png';
+            link.download = 'granular_flow.png';
             link.href = renderer.domElement.toDataURL('image/png');
             link.click();
         }
@@ -338,12 +464,20 @@ export async function run(app: HTMLElement) {
 
         // Remove bodies outside bounds
         const halfBox = boxSize / 2;
+        const limit = halfBox + 10; // little buffer
         for (let i = bodies.length - 1; i >= 0; i--) {
             const body = bodies[i];
+            if (!body) continue;
             const pos = body.translation();
-            if (Math.abs(pos.x) > halfBox || Math.abs(pos.y) > halfBox || Math.abs(pos.z) > halfBox) {
-                world.removeRigidBody(body);
-                bodies.splice(i, 1);
+            
+            // Check bounds based on geometry
+            let out = false;
+            if (params.geometry === 'helix' || params.geometry === 'cone') {
+                if (Math.abs(pos.z) > limit) out = true;
+            }
+            if (out) {
+                 world.removeRigidBody(body);
+                 bodies.splice(i, 1);
             }
         }
 
@@ -360,21 +494,35 @@ export async function run(app: HTMLElement) {
         // Physics Step
         // Apply forces to drive flow along the curve
         for (let i = 0; i < bodies.length; i++) {
+            if (!bodies[i]) continue;
             const body = bodies[i];
             const pos = body.translation();
-            const p = new THREE.Vector3(pos.x, pos.y, pos.z);
             
-            // Estimate t based on projection onto helix axis
-            const v = new THREE.Vector3().subVectors(p, start);
-            let t = v.dot(axis) / axisLenSq;
-            
-            // Force along tangent
-            t = Math.max(0, Math.min(1, t));
-            const tangent = curve.getTangentAt(t);
-            
-            // Apply impulse to drive flow
-            const forceMag = params.speed * 160.0;
-            body.applyImpulse(tangent.multiplyScalar(forceMag * 0.016), true);
+            if (params.geometry === 'helix') {
+                const p = new THREE.Vector3(pos.x, pos.y, pos.z);
+                // Estimate t based on projection onto helix axis
+                const v = new THREE.Vector3().subVectors(p, start);
+                let t = v.dot(axis) / axisLenSq;
+                
+                // Force along tangent
+                t = Math.max(0, Math.min(1, t));
+                const tangent = curve.getTangentAt(t);
+                
+                // Apply impulse to drive flow
+                const forceMag = params.speed * 160.0;
+                body.applyImpulse(tangent.multiplyScalar(forceMag * 0.016), true);
+            } else if (params.geometry === 'torus') {
+                // Flow around Z axis
+                const x = pos.x;
+                const y = pos.y;
+                const len = Math.sqrt(x*x + y*y);
+                if (len > 0.001) {
+                    const tx = -y / len;
+                    const ty = x / len;
+                    const forceMag = params.speed * 100.0;
+                    body.applyImpulse({ x: tx * forceMag * 0.016, y: ty * forceMag * 0.016, z: 0 }, true);
+                }
+            }
         }
 
         world.step();
@@ -387,6 +535,7 @@ export async function run(app: HTMLElement) {
 
         for (let i = 0; i < bodies.length; i++) {
             const body = bodies[i];
+            if (!body) continue;
             const pos = body.translation();
 
             // Update particle mesh

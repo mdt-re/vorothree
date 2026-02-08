@@ -11,10 +11,12 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.position = 'absolute';
     resultsDiv.style.bottom = '10px';
     resultsDiv.style.right = '10px';
+    resultsDiv.style.textAlign = 'left';
     resultsDiv.style.color = 'white';
     resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     resultsDiv.style.padding = '10px';
     resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.display = 'none';
@@ -101,7 +103,7 @@ export async function run(app: HTMLElement) {
     function runBenchmark() {
         if (resultsDiv) {
             resultsDiv.style.display = 'block';
-            resultsDiv.innerText = 'Running...';
+            resultsDiv.innerText = 'running...';
         }
 
         // Use setTimeout to allow UI to update before heavy processing
@@ -229,21 +231,21 @@ export async function run(app: HTMLElement) {
 
                 if (resultsDiv) {
                     resultsDiv.innerText = 
-                        `Particles:    ${params.count}\n` +
-                        `Box Size:     ${params.boxSize}\n` +
-                        `Grid N:       ${params.n}\n` +
-                        `Octree Cap:   ${params.capacity}\n` +
-                        `JS Gen:       ${tGen.toFixed(2)} ms\n` +
+                        `generators:   ${params.count}\n` +
+                        `box size:     ${params.boxSize}\n` +
+                        `grid N:       ${params.n}\n` +
+                        `octree cap:   ${params.capacity}\n` +
+                        `generation:   ${tGen.toFixed(2)} ms\n` +
                         `--------------------------------------\n` +
-                        `Metric        | Grid (ms) | Octree (ms)\n` +
+                        `metric        | grid (ms) | octree (ms)\n` +
                         `--------------------------------------\n` +
-                        `Insert        | ${tInsert.toFixed(2).padStart(9)} | ${tInsertMoc.toFixed(2).padStart(11)}\n` +
-                        `Compute       | ${tCompute.toFixed(2).padStart(9)} | ${tComputeMoc.toFixed(2).padStart(11)}\n` +
-                        `Relax         | ${tRelax.toFixed(2).padStart(9)} | ${tRelaxMoc.toFixed(2).padStart(11)}\n` +
-                        `Extract       | ${tExtract.toFixed(2).padStart(9)} | ${tExtractMoc.toFixed(2).padStart(11)}\n` +
+                        `insert        | ${tInsert.toFixed(2).padStart(9)} | ${tInsertMoc.toFixed(2).padStart(11)}\n` +
+                        `compute       | ${tCompute.toFixed(2).padStart(9)} | ${tComputeMoc.toFixed(2).padStart(11)}\n` +
+                        `relax         | ${tRelax.toFixed(2).padStart(9)} | ${tRelaxMoc.toFixed(2).padStart(11)}\n` +
+                        `extract       | ${tExtract.toFixed(2).padStart(9)} | ${tExtractMoc.toFixed(2).padStart(11)}\n` +
                         `--------------------------------------\n` +
-                        `Total         | ${totalGrid.toFixed(2).padStart(9)} | ${totalMoc.toFixed(2).padStart(11)}\n` +
-                        `FPS (equiv)   | ${(1000/totalGrid).toFixed(1).padStart(9)} | ${(1000/totalMoc).toFixed(1).padStart(11)}`;
+                        `total         | ${totalGrid.toFixed(2).padStart(9)} | ${totalMoc.toFixed(2).padStart(11)}\n` +
+                        `fps (equiv)   | ${(1000/totalGrid).toFixed(1).padStart(9)} | ${(1000/totalMoc).toFixed(1).padStart(11)}`;
                 }
 
             } catch (e: any) {
@@ -301,7 +303,7 @@ export async function run(app: HTMLElement) {
         if (event.key === 'p') {
             renderer.render(scene, activeCamera);
             const link = document.createElement('a');
-            link.download = 'voro_performance.png';
+            link.download = 'benchmark.png';
             link.href = renderer.domElement.toDataURL('image/png');
             link.click();
         }

@@ -17,10 +17,12 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.position = 'absolute';
     resultsDiv.style.bottom = '10px';
     resultsDiv.style.right = '10px';
+    resultsDiv.style.textAlign = 'left';
     resultsDiv.style.color = 'white';
     resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     resultsDiv.style.padding = '10px';
     resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
 
@@ -43,6 +45,7 @@ export async function run(app: HTMLElement) {
         height: 60.0,
         tube: 10.0,
         scale: 15.0,
+        angle: 0.5,
         count: 2000,
         opacity: 0.3,
     };
@@ -88,6 +91,10 @@ export async function run(app: HTMLElement) {
             case 'cylinder':
                 // @ts-ignore
                 tess.add_wall(Wall.new_cylinder(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, params.radius, -15));
+                break;
+            case 'cone':
+                // @ts-ignore
+                tess.add_wall(Wall.new_cone(0.0, 0.0, -50.0, 0.0, 0.0, 1.0, params.angle, -15));
                 break;
             case 'torus':
                 // @ts-ignore
@@ -184,6 +191,9 @@ export async function run(app: HTMLElement) {
             case 'cylinder':
                 // Infinite cylinder clipped by 100x100x100 box
                 return Math.PI * Math.pow(p.radius, 2) * 100;
+            case 'cone':
+                const r_cone = 100.0 * Math.tan(p.angle);
+                return (1.0/3.0) * Math.PI * Math.pow(r_cone, 2) * 100.0;
             case 'torus':
                 return 2 * Math.pow(Math.PI, 2) * p.radius * Math.pow(p.tube, 2);
             case 'tetrahedron':
@@ -309,7 +319,11 @@ export async function run(app: HTMLElement) {
 
         const expected = getExpectedVolume();
         const deviation = expected > 0 ? ((totalVolume - expected) / expected) * 100 : 0;
-        infoText.innerText = `total volume: ${totalVolume.toFixed(2)}\nexpected volume:  ${expected.toFixed(2)}\ndeviation: ${deviation.toFixed(2)}%`;
+        infoText.innerText =
+            `total volume:     ${totalVolume.toFixed(2)}\n` + 
+            `expected volume:  ${expected.toFixed(2)}\n` +
+            `--------------------------------------\n` +
+            `deviation:        ${deviation.toFixed(2)}%`;
     }
 
     initTessellation();
@@ -317,7 +331,7 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
 
-    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier']).name('wall');
+    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'cone', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier']).name('wall');
 
     const radiusCtrl = gui.add(params, 'radius', 5, 45).name('radius').onChange(initTessellation);
     const radiusACtrl = gui.add(params, 'radiusA', 5, 45).name('radius x').onChange(initTessellation);
@@ -326,10 +340,11 @@ export async function run(app: HTMLElement) {
     const heightCtrl = gui.add(params, 'height', 10, 100).name('height').onChange(initTessellation);
     const tubeCtrl = gui.add(params, 'tube', 1, 20).name('radius tube').onChange(initTessellation);
     const scaleCtrl = gui.add(params, 'scale', 5, 20).name('scale').onChange(initTessellation);
+    const angleCtrl = gui.add(params, 'angle', 0.1, 1.0).name('angle').onChange(initTessellation);
 
     const updateVisibility = () => {
         const t = params.wallType;
-        if (t === 'trefoil' || t === 'ellipsoid' || t === 'bezier') radiusCtrl.hide(); else radiusCtrl.show();
+        if (t === 'trefoil' || t === 'ellipsoid' || t === 'bezier' || t === 'cone') radiusCtrl.hide(); else radiusCtrl.show();
 
         if (t === 'ellipsoid') {
             radiusACtrl.show(); radiusBCtrl.show(); radiusCCtrl.show();
@@ -340,6 +355,7 @@ export async function run(app: HTMLElement) {
         if (t === 'cylinder') heightCtrl.show(); else heightCtrl.hide();
         if (t === 'torus' || t === 'trefoil' || t === 'bezier') tubeCtrl.show(); else tubeCtrl.hide();
         if (t === 'trefoil') scaleCtrl.show(); else scaleCtrl.hide();
+        if (t === 'cone') angleCtrl.show(); else angleCtrl.hide();
     };
 
     wallTypeCtrl.onChange(() => {
@@ -347,6 +363,17 @@ export async function run(app: HTMLElement) {
         initTessellation();
     });
     updateVisibility();
+
+    // Handle screenshot
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'p') {
+            renderer.render(scene, camera);
+            const link = document.createElement('a');
+            link.download = 'walls.png';
+            link.href = renderer.domElement.toDataURL('image/png');
+            link.click();
+        }
+    });
 
     // Animation Loop
     function animate() {

@@ -12,10 +12,12 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.position = 'absolute';
     resultsDiv.style.bottom = '10px';
     resultsDiv.style.right = '10px';
+    resultsDiv.style.textAlign = 'left';
     resultsDiv.style.color = 'white';
     resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     resultsDiv.style.padding = '10px';
     resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
 
@@ -95,10 +97,11 @@ export async function run(app: HTMLElement) {
         side: THREE.DoubleSide
     });
 
-    // Wireframe box
+    // Helper to visualize bounds
     const boxGeo = new THREE.BoxGeometry(size, size, size);
-    const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, opacity: 0.2, transparent: true });
-    scene.add(new THREE.Mesh(boxGeo, boxMat));
+    const boxEdges = new THREE.EdgesGeometry(boxGeo);
+    const boxLines = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({ color: 0x888888 }));
+    scene.add(boxLines);
 
     function resetGenerators() {
         const points = new Float64Array(params.count * 3);
@@ -156,6 +159,17 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'autoRelax').name('Auto Relax');
     gui.add(params, 'relax').name('Step Relax');
     gui.add(params, 'reset').name('Reset');
+
+    // Handle screenshot
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'p') {
+            renderer.render(scene, camera);
+            const link = document.createElement('a');
+            link.download = 'relaxation.png';
+            link.href = renderer.domElement.toDataURL('image/png');
+            link.click();
+        }
+    });
 
     let frame = 0;
     function animate() {

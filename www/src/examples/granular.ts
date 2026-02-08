@@ -17,10 +17,12 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.position = 'absolute';
     resultsDiv.style.bottom = '10px';
     resultsDiv.style.right = '10px';
+    resultsDiv.style.textAlign = 'left';
     resultsDiv.style.color = 'white';
     resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     resultsDiv.style.padding = '10px';
     resultsDiv.style.fontFamily = 'monospace';
+    resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
 
@@ -308,6 +310,17 @@ export async function run(app: HTMLElement) {
     });
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
     gui.add(material, 'wireframe');
+
+    // Handle screenshot
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'p') {
+            renderer.render(scene, camera);
+            const link = document.createElement('a');
+            link.download = 'granular.png';
+            link.href = renderer.domElement.toDataURL('image/png');
+            link.click();
+        }
+    });
 
     function animate() {
         if (!app.isConnected) return;
