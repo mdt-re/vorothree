@@ -23,6 +23,9 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.padding = '10px';
     resultsDiv.style.fontFamily = 'monospace';
     resultsDiv.style.whiteSpace = 'pre';
+    resultsDiv.style.pointerEvents = 'none';
+    resultsDiv.style.userSelect = 'none';
+    resultsDiv.style.textTransform = 'lowercase';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';

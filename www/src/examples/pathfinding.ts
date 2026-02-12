@@ -29,6 +29,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
+    resultsDiv.style.textTransform = 'lowercase';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';
@@ -41,14 +42,13 @@ export async function run(app: HTMLElement) {
     resultsDiv.appendChild(stats.dom);
 
     const params = {
-        count: 500,
-        paths: 3,
-        opacity: 0.2,
-        pathOpacity: 0.9,
+        count: 1000,
+        paths: 5,
+        opacity: 0.1,
+        pathOpacity: 0.8,
         relaxIterations: 5,
         torusRadius: 40,
         torusTube: 15,
-        mode: 'Random Paths',
     };
 
     // --- Three.js Setup ---
@@ -87,16 +87,17 @@ export async function run(app: HTMLElement) {
 
     let generators = new Float64Array(0);
     const cellPathMap = new Map<number, number>(); // cellId -> pathIndex
-    const cellSequenceMap = new Map<number, number>(); // cellId -> sequenceIndex
     let graph: any;
 
     const pathColors = [
-        new THREE.Color(0xff3333),
-        new THREE.Color(0x33ff33),
-        new THREE.Color(0x3333ff),
-        new THREE.Color(0xffff33),
-        new THREE.Color(0x33ffff),
-        new THREE.Color(0xff33ff),
+        { name: 'dark red',  color: new THREE.Color(0xff6666) },
+        { name: 'light red', color: new THREE.Color(0xffcccc) },
+        { name: 'orange', color: new THREE.Color(0xffcc99) },
+        { name: 'yellow', color: new THREE.Color(0xffff99) },
+        { name: 'green',  color: new THREE.Color(0x99ff99) },
+        { name: 'cyan',   color: new THREE.Color(0x99ffff) },
+        { name: 'blue',   color: new THREE.Color(0x9999ff) },
+        { name: 'purple', color: new THREE.Color(0xcc99ff) },
     ];
     const whiteColor = new THREE.Color(0xffffff);
 
@@ -154,12 +155,13 @@ export async function run(app: HTMLElement) {
     function calculatePaths() {
         console.log("Calculating paths...");
         cellPathMap.clear();
-        cellSequenceMap.clear();
         if (!graph) buildGraph();
         
         const nodeIds: number[] = [];
+        const nodePositions = new Map<number, {x: number, y: number, z: number}>();
         graph.forEachNode((node: any) => {
             nodeIds.push(node.id);
+            nodePositions.set(node.id, node.data);
         });
 
         if (nodeIds.length === 0) {
@@ -168,13 +170,11 @@ export async function run(app: HTMLElement) {
         }
         console.log(`Graph has ${nodeIds.length} nodes available for pathfinding.`);
         
-        if (params.mode === 'Longest Path') {
-            calculateLongestPath(nodeIds);
-            return;
-        }
+        const usedCells = new Set<number>();
 
         const pathFinder = aStar(graph, {
             distance(a: any, b: any) {
+                if (usedCells.has(b.id)) return Infinity;
                 const dx = a.data.x - b.data.x;
                 const dy = a.data.y - b.data.y;
                 const dz = a.data.z - b.data.z;
@@ -188,95 +188,138 @@ export async function run(app: HTMLElement) {
             }
         });
 
+        let statsText = `paths:        ${params.paths}\n` +
+                        `--------------------------------------\n` +
+                        `color         | cells     | length (px)\n` +
+                        `--------------------------------------\n`;
+
+        const R = params.torusRadius;
+
         for (let p = 0; p < params.paths; p++) {
-            let path: any[] = [];
+            let fullPath: any[] = [];
+            let success = false;
             let attempts = 0;
-            while (path.length === 0 && attempts < 50) {
+            
+            while (!success && attempts < 20) {
                 attempts++;
-                const startId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
+                fullPath = [];
+                
+                // Generate 6 waypoints
+                const segments = 6;
+                const angleOffset = Math.random() * Math.PI * 2;
+                const waypoints: number[] = [];
+                let waypointsFound = true;
 
-                // BFS to find a reachable node at some distance
-                const visited = new Set<number>();
-                const queue: { id: number, dist: number }[] = [{ id: startId, dist: 0 }];
-                visited.add(startId);
-                const candidates: number[] = [];
-                let head = 0;
+                for (let i = 0; i < segments; i++) {
+                    const theta = angleOffset + (i / segments) * Math.PI * 2;
+                    const tx = R * Math.cos(theta);
+                    const ty = R * Math.sin(theta);
+                    const tz = 0; // Center of tube cross section is at z=0
 
-                while (head < queue.length && candidates.length < 20 && head < 500) {
-                    const { id, dist } = queue[head++];
-                    if (dist > 8) candidates.push(id);
+                    // Find closest unused node
+                    let closest = -1;
+                    let minD2 = Infinity;
                     
-                    graph.forEachLinkedNode(id, (node: any) => {
-                        if (!visited.has(node.id)) {
-                            visited.add(node.id);
-                            queue.push({ id: node.id, dist: dist + 1 });
+                    for (const id of nodeIds) {
+                        if (usedCells.has(id)) continue;
+                        // Avoid picking same node as previous waypoint
+                        if (waypoints.length > 0 && waypoints[waypoints.length-1] === id) continue;
+
+                        const pos = nodePositions.get(id)!;
+                        const d2 = (pos.x - tx)**2 + (pos.y - ty)**2 + (pos.z - tz)**2;
+                        if (d2 < minD2) {
+                            minD2 = d2;
+                            closest = id;
                         }
-                    });
+                    }
+
+                    if (closest !== -1) {
+                        waypoints.push(closest);
+                    } else {
+                        waypointsFound = false;
+                        break;
+                    }
                 }
 
-                if (candidates.length > 0) {
-                    const endId = candidates[Math.floor(Math.random() * candidates.length)];
-                    path = pathFinder.find(startId, endId);
-                    if (path.length > 0) {
-                        console.log(`Path ${p} found with length ${path.length}`);
+                if (!waypointsFound) continue;
+
+                // Close the loop
+                waypoints.push(waypoints[0]);
+
+                // Connect waypoints
+                let pathNodes: any[] = [];
+                let connectionFailed = false;
+
+                for (let i = 0; i < segments; i++) {
+                    const start = waypoints[i];
+                    const end = waypoints[i+1];
+                    
+                    const segment = pathFinder.find(start, end);
+                    if (segment.length === 0) {
+                        connectionFailed = true;
+                        break;
+                    }
+
+                    // ngraph.path returns path in reverse order (end -> start)
+                    const segmentNodes = segment.reverse();
+                    
+                    // If not the first segment, remove the first node (it's the same as last of previous)
+                    if (i > 0) {
+                        segmentNodes.shift();
+                    }
+                    
+                    for (const node of segmentNodes) {
+                        pathNodes.push(node);
+                    }
+                }
+
+                if (!connectionFailed) {
+                    // Check for duplicates in pathNodes (self-intersection)
+                    const seen = new Set<number>();
+                    let selfIntersect = false;
+                    for (let i = 0; i < pathNodes.length - 1; i++) {
+                        const id = pathNodes[i].id;
+                        if (seen.has(id)) {
+                            selfIntersect = true;
+                            break;
+                        }
+                        seen.add(id);
+                    }
+                    
+                    if (!selfIntersect) {
+                        fullPath = pathNodes;
+                        success = true;
                     }
                 }
             }
             
-            if (path.length === 0) console.warn(`Failed to find path ${p} after ${attempts} attempts.`);
-            
-            for (const node of path) {
-                cellPathMap.set(Number(node.id), p);
+            if (success) {
+                let len = 0;
+                for(let k=0; k<fullPath.length-1; k++) {
+                    const a = fullPath[k].data;
+                    const b = fullPath[k+1].data;
+                    const dx = a.x - b.x;
+                    const dy = a.y - b.y;
+                    const dz = a.z - b.z;
+                    len += Math.sqrt(dx * dx + dy * dy + dz * dz);
+                }
+
+                const colorEntry = pathColors[p % pathColors.length];
+                const colorName = colorEntry.name.padEnd(13, ' ');
+                statsText += `${colorName} | ${(fullPath.length - 1).toString().padStart(9)} | ${len.toFixed(2).padStart(11)}\n`;
+
+                // Register used cells
+                for (let i=0; i<fullPath.length - 1; i++) {
+                    const id = Number(fullPath[i].id);
+                    cellPathMap.set(id, p);
+                    usedCells.add(id);
+                }
+            } else {
+                console.warn(`Failed to find path ${p}`);
             }
         }
         
-        infoText.innerText = `Paths generated: ${params.paths}`;
-    }
-
-    function calculateLongestPath(nodeIds: number[]) {
-        let bestPath: number[] = [];
-        
-        // Try multiple starts to find a better path
-        const attempts = 20;
-        for(let i=0; i<attempts; i++) {
-             const startId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
-             const path = [startId];
-             const visited = new Set([startId]);
-             let curr = startId;
-             
-             while(true) {
-                 let neighbors: number[] = [];
-                 graph.forEachLinkedNode(curr, (node: any) => {
-                     if (!visited.has(node.id)) neighbors.push(node.id);
-                 });
-                 
-                 if (neighbors.length === 0) break;
-                 
-                 // Warnsdorff's rule: choose neighbor with fewest unvisited neighbors
-                 neighbors.sort((a: number, b: number) => {
-                     let degA = 0;
-                     graph.forEachLinkedNode(a, (n: any) => { if(!visited.has(n.id)) degA++; });
-                     let degB = 0;
-                     graph.forEachLinkedNode(b, (n: any) => { if(!visited.has(n.id)) degB++; });
-                     return degA - degB;
-                 });
-                 
-                 const next = neighbors[0];
-                 path.push(next);
-                 visited.add(next);
-                 curr = next;
-             }
-             
-             if (path.length > bestPath.length) bestPath = path;
-             if (bestPath.length === nodeIds.length) break;
-        }
-        
-        for (let i = 0; i < bestPath.length; i++) {
-            const nodeId = bestPath[i];
-            cellPathMap.set(nodeId, 0);
-            cellSequenceMap.set(nodeId, i);
-        }
-        infoText.innerText = `Longest Path: ${bestPath.length} / ${nodeIds.length} cells\nCoverage: ${((bestPath.length/nodeIds.length)*100).toFixed(1)}%`;
+        infoText.innerText = statsText;
     }
 
     // --- Visualization ---
@@ -326,14 +369,9 @@ export async function run(app: HTMLElement) {
             if (!cell) continue;
 
             // Determine color
-            if (params.mode === 'Longest Path' && cellSequenceMap.has(cell.id)) {
-                const seqIdx = cellSequenceMap.get(cell.id)!;
-                const maxSeq = cellSequenceMap.size > 1 ? cellSequenceMap.size - 1 : 1;
-                const hue = (seqIdx / maxSeq) * 0.8; // 0.0 (Red) to 0.8 (Purple)
-                color.setHSL(hue, 1.0, 0.5);
-            } else if (cellPathMap.has(cell.id)) {
+            if (cellPathMap.has(cell.id)) {
                 const pathIdx = cellPathMap.get(cell.id)!;
-                const c = pathColors[pathIdx % pathColors.length];
+                const c = pathColors[pathIdx % pathColors.length].color;
                 if (c) color.copy(c); else color.copy(whiteColor);
             } else {
                 color.copy(whiteColor);
@@ -392,12 +430,11 @@ export async function run(app: HTMLElement) {
     init();
 
     gui.add(params, 'count', 100, 2000, 100).onChange(init);
-    gui.add(params, 'mode', ['Random Paths', 'Longest Path']).onChange(() => { calculatePaths(); updateVisualization(); });
-    gui.add(params, 'paths', 1, 6, 1).onChange(() => { calculatePaths(); updateVisualization(); });
-    gui.add(params, 'torusRadius', 10, 50).onChange(init);
-    gui.add(params, 'torusTube', 5, 30).onChange(init);
-    gui.add(params, 'opacity', 0, 1).name('Cell Opacity').onChange(updateVisualization);
-    gui.add(params, 'pathOpacity', 0, 1).name('Path Opacity').onChange(updateVisualization);
+    gui.add(params, 'paths', 1, 8, 1).onChange(() => { calculatePaths(); updateVisualization(); });
+    gui.add(params, 'torusRadius', 10, 50).name('torus radius').onChange(init);
+    gui.add(params, 'torusTube', 5, 30).name('tube radius').onChange(init);
+    gui.add(params, 'opacity', 0, 1).name('cell opacity').onChange(updateVisualization);
+    gui.add(params, 'pathOpacity', 0, 1).name('path opacity').onChange(updateVisualization);
 
     // Handle screenshot
     window.addEventListener('keydown', (event) => {

@@ -19,6 +19,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
+    resultsDiv.style.textTransform = 'lowercase';
     resultsDiv.style.display = 'none';
     app.appendChild(resultsDiv);
 

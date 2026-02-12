@@ -11,6 +11,8 @@ const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promis
     'pathfinding': () => import('./examples/pathfinding'),
 };
 
+const thumbnails = import.meta.glob('./assets/*.png', { eager: true });
+
 async function run() {
     await init();
 
@@ -23,14 +25,14 @@ async function run() {
         
         /* Gallery Styles */
         .gallery-container { height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: #2a2a2a; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; color: white; display: flex; flex-direction: column; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { aspect-ratio: 1; position: relative; background: #2a2a2a; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; color: white; display: block; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px rgba(0,0,0,0.4); }
-        .card-image { height: 200px; background: #333; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .card-image { width: 100%; height: 100%; background: #333; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
         .card-image img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
         .card-placeholder { font-size: 4rem; color: #444; font-weight: bold; }
-        .card-content { padding: 15px; }
-        .card-title { margin: 0; font-size: 1.2rem; font-weight: 500; }
+        .card-content { position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px; background: rgba(0,0,0,0.6); box-sizing: border-box; backdrop-filter: blur(2px); }
+        .card-title { margin: 0; font-size: 1.2rem; font-weight: 500; text-align: center; }
     `;
     document.head.appendChild(style);
 
@@ -63,17 +65,21 @@ async function run() {
             <div class="gallery-container">
                 <h1 style="text-align: center; margin-bottom: 40px;">vorothree examples</h1>
                 <div class="gallery-grid">
-                    ${Object.keys(examples).map(key => `
+                    ${Object.keys(examples).map(key => {
+                        const path = `./assets/${key}.png`;
+                        const mod = thumbnails[path] as { default: string };
+                        const src = mod?.default || '';
+                        return `
                         <a href="?example=${key}" class="card">
                             <div class="card-image">
                                 <span class="card-placeholder">${key}</span>
-                                <img src="assets/${key}.png" onerror="this.style.display='none'" alt="${key}" />
+                                <img src="${src}" onerror="this.style.display='none'" alt="${key}" />
                             </div>
                             <div class="card-content">
                                 <h3 class="card-title">${key.replace(/_/g, ' ')}</h3>
                             </div>
                         </a>
-                    `).join('')}
+                    `}).join('')}
                 </div>
             </div>
         `;

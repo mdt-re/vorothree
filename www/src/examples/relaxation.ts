@@ -20,6 +20,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
+    resultsDiv.style.textTransform = 'lowercase';
 
     const infoText = document.createElement('div');
     infoText.innerText = 'Ready';
@@ -45,7 +46,7 @@ export async function run(app: HTMLElement) {
             tess.relax();
             tess.calculate();
             const dt = performance.now() - t0;
-            infoText.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
+            updateStats(dt);
             updateMesh();
         },
         reset: () => resetGenerators()
@@ -56,7 +57,7 @@ export async function run(app: HTMLElement) {
     scene.background = new THREE.Color(0x222222);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-    camera.position.set(80, 80, 80);
+    camera.position.set(120, 120, 120);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -79,7 +80,7 @@ export async function run(app: HTMLElement) {
     scene.add(new THREE.AmbientLight(0x404040));
 
     // --- Vorothree ---
-    const size = 60;
+    const size = 100;
     const bounds = new BoundingBox(-size/2, -size/2, -size/2, size/2, size/2, size/2);
     const tess = new Tessellation(bounds, 8, 8, 8);
 
@@ -103,6 +104,59 @@ export async function run(app: HTMLElement) {
     const boxLines = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({ color: 0x888888 }));
     scene.add(boxLines);
 
+    function updateStats(dt: number) {
+        const volumes: number[] = [];
+        const faceCounts: number[] = [];
+        const vertexCounts: number[] = [];
+        const faceAreas: number[] = [];
+        const vertsPerFace: number[] = [];
+
+        const count = tess.count_cells;
+        for (let i = 0; i < count; i++) {
+            const cell = tess.get(i);
+            if (!cell) continue;
+
+            volumes.push(cell.volume());
+            
+            const fCounts = cell.face_counts;
+            faceCounts.push(fCounts.length);
+
+            const vCount = cell.vertices.length / 3;
+            vertexCounts.push(vCount);
+
+            for(let j=0; j<fCounts.length; j++) {
+                faceAreas.push(cell.face_area(j));
+                vertsPerFace.push(fCounts[j]);
+            }
+        }
+
+        const getStats = (data: number[]) => {
+            if (data.length === 0) return { avg: 0, std: 0 };
+            const sum = data.reduce((a, b) => a + b, 0);
+            const avg = sum / data.length;
+            const sqDiff = data.reduce((a, b) => a + (b - avg) ** 2, 0);
+            const std = Math.sqrt(sqDiff / data.length);
+            return { avg, std };
+        };
+
+        const sVol = getStats(volumes);
+        const sFaces = getStats(faceCounts);
+        const sVerts = getStats(vertexCounts);
+        const sAreas = getStats(faceAreas);
+        const sVertsPerFace = getStats(vertsPerFace);
+
+        infoText.innerText = 
+            `Relaxation:   ${dt.toFixed(2)} ms\n` +
+            `--------------------------------------\n` +
+            `Metric        | Avg       | Std Dev   \n` +
+            `--------------------------------------\n` +
+            `Volume        | ${sVol.avg.toFixed(2).padStart(9)} | ${sVol.std.toFixed(2).padStart(9)}\n` +
+            `Faces/Cell    | ${sFaces.avg.toFixed(2).padStart(9)} | ${sFaces.std.toFixed(2).padStart(9)}\n` +
+            `Verts/Cell    | ${sVerts.avg.toFixed(2).padStart(9)} | ${sVerts.std.toFixed(2).padStart(9)}\n` +
+            `Verts/Face    | ${sVertsPerFace.avg.toFixed(2).padStart(9)} | ${sVertsPerFace.std.toFixed(2).padStart(9)}\n` +
+            `Face Area     | ${sAreas.avg.toFixed(2).padStart(9)} | ${sAreas.std.toFixed(2).padStart(9)}`;
+    }
+
     function resetGenerators() {
         const points = new Float64Array(params.count * 3);
         for(let i=0; i<params.count * 3; i++) {
@@ -111,7 +165,7 @@ export async function run(app: HTMLElement) {
         tess.set_generators(points);
         tess.calculate();
         updateMesh();
-        infoText.innerText = 'Ready';
+        updateStats(0);
     }
 
     function updateMesh() {
@@ -184,7 +238,7 @@ export async function run(app: HTMLElement) {
             tess.relax();
             tess.calculate();
             const dt = performance.now() - t0;
-            infoText.innerText = `Relaxation: ${dt.toFixed(2)} ms`;
+            updateStats(dt);
             updateMesh();
         }
 

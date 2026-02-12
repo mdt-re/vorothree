@@ -25,6 +25,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.whiteSpace = 'pre';
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
+    resultsDiv.style.textTransform = 'lowercase';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';
@@ -55,7 +56,7 @@ export async function run(app: HTMLElement) {
     scene.background = new THREE.Color(0x242424);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(100, 100, 100);
+    camera.position.set(80, 80, 80);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -76,6 +77,13 @@ export async function run(app: HTMLElement) {
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(50, 100, 50);
     scene.add(dirLight);
+
+    // Helper to visualize bounds
+    const boxSize = 100;
+    const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+    const boxEdges = new THREE.EdgesGeometry(boxGeo);
+    const boxLines = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({ color: 0x888888 }));
+    scene.add(boxLines);
 
     // --- Vorothree Setup ---
     let tess: Tessellation;
@@ -176,6 +184,43 @@ export async function run(app: HTMLElement) {
                 ]);
                 tess.add_wall(Wall.new_bezier(points, params.tube, 100, false, -15));
                 break;
+            case 'catmull':
+                const boxSize = 100;
+                const spiralPoints: THREE.Vector3[] = [];
+                const turns = 3;
+                const helixRadius = params.radius;
+                const start = new THREE.Vector3(-boxSize / 2, -boxSize / 2, -boxSize / 2);
+                const end = new THREE.Vector3(boxSize / 2, boxSize / 2, boxSize / 2);
+
+                const axis = new THREE.Vector3().subVectors(end, start);
+                const axisNorm = axis.clone().normalize();
+
+                const tmpVec = new THREE.Vector3(0, 1, 0);
+                if (Math.abs(axisNorm.dot(tmpVec)) > 0.9) tmpVec.set(1, 0, 0);
+
+                const basisX = new THREE.Vector3().crossVectors(axisNorm, tmpVec).normalize();
+                const basisY = new THREE.Vector3().crossVectors(axisNorm, basisX).normalize();
+
+                const numPoints = 50;
+                for (let i = 0; i <= numPoints; i++) {
+                    const t = i / numPoints;
+                    const pos = new THREE.Vector3().copy(start).lerp(end, t);
+                    const r = helixRadius * Math.sin(t * Math.PI);
+                    const angle = t * turns * Math.PI * 2;
+                    const offsetX = basisX.clone().multiplyScalar(r * Math.cos(angle));
+                    const offsetY = basisY.clone().multiplyScalar(r * Math.sin(angle));
+                    pos.add(offsetX).add(offsetY);
+                    spiralPoints.push(pos);
+                }
+                const wallPoints = new Float64Array(spiralPoints.length * 3);
+                for (let i = 0; i < spiralPoints.length; i++) {
+                    wallPoints[i * 3] = spiralPoints[i].x;
+                    wallPoints[i * 3 + 1] = spiralPoints[i].y;
+                    wallPoints[i * 3 + 2] = spiralPoints[i].z;
+                }
+                // @ts-ignore
+                tess.add_wall(Wall.new_catmull_rom(wallPoints, params.tube, 200, false, -15));
+                break;
         }
 
         tess.random_generators(params.count);
@@ -214,6 +259,36 @@ export async function run(app: HTMLElement) {
                 return calculateTrefoilLength(p.scale) * Math.PI * Math.pow(p.tube, 2);
             case 'bezier':
                 return calculateBezierLength(p.radius) * Math.PI * Math.pow(p.tube, 2);
+            case 'catmull':
+                const c_boxSize = 100;
+                const c_points: THREE.Vector3[] = [];
+                const c_turns = 3;
+                const c_helixRadius = p.radius;
+                const c_start = new THREE.Vector3(-c_boxSize / 2, -c_boxSize / 2, -c_boxSize / 2);
+                const c_end = new THREE.Vector3(c_boxSize / 2, c_boxSize / 2, c_boxSize / 2);
+
+                const c_axis = new THREE.Vector3().subVectors(c_end, c_start);
+                const c_axisNorm = c_axis.clone().normalize();
+
+                const c_tmpVec = new THREE.Vector3(0, 1, 0);
+                if (Math.abs(c_axisNorm.dot(c_tmpVec)) > 0.9) c_tmpVec.set(1, 0, 0);
+
+                const c_basisX = new THREE.Vector3().crossVectors(c_axisNorm, c_tmpVec).normalize();
+                const c_basisY = new THREE.Vector3().crossVectors(c_axisNorm, c_basisX).normalize();
+
+                const c_numPoints = 50;
+                for (let i = 0; i <= c_numPoints; i++) {
+                    const t = i / c_numPoints;
+                    const pos = new THREE.Vector3().copy(c_start).lerp(c_end, t);
+                    const r = c_helixRadius * Math.sin(t * Math.PI);
+                    const angle = t * c_turns * Math.PI * 2;
+                    const offsetX = c_basisX.clone().multiplyScalar(r * Math.cos(angle));
+                    const offsetY = c_basisY.clone().multiplyScalar(r * Math.sin(angle));
+                    pos.add(offsetX).add(offsetY);
+                    c_points.push(pos);
+                }
+                const curve = new THREE.CatmullRomCurve3(c_points);
+                return curve.getLength() * Math.PI * Math.pow(p.tube, 2);
         }
         return 0;
     }
@@ -331,7 +406,7 @@ export async function run(app: HTMLElement) {
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
 
-    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'cone', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier']).name('wall');
+    const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'cone', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier', 'catmull']).name('wall');
 
     const radiusCtrl = gui.add(params, 'radius', 5, 45).name('radius').onChange(initTessellation);
     const radiusACtrl = gui.add(params, 'radiusA', 5, 45).name('radius x').onChange(initTessellation);
@@ -353,7 +428,7 @@ export async function run(app: HTMLElement) {
         }
 
         if (t === 'cylinder') heightCtrl.show(); else heightCtrl.hide();
-        if (t === 'torus' || t === 'trefoil' || t === 'bezier') tubeCtrl.show(); else tubeCtrl.hide();
+        if (t === 'torus' || t === 'trefoil' || t === 'bezier' || t === 'catmull') tubeCtrl.show(); else tubeCtrl.hide();
         if (t === 'trefoil') scaleCtrl.show(); else scaleCtrl.hide();
         if (t === 'cone') angleCtrl.show(); else angleCtrl.hide();
     };
