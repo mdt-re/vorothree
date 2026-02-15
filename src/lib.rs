@@ -21,16 +21,20 @@
 
 mod bounds;
 mod cell;
+mod cell_edges;
 pub mod geometries;
 mod moctree;
 mod tessellation;
+mod tessellation_edges;
 mod tessellation_moctree;
 mod wall;
 
 
 pub use bounds::BoundingBox;
 pub use cell::Cell;
+pub use cell_edges::CellEdges;
 pub use tessellation::Tessellation;
+pub use tessellation_edges::TessellationEdges;
 pub use tessellation_moctree::TessellationMoctree;
 pub use wall::Wall;
 pub use wall::WallGeometry;
