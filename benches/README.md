@@ -4,19 +4,15 @@ This folder contains performance benchmarks for the `vorothree` library, utilizi
 
 ## Files
 
-* `tessellation.rs`: Benchmarks for tessellation updates and bulk calculations.
-* `cell.rs`: Benchmarks for individual cell operations.
+* `cell.rs`: Benchmarks for individual cell operations, like `volume` or `centroid`.
+* `distributions.rs`: Compares the algorithms for different distributions for the generators.
+* `scaling.rs`: Scaling of the tessellation algorithm with the input size of the generators.
 
 ## Usage
 
-To run all benchmarks:
+To run all benchmarks or a specific benchmark suite, run one of the following commands:
 
 ```bash
 cargo bench
-```
-
-To run a specific benchmark suite (e.g., `tessellation`):
-
-```bash
-cargo bench --bench tessellation
+cargo bench --bench <suite_name>
 ```

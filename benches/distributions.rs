@@ -4,11 +4,11 @@ use vorothree::geometries::TrefoilKnotGeometry;
 use rand::prelude::*;
 
 fn benchmark_distributions(c: &mut Criterion) {
-    let sizes = [10_000, 100_000];
+    let sizes = [1_000, 10_000];
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
     
     let mut group = c.benchmark_group("distributions");
-    group.sample_size(10);
+    group.sample_size(50);
     
     for &size in &sizes {
         // Grid resolution heuristic: cube root of N

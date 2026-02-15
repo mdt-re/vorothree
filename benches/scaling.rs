@@ -6,7 +6,7 @@ fn benchmark_scaling(c: &mut Criterion) {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
     
     let mut group = c.benchmark_group("scaling");
-    group.sample_size(10);
+    group.sample_size(50);
     
     for &size in &sizes {
         // Grid resolution heuristic: cube root of N

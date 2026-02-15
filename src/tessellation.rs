@@ -40,7 +40,7 @@ pub struct Tessellation {
     grid_limit_z: f64,
     grid_bins: Vec<Vec<usize>>,
     generator_bin_ids: Vec<usize>,
-    bin_search_order: Vec<(isize, isize, isize)>,
+    bin_search_order: Vec<(isize, isize, isize, f64)>,
 }
 
 #[wasm_bindgen]
@@ -73,11 +73,12 @@ impl Tessellation {
         for z in -rz..=rz {
             for y in -ry..=ry {
                 for x in -rx..=rx {
-                    bin_search_order.push((x, y, z));
+                    let dist_sq = get_min_dist_sq(x, y, z, cell_size_x, cell_size_y, cell_size_z);
+                    bin_search_order.push((x, y, z, dist_sq));
                 }
             }
         }
-        bin_search_order.sort_unstable_by(|a, b| get_min_dist_sq(a.0, a.1, a.2, cell_size_x, cell_size_y, cell_size_z).partial_cmp(&get_min_dist_sq(b.0, b.1, b.2, cell_size_x, cell_size_y, cell_size_z)).unwrap_or(std::cmp::Ordering::Equal));
+        bin_search_order.sort_unstable_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
 
         Tessellation {
             bounds,
@@ -234,8 +235,7 @@ impl Tessellation {
             };
 
             // Iterate using pre-calculated sorted offsets covering the full grid
-            for &(dx, dy, dz) in bin_search_order {
-                let min_d2 = get_min_dist_sq(dx, dy, dz, cell_size_x, cell_size_y, cell_size_z);
+            for &(dx, dy, dz, min_d2) in bin_search_order {
                 if min_d2 > 4.0 * current_max_dist_sq {
                     break;
                 }
@@ -372,11 +372,12 @@ impl Tessellation {
         for z in -rz..=rz {
             for y in -ry..=ry {
                 for x in -rx..=rx {
-                    self.bin_search_order.push((x, y, z));
+                    let dist_sq = get_min_dist_sq(x, y, z, cell_size_x, cell_size_y, cell_size_z);
+                    self.bin_search_order.push((x, y, z, dist_sq));
                 }
             }
         }
-        self.bin_search_order.sort_unstable_by(|a, b| get_min_dist_sq(a.0, a.1, a.2, cell_size_x, cell_size_y, cell_size_z).partial_cmp(&get_min_dist_sq(b.0, b.1, b.2, cell_size_x, cell_size_y, cell_size_z)).unwrap_or(std::cmp::Ordering::Equal));
+        self.bin_search_order.sort_unstable_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
 
         // Re-bin existing generators
         // We can simply call set_generators with the current data to rebuild
