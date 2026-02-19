@@ -1,6 +1,6 @@
 # vorothree
 
-`vorothree` is a Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (WASM). It provides efficient management of 3D generator points and spatial partitioning to facilitate cellular computations.
+Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (WASM). It provides efficient management of 3D generator points and spatial partitioning to facilitate cellular computations.
 
 ## Features
 

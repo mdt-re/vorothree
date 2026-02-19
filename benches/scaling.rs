@@ -18,13 +18,13 @@ struct Stats {
     point_estimate: f64,
 }
 
-const SIZES: [usize; 6] = [10, 100, 1000, 10_000, 100_000, 1_000_000];
+const SIZES: [usize; 7] = [10, 100, 1000, 10_000, 100_000, 1_000_000, 10_000_000];
 
 fn benchmark_scaling(c: &mut Criterion) {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
     
     let mut group = c.benchmark_group("scaling");
-    group.sample_size(50);
+    group.sample_size(10);
     
     for &size in &SIZES {
         // Grid resolution heuristic: cube root of N
@@ -125,6 +125,53 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
         .x_desc("Number of Points (N)")
         .y_desc("Time (ns)")
         .draw()?;
+
+    // Draw Linear and Quadratic Scaling References (Dotted Lines)
+    if let Some(first_series) = data.values().next() {
+        if let Some(&(start_n, start_t)) = first_series.first() {
+            let start_n = start_n as f64;
+            let end_n = *SIZES.last().unwrap() as f64;
+            
+            // Logarithmic steps for uniform dots on log-scale
+            let step = 10.0f64.powf(0.05); 
+
+            // Linear: y = x * (start_t / start_n)
+            let mut linear_points = Vec::new();
+            let mut n = SIZES[0] as f64;
+            while n <= end_n * 1.1 {
+                let t = start_t * (n / start_n);
+                linear_points.push((n, t));
+                n *= step;
+            }
+
+            chart.draw_series(PointSeries::of_element(
+                linear_points,
+                1,
+                &BLACK,
+                &|c, s, st| Circle::new(c, s, st.filled()),
+            ))?
+            .label("Linear")
+            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
+
+            // Quadratic: y = x^2 * (start_t / start_n^2)
+            let mut quadratic_points = Vec::new();
+            let mut n = SIZES[0] as f64;
+            while n <= end_n * 1.1 {
+                let t = start_t * (n / start_n).powi(2);
+                quadratic_points.push((n, t));
+                n *= step;
+            }
+
+            chart.draw_series(PointSeries::of_element(
+                quadratic_points,
+                1,
+                &BLACK,
+                &|c, s, st| Circle::new(c, s, st.filled()),
+            ))?
+            .label("Quadratic")
+            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
+        }
+    }
 
     let colors = [RED, BLUE, GREEN, MAGENTA, CYAN];
 

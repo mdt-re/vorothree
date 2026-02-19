@@ -70,5 +70,10 @@ name = "capacity"
 harness = false
 path = "benches/capacity.rs"
 
+[[bench]]
+name = "parallelism"
+harness = false
+path = "benches/parallelism.rs"
+
 [profile.release]
 debug = true
