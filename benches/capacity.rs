@@ -16,44 +16,56 @@ struct Estimates {
 #[derive(Deserialize)]
 struct Stats {
     point_estimate: f64,
+    confidence_interval: ConfidenceInterval,
 }
 
-const SIZES: [usize; 6] = [10, 100, 1000, 10_000, 100_000, 1_000_000];
+#[derive(Deserialize)]
+struct ConfidenceInterval {
+    lower_bound: f64,
+    upper_bound: f64,
+}
 
-fn benchmark_scaling(c: &mut Criterion) {
+// Test for a given number of points and a range of capacities (generators per bin/leaf)
+const N_POINTS: usize = 100_000;
+const CAPACITIES: [f64; 9] = [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 20.0];
+
+
+fn benchmark_capacity(c: &mut Criterion) {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
+
+    let mut group = c.benchmark_group(format!("capacity_{}k", N_POINTS / 1000));
+    group.sample_size(20);
     
-    let mut group = c.benchmark_group("scaling");
-    group.sample_size(50);
-    
-    for &size in &SIZES {
-        // Grid resolution heuristic: cube root of N
-        let grid_res = (size as f64).powf(1.0/3.0).ceil() as usize;
+    for &cap in &CAPACITIES {
+        // For grids: resolution derived from desired density (capacity)
+        let total_cells = N_POINTS as f64 / cap;
+        let grid_res = total_cells.powf(1.0/3.0).ceil() as usize;
         let grid_res = grid_res.max(1);
         
-        let total_cells = grid_res * grid_res * grid_res;
-        let density = size as f64 / total_cells as f64;
-        println!("N: {:7}, Grid: {:3}x{:3}x{:3}, Cells: {:9}, Density: {:.3}", size, grid_res, grid_res, grid_res, total_cells, density);
+        // For Moctree: capacity is the bucket size. 
+        let moctree_cap = (cap.ceil() as usize).max(1);
 
-        group.bench_with_input(BenchmarkId::new("grid", size), &size, |b, &s| {
+        println!("Cap: {:.1}, Grid Res: {}, Moctree Cap: {}", cap, grid_res, moctree_cap);
+
+        group.bench_with_input(BenchmarkId::new("grid", format!("{:.1}", cap)), &cap, |b, &_| {
             let mut tess = Tessellation::new(bounds, grid_res, grid_res, grid_res);
-            tess.random_generators(s);
+            tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
             })
         });
 
-        group.bench_with_input(BenchmarkId::new("edges", size), &size, |b, &s| {
+        group.bench_with_input(BenchmarkId::new("edges", format!("{:.1}", cap)), &cap, |b, &_| {
             let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
-            tess.random_generators(s);
+            tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
             })
         });
 
-        group.bench_with_input(BenchmarkId::new("moctree", size), &size, |b, &s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
-            tess.random_generators(s);
+        group.bench_with_input(BenchmarkId::new("moctree", format!("{:.1}", cap)), &cap, |b, &_| {
+            let mut tess = TessellationMoctree::new(bounds, moctree_cap);
+            tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
             })
@@ -62,33 +74,39 @@ fn benchmark_scaling(c: &mut Criterion) {
     group.finish();
 }
 
-fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
+fn plot_capacity_results() -> Result<(), Box<dyn std::error::Error>> {
     let methods = ["grid", "edges", "moctree"];
-    let root = Path::new("target/criterion/scaling");
+    let root_dir = format!("target/criterion/capacity_{}k", N_POINTS / 1000);
+    let root = Path::new(&root_dir);
 
     if !root.exists() {
         return Ok(());
     }
 
-    let mut data: BTreeMap<&str, Vec<(usize, f64)>> = BTreeMap::new();
+    let mut data: BTreeMap<&str, Vec<(f64, f64, f64, f64)>> = BTreeMap::new();
 
     for &method in &methods {
         let mut points = Vec::new();
-        for &size in &SIZES {
+        for &cap in &CAPACITIES {
             let path = root
                 .join(method)
-                .join(size.to_string())
+                .join(format!("{:.1}", cap))
                 .join("base/estimates.json");
 
             if path.exists() {
                 let file = File::open(&path)?;
                 let reader = BufReader::new(file);
                 let estimates: Estimates = serde_json::from_reader(reader)?;
-                points.push((size, estimates.mean.point_estimate));
+                points.push((
+                    cap,
+                    estimates.mean.point_estimate,
+                    estimates.mean.confidence_interval.lower_bound,
+                    estimates.mean.confidence_interval.upper_bound,
+                ));
             }
         }
         if !points.is_empty() {
-            points.sort_by_key(|k| k.0);
+            points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
             data.insert(method, points);
         }
     }
@@ -104,25 +122,25 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
         .output()
         .expect("Failed to execute git command");
     let git_hash = String::from_utf8(output.stdout).expect("Invalid UTF-8").trim().to_string();
-    let out_file = out_dir.join(format!("bench_scaling_{}.png", git_hash));
+    let out_file = out_dir.join(format!("bench_capacity_{}k_{}.png", N_POINTS / 1000, git_hash));
     let root_area = BitMapBackend::new(&out_file, (1024, 768)).into_drawing_area();
     root_area.fill(&WHITE)?;
 
-    let min_y = data.values().flat_map(|v| v.iter().map(|p| p.1)).fold(f64::INFINITY, f64::min);
-    let max_y = data.values().flat_map(|v| v.iter().map(|p| p.1)).fold(f64::NEG_INFINITY, f64::max);
+    let min_y = data.values().flat_map(|v| v.iter().map(|p| p.2)).fold(f64::INFINITY, f64::min);
+    let max_y = data.values().flat_map(|v| v.iter().map(|p| p.3)).fold(f64::NEG_INFINITY, f64::max);
 
     let mut chart = ChartBuilder::on(&root_area)
-        .caption("Scaling Benchmark Results", ("sans-serif", 40).into_font())
+        .caption(format!("Capacity Benchmark Results (N={})", N_POINTS), ("sans-serif", 40).into_font())
         .margin(20)
         .x_label_area_size(40)
         .y_label_area_size(80)
         .build_cartesian_2d(
-            (SIZES[0] as f64..*SIZES.last().unwrap() as f64).log_scale(),
+            (CAPACITIES[0]..CAPACITIES[CAPACITIES.len()-1]).log_scale(),
             (min_y * 0.8..max_y * 1.5).log_scale(),
         )?;
 
     chart.configure_mesh()
-        .x_desc("Number of Points (N)")
+        .x_desc("Capacity (Points per Bin/Leaf)")
         .y_desc("Time (ns)")
         .draw()?;
 
@@ -131,16 +149,29 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
     for (i, (method, points)) in data.iter().enumerate() {
         let color = colors[i % colors.len()];
 
+        let mut band_points = Vec::new();
+        for (x, _, _, u) in points.iter() {
+            band_points.push((*x, *u));
+        }
+        for (x, _, l, _) in points.iter().rev() {
+            band_points.push((*x, *l));
+        }
+
+        chart.draw_series(std::iter::once(Polygon::new(
+            band_points,
+            color.mix(0.2).filled(),
+        )))?;
+
         chart
             .draw_series(LineSeries::new(
-                points.iter().map(|(x, y)| (*x as f64, *y)),
+                points.iter().map(|(x, y, _, _)| (*x, *y)),
                 &color,
             ))?
             .label(*method)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &color));
 
         chart.draw_series(PointSeries::of_element(
-            points.iter().map(|(x, y)| (*x as f64, *y)),
+            points.iter().map(|(x, y, _, _)| (*x, *y)),
             5,
             &color,
             &|c, s, st| {
@@ -160,11 +191,11 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-criterion_group!(benches, benchmark_scaling);
+criterion_group!(benches, benchmark_capacity);
 
 fn main() {
     benches();
-    if let Err(e) = plot_scaling_results() {
+    if let Err(e) = plot_capacity_results() {
         eprintln!("Error generating plot: {}", e);
     }
 }

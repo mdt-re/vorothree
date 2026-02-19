@@ -65,5 +65,10 @@ name = "wall"
 harness = false
 path = "benches/wall.rs"
 
+[[bench]]
+name = "capacity"
+harness = false
+path = "benches/capacity.rs"
+
 [profile.release]
 debug = true
