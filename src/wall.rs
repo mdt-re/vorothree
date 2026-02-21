@@ -9,7 +9,7 @@ export const WALL_ID_START = -10;
 "#;
 
 /// The starting ID for walls. Wall IDs must be less than or equal to this value
-/// to avoid conflicts with non-negative generator IDs and positive boundary IDs.
+/// to avoid conflicts with non-negative generator IDs and the bounding box IDs.
 pub const WALL_ID_START: i32 = -10;
 
 /// Trait defining the geometry and logic of a wall.

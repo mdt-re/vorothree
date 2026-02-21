@@ -11,6 +11,11 @@ struct Point {
     z: f64,
 }
 
+/// A spatial partitioning structure based on an Octree.
+///
+/// This structure recursively subdivides the 3D space into eight octants.
+/// It is particularly efficient for non-uniform distributions of points,
+/// as it adapts the depth of the tree to the local density of points.
 pub struct AlgorithmOctree {
     bounds: BoundingBox,
     capacity: usize,
@@ -19,6 +24,12 @@ pub struct AlgorithmOctree {
 }
 
 impl AlgorithmOctree {
+    /// Creates a new `AlgorithmOctree` with the specified bounds and capacity.
+    ///
+    /// # Arguments
+    ///
+    /// * `bounds` - The spatial boundaries of the octree.
+    /// * `capacity` - The maximum number of points a leaf node can hold before subdividing.
     pub fn new(bounds: BoundingBox, capacity: usize) -> AlgorithmOctree {
         AlgorithmOctree {
             bounds,
@@ -28,6 +39,10 @@ impl AlgorithmOctree {
         }
     }
 
+    /// Inserts a point into the octree.
+    ///
+    /// Returns `true` if the point was successfully inserted (i.e., it is within bounds),
+    /// or `false` otherwise.
     pub fn insert(&mut self, index: usize, x: f64, y: f64, z: f64) -> bool {
         if !self.contains(x, y, z) {
             return false;
@@ -54,11 +69,16 @@ impl AlgorithmOctree {
         false
     }
 
+    /// Clears all points from the octree, resetting it to an empty state.
     pub fn clear(&mut self) {
         self.points.clear();
         self.children = None;
     }
 
+    /// Returns an iterator that yields points in the octree ordered by distance from the query point.
+    ///
+    /// This iterator uses a priority queue to traverse the octree, ensuring that
+    /// closer points (or octants containing closer points) are visited first.
     pub fn nearest_iter(&self, x: f64, y: f64, z: f64) -> NearestIterator<'_> {
         let mut queue = BinaryHeap::new();
         
@@ -156,6 +176,16 @@ impl SpatialAlgorithm for AlgorithmOctree {
             let ox = generators[j * 3];
             let oy = generators[j * 3 + 1];
             let oz = generators[j * 3 + 2];
+
+            let dx = ox - pos[0];
+            let dy = oy - pos[1];
+            let dz = oz - pos[2];
+            let dist_sq = dx * dx + dy * dy + dz * dz;
+
+            if dist_sq > 4.0 * *max_dist_sq {
+                break;
+            }
+
             *max_dist_sq = visitor(j, [ox, oy, oz], *max_dist_sq);
         }
     }
@@ -188,6 +218,7 @@ impl<'a> Ord for SearchItem<'a> {
     }
 }
 
+/// An iterator that yields points from the octree in order of increasing distance.
 pub struct NearestIterator<'a> {
     queue: BinaryHeap<SearchItem<'a>>,
     query_x: f64,

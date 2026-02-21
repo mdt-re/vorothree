@@ -2,25 +2,48 @@ use crate::bounds::BoundingBox;
 use crate::tessellation::SpatialAlgorithm;
 
 /// A spatial index based on a uniform grid.
+///
+/// This structure divides the 3D space into a fixed number of bins (voxels).
+/// It is generally faster than an octree for uniform distributions and allows
+/// for O(1) insertion and update operations, but may be less memory efficient
+/// for highly clustered data or very large sparse domains.
 pub struct AlgorithmGrid {
+    /// Number of bins along the X axis.
     pub grid_res_x: usize,
+    /// Number of bins along the Y axis.
     pub grid_res_y: usize,
+    /// Number of bins along the Z axis.
     pub grid_res_z: usize,
+    /// Scale factor for X coordinate to grid index.
     pub grid_scale_x: f64,
+    /// Scale factor for Y coordinate to grid index.
     pub grid_scale_y: f64,
+    /// Scale factor for Z coordinate to grid index.
     pub grid_scale_z: f64,
+    /// Maximum valid index for X.
     pub grid_limit_x: f64,
+    /// Maximum valid index for Y.
     pub grid_limit_y: f64,
+    /// Maximum valid index for Z.
     pub grid_limit_z: f64,
+    /// Minimum X coordinate of the grid bounds.
     pub min_x: f64,
+    /// Minimum Y coordinate of the grid bounds.
     pub min_y: f64,
+    /// Minimum Z coordinate of the grid bounds.
     pub min_z: f64,
+    /// The grid bins, each containing a list of generator indices.
     pub grid_bins: Vec<Vec<usize>>,
+    /// Map from generator index to its current bin index.
     pub generator_bin_ids: Vec<usize>,
+    /// Precomputed search order for visiting neighboring bins.
     pub bin_search_order: Vec<(isize, isize, isize, f64)>,
 }
 
 impl AlgorithmGrid {
+    /// Creates a new `AlgorithmGrid` with the specified dimensions and bounds.
+    ///
+    /// The grid resolution (`nx`, `ny`, `nz`) determines the granularity of the spatial partitioning.
     pub fn new(nx: usize, ny: usize, nz: usize, bounds: &BoundingBox) -> Self {
         let sx = (nx as f64) / (bounds.max_x - bounds.min_x);
         let sy = (ny as f64) / (bounds.max_y - bounds.min_y);
@@ -63,6 +86,7 @@ impl AlgorithmGrid {
         }
     }
 
+    /// Calculates the linear index of the bin corresponding to the given coordinates.
     pub fn get_bin_index(&self, x: f64, y: f64, z: f64, bounds: &BoundingBox) -> usize {
         let nx = self.grid_res_x;
         let ny = self.grid_res_y;

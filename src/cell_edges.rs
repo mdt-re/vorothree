@@ -1,5 +1,5 @@
 use crate::bounds::BoundingBox;
-use crate::bounds::{BOX_BOTTOM, BOX_TOP, BOX_FRONT, BOX_BACK, BOX_LEFT, BOX_RIGHT};
+use crate::bounds::{BOX_ID_BOTTOM, BOX_ID_TOP, BOX_ID_FRONT, BOX_ID_BACK, BOX_ID_LEFT, BOX_ID_RIGHT};
 use crate::tessellation::Cell;
 use wasm_bindgen::prelude::*;
 use std::collections::HashSet;
@@ -69,42 +69,42 @@ impl CellEdges {
         // Vertex 0
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[1, 4, 3]);
-        neighbor_buffer.extend_from_slice(&[BOX_FRONT, BOX_LEFT, BOX_BOTTOM]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_FRONT, BOX_ID_LEFT, BOX_ID_BOTTOM]);
 
         // Vertex 1
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[2, 5, 0]);
-        neighbor_buffer.extend_from_slice(&[BOX_RIGHT, BOX_FRONT, BOX_BOTTOM]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_RIGHT, BOX_ID_FRONT, BOX_ID_BOTTOM]);
 
         // Vertex 2
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[3, 6, 1]);
-        neighbor_buffer.extend_from_slice(&[BOX_BACK, BOX_RIGHT, BOX_BOTTOM]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_BACK, BOX_ID_RIGHT, BOX_ID_BOTTOM]);
 
         // Vertex 3
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[0, 7, 2]);
-        neighbor_buffer.extend_from_slice(&[BOX_LEFT, BOX_BACK, BOX_BOTTOM]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_LEFT, BOX_ID_BACK, BOX_ID_BOTTOM]);
 
         // Vertex 4
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[5, 0, 7]);
-        neighbor_buffer.extend_from_slice(&[BOX_FRONT, BOX_LEFT, BOX_TOP]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_FRONT, BOX_ID_LEFT, BOX_ID_TOP]);
 
         // Vertex 5
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[1, 6, 4]);
-        neighbor_buffer.extend_from_slice(&[BOX_RIGHT, BOX_TOP, BOX_FRONT]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_RIGHT, BOX_ID_TOP, BOX_ID_FRONT]);
 
         // Vertex 6
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[2, 7, 5]);
-        neighbor_buffer.extend_from_slice(&[BOX_BACK, BOX_TOP, BOX_RIGHT]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_BACK, BOX_ID_TOP, BOX_ID_RIGHT]);
 
         // Vertex 7
         vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[3, 4, 6]);
-        neighbor_buffer.extend_from_slice(&[BOX_LEFT, BOX_TOP, BOX_BACK]);
+        neighbor_buffer.extend_from_slice(&[BOX_ID_LEFT, BOX_ID_TOP, BOX_ID_BACK]);
 
         CellEdges {
             id,

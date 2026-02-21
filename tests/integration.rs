@@ -1,10 +1,10 @@
-use vorothree::{BoundingBox, Cell, Tessellation};
+use vorothree::{BoundingBox, CellFaces, TessellationGrid};
 
 #[test]
 fn test_cell_metrics() {
     // Create a 10x20x30 box
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 20.0, 30.0);
-    let cell = Cell::new(0, bounds);
+    let cell = CellFaces::new(0, bounds);
 
     // Test Volume
     // 10 * 20 * 30 = 6000
@@ -22,7 +22,7 @@ fn test_cell_metrics() {
 #[test]
 fn test_tessellation_workflow() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = Tessellation::new(bounds, 10, 10, 10);
+    let mut tess = TessellationGrid::new(bounds, 10, 10, 10);
 
     let points = vec![
         10.0, 10.0, 10.0,
@@ -48,7 +48,7 @@ fn test_tessellation_workflow() {
 #[test]
 fn test_tessellation_cells_octet() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = Tessellation::new(bounds, 10, 10, 10);
+    let mut tess = TessellationGrid::new(bounds, 10, 10, 10);
 
     let points = vec![
         25.0, 25.0, 25.0,

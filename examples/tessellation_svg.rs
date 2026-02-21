@@ -1,6 +1,6 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{BoundingBox, Tessellation};
+use vorothree::{BoundingBox, TessellationGrid};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Define the output file and dimensions
@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Setup the tessellation
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = Tessellation::new(bounds, 10, 10, 10);
+    let mut tess = TessellationGrid::new(bounds, 10, 10, 10);
 
     // Generate random points
     let mut rng = rand::thread_rng();

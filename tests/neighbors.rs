@@ -1,11 +1,11 @@
-use vorothree::{BoundingBox, Tessellation, Wall};
+use vorothree::{BoundingBox, TessellationGrid, Wall};
 use vorothree::geometries::{SphereGeometry, PlaneGeometry, TrefoilKnotGeometry};
 use rand::Rng;
 
 #[test]
 fn test_two_cells_neighbors() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
-    let mut tess = Tessellation::new(bounds, 1, 1, 1);
+    let mut tess = TessellationGrid::new(bounds, 1, 1, 1);
 
     // Two points: one at left, one at right
     let generators = vec![
@@ -28,7 +28,7 @@ fn test_two_cells_neighbors() {
 #[test]
 fn test_neighbor_reciprocity_random() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
-    let mut tess = Tessellation::new(bounds, 5, 5, 5);
+    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
 
     // 27 random points
     let mut rng = rand::thread_rng();
@@ -73,7 +73,7 @@ fn test_neighbor_reciprocity_random() {
 #[test]
 fn test_neighbor_reciprocity_half_sphere() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
-    let mut tess = Tessellation::new(bounds, 5, 5, 5);
+    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
 
     // 50 random points
     let mut rng = rand::thread_rng();
@@ -132,7 +132,7 @@ fn test_neighbor_reciprocity_half_sphere() {
 #[test]
 fn test_neighbor_reciprocity_sphere_small() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 20.0, 20.0, 20.0);
-    let mut tess = Tessellation::new(bounds, 5, 5, 5);
+    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
 
     // Sphere wall: center (10, 10, 10), radius 8. ID -10.
     tess.add_wall(Wall::new(-10, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
@@ -175,7 +175,7 @@ fn test_neighbor_reciprocity_sphere_small() {
 #[test]
 fn test_neighbor_reciprocity_trefoil_knot() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
-    let mut tess = Tessellation::new(bounds, 5, 5, 5);
+    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
 
     // 100 random points
     let mut rng = rand::thread_rng();

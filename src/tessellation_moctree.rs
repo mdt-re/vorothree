@@ -4,8 +4,6 @@ use crate::tessellation::Tessellation;
 use crate::wall::Wall;
 use crate::algo_octree::AlgorithmOctree;
 use wasm_bindgen::prelude::*;
-use rand::prelude::*;
-use rand::rngs::StdRng;
 
 /// A Voronoi tessellation container that uses an Octree for spatial partitioning.
 ///
@@ -83,29 +81,7 @@ impl TessellationMoctree {
     /// # Arguments
     /// * `generators` - A flat array of coordinates `[x, y, z, x, y, z, ...]`.
     pub fn set_generators(&mut self, generators: &[f64]) {
-        let mut valid_generators = Vec::with_capacity(generators.len());
-        let count = generators.len() / 3;
-
-        for i in 0..count {
-            let x = generators[i * 3];
-            let y = generators[i * 3 + 1];
-            let z = generators[i * 3 + 2];
-
-            let mut inside = true;
-            for wall in &self.inner.walls {
-                if !wall.contains(x, y, z) {
-                    inside = false;
-                    break;
-                }
-            }
-
-            if inside {
-                valid_generators.push(x);
-                valid_generators.push(y);
-                valid_generators.push(z);
-            }
-        }
-        self.inner.set_generators(valid_generators);
+        self.inner.set_generators(generators);
     }
 
     /// Update the position of a single generator by index.
@@ -130,7 +106,7 @@ impl TessellationMoctree {
             gens[offset] = x;
             gens[offset+1] = y;
             gens[offset+2] = z;
-            self.inner.set_generators(gens);
+            self.inner.set_generators(&gens);
         }
     }
 
@@ -141,80 +117,12 @@ impl TessellationMoctree {
 
     /// Generates random points within the bounds and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
-        let mut rng = StdRng::seed_from_u64(get_seed());
-        let mut points = Vec::with_capacity(count * 3);
-        let w = self.inner.bounds.max_x - self.inner.bounds.min_x;
-        let h = self.inner.bounds.max_y - self.inner.bounds.min_y;
-        let d = self.inner.bounds.max_z - self.inner.bounds.min_z;
-        
-        let mut found = 0;
-        let max_attempts = count * 1000;
-        let mut attempts = 0;
-
-        while found < count && attempts < max_attempts {
-            attempts += 1;
-            let x = self.inner.bounds.min_x + rng.r#gen::<f64>() * w;
-            let y = self.inner.bounds.min_y + rng.r#gen::<f64>() * h;
-            let z = self.inner.bounds.min_z + rng.r#gen::<f64>() * d;
-
-            let mut inside = true;
-            for wall in &self.inner.walls {
-                if !wall.contains(x, y, z) {
-                    inside = false;
-                    break;
-                }
-            }
-
-            if inside {
-                points.push(x);
-                points.push(y);
-                points.push(z);
-                found += 1;
-            }
-        }
-        
-        self.set_generators(&points);
+        self.inner.random_generators(count);
     }
 
     /// Removes generators that are not inside the defined walls.
     /// Note: This changes the indices of the remaining generators.
     pub fn prune_outside_generators(&mut self) {
-        let mut new_generators = Vec::with_capacity(self.inner.generators.len());
-        let count = self.inner.generators.len() / 3;
-        
-        for i in 0..count {
-            let x = self.inner.generators[i * 3];
-            let y = self.inner.generators[i * 3 + 1];
-            let z = self.inner.generators[i * 3 + 2];
-            
-            let mut inside = true;
-            for wall in &self.inner.walls {
-                if !wall.contains(x, y, z) {
-                    inside = false;
-                    break;
-                }
-            }
-            
-            if inside {
-                new_generators.push(x);
-                new_generators.push(y);
-                new_generators.push(z);
-            }
-        }
-        
-        if new_generators.len() != self.inner.generators.len() {
-            self.set_generators(&new_generators);
-        }
-    }
-}
-
-fn get_seed() -> u64 {
-    #[cfg(target_arch = "wasm32")]
-    {
-        (js_sys::Math::random() * 4294967296.0) as u64
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        123456789
+        self.inner.prune_outside_generators();
     }
 }

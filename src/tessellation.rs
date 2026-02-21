@@ -1,6 +1,8 @@
 use crate::bounds::BoundingBox;
 use crate::wall::Wall;
 use rayon::prelude::*;
+use rand::prelude::*;
+use rand::rngs::StdRng;
 
 /// A geometry-based Voronoi tessellation that unifies Cells, SpatialAlgorithms, and Walls.
 pub struct Tessellation<C: Cell, A: SpatialAlgorithm> {
@@ -24,12 +26,93 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
 
     pub fn add_wall(&mut self, wall: Wall) {
         self.walls.push(wall);
+        self.prune_outside_generators();
     }
 
-    pub fn set_generators(&mut self, generators: Vec<f64>) {
-        // Note: Pruning logic could be moved here or kept in specific implementations
-        self.generators = generators;
+    /// Update all generators at once.
+    ///
+    /// # Arguments
+    /// * `generators` - A flat array of coordinates `[x, y, z, x, y, z, ...]`.
+    pub fn set_generators(&mut self, generators: &[f64]) {
+        let mut valid_generators = Vec::with_capacity(generators.len());
+        let count = generators.len() / 3;
+
+        for i in 0..count {
+            let x = generators[i * 3];
+            let y = generators[i * 3 + 1];
+            let z = generators[i * 3 + 2];
+
+            let mut inside = true;
+            for wall in &self.walls {
+                if !wall.contains(x, y, z) {
+                    inside = false;
+                    break;
+                }
+            }
+
+            if inside {
+                valid_generators.push(x);
+                valid_generators.push(y);
+                valid_generators.push(z);
+            }
+        }
+
+        self.generators = valid_generators;
         self.algorithm.set_generators(&self.generators, &self.bounds);
+    }
+
+    /// Generates random points within the bounds and sets them as generators.
+    pub fn random_generators(&mut self, count: usize) {
+        let mut rng = StdRng::seed_from_u64(get_seed());
+        let mut points = Vec::with_capacity(count * 3);
+        let w = self.bounds.max_x - self.bounds.min_x;
+        let h = self.bounds.max_y - self.bounds.min_y;
+        let d = self.bounds.max_z - self.bounds.min_z;
+        
+        let mut found = 0;
+        let max_attempts = count * 1000;
+        let mut attempts = 0;
+
+        while found < count && attempts < max_attempts {
+            attempts += 1;
+            let x = self.bounds.min_x + rng.r#gen::<f64>() * w;
+            let y = self.bounds.min_y + rng.r#gen::<f64>() * h;
+            let z = self.bounds.min_z + rng.r#gen::<f64>() * d;
+
+            if self.walls.iter().all(|w| w.contains(x, y, z)) {
+                points.push(x);
+                points.push(y);
+                points.push(z);
+                found += 1;
+            }
+        }
+        
+        self.generators = points;
+        self.algorithm.set_generators(&self.generators, &self.bounds);
+    }
+
+    /// Removes generators that are not inside the defined walls.
+    /// Note: This changes the indices of the remaining generators.
+    pub fn prune_outside_generators(&mut self) {
+        let mut new_generators = Vec::with_capacity(self.generators.len());
+        let count = self.generators.len() / 3;
+        
+        for i in 0..count {
+            let x = self.generators[i * 3];
+            let y = self.generators[i * 3 + 1];
+            let z = self.generators[i * 3 + 2];
+            
+            if self.walls.iter().all(|w| w.contains(x, y, z)) {
+                new_generators.push(x);
+                new_generators.push(y);
+                new_generators.push(z);
+            }
+        }
+        
+        if new_generators.len() != self.generators.len() {
+            self.generators = new_generators;
+            self.algorithm.set_generators(&self.generators, &self.bounds);
+        }
     }
 
     pub fn calculate(&mut self) {
@@ -90,6 +173,10 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
             .collect();
     }
 
+    /// Performs one step of Lloyd's relaxation.
+    ///
+    /// This moves each generator to the centroid of its calculated Voronoi cell,
+    /// which tends to make the cells more uniform in size and shape.
     pub fn relax(&mut self) {
         let new_generators: Vec<f64> = self.cells.par_iter()
             .zip(self.generators.par_chunks(3))
@@ -102,7 +189,7 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
             })
             .collect();
 
-        self.set_generators(new_generators);
+        self.set_generators(&new_generators);
     }
 }
 
@@ -160,4 +247,15 @@ pub trait SpatialAlgorithm: Send + Sync {
     fn visit_neighbors<F>(&self, generators: &[f64], index: usize, pos: [f64; 3], max_dist_sq: &mut f64, visitor: F)
     where
         F: FnMut(usize, [f64; 3], f64) -> f64;
+}
+
+fn get_seed() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        (js_sys::Math::random() * 4294967296.0) as u64
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        123456789
+    }
 }

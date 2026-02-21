@@ -1,10 +1,10 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{BoundingBox, Tessellation, Wall};
+use vorothree::{BoundingBox, TessellationGrid, Wall};
 use vorothree::geometries::{TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
 
 fn draw_tessellation(
-    tess: &Tessellation,
+    tess: &TessellationGrid,
     generators: &[f64],
     filename: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -62,7 +62,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 1: Plane Wall
     {
-        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
 
         tess.add_wall(Wall::new(
@@ -75,7 +75,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 2: Sphere Wall
     {
-        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-11, Box::new(SphereGeometry::new([50.0, 50.0, 50.0], 40.0))));
         tess.calculate();
@@ -84,7 +84,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     
     // Run 3: Cylinder Wall
     {
-        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-12, Box::new(CylinderGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 40.0))));
         tess.calculate();
@@ -93,7 +93,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 4: Torus Wall
     {
-        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-13, Box::new(TorusGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 35.0, 10.0))));
         tess.calculate();
@@ -102,7 +102,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 6: Trefoil Knot Wall (Custom)
     {
-        let mut tess = Tessellation::new(bounds.clone(), 10, 10, 10);
+        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-15, Box::new(TrefoilKnotGeometry::new(
             [50.0, 50.0, 50.0],

@@ -1,5 +1,5 @@
 use crate::bounds::BoundingBox;
-use crate::bounds::{BOX_BOTTOM, BOX_TOP, BOX_FRONT, BOX_BACK, BOX_LEFT, BOX_RIGHT};
+use crate::bounds::{BOX_ID_BOTTOM, BOX_ID_TOP, BOX_ID_FRONT, BOX_ID_BACK, BOX_ID_LEFT, BOX_ID_RIGHT};
 use crate::tessellation::Cell;
 use wasm_bindgen::prelude::*;
 
@@ -68,12 +68,12 @@ impl CellFaces {
             face_counts,
             face_indices,
             face_neighbors: vec![
-                BOX_BOTTOM, // z-
-                BOX_TOP,    // z+
-                BOX_FRONT,  // y-
-                BOX_BACK,   // y+
-                BOX_LEFT,   // x-
-                BOX_RIGHT,  // x+
+                BOX_ID_BOTTOM, // z-
+                BOX_ID_TOP,    // z+
+                BOX_ID_FRONT,  // y-
+                BOX_ID_BACK,   // y+
+                BOX_ID_LEFT,   // x-
+                BOX_ID_RIGHT,  // x+
             ],
         }
     }

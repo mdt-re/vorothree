@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, Tessellation};
+use vorothree::{BoundingBox, TessellationGrid};
 
 fn main() {
     // Initialize Rayon explicitly so thread creation (clone3) happens
@@ -10,7 +10,7 @@ fn main() {
 
     // Create the tessellation instance with a spatial grid (20x20x20)
     // Adjusting grid size affects the binning performance
-    let mut tess = Tessellation::new(bounds, 20, 20, 20);
+    let mut tess = TessellationGrid::new(bounds, 20, 20, 20);
 
     // Generate a large number of random points to stress the algorithm
     // 10,000 points is usually enough to get a good profile
