@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, TessellationEdges, TessellationMoctree};
+use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -18,7 +18,8 @@ struct Stats {
     point_estimate: f64,
 }
 
-const SIZES: [usize; 7] = [10, 100, 1000, 10_000, 100_000, 1_000_000, 10_000_000];
+//const SIZES: [usize; 7] = [10, 100, 1000, 10_000, 100_000, 1_000_000, 10_000_000];
+const SIZES: [usize; 5] = [10, 100, 1000, 10_000, 100_000];
 
 fn benchmark_scaling(c: &mut Criterion) {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
@@ -36,7 +37,7 @@ fn benchmark_scaling(c: &mut Criterion) {
         println!("N: {:7}, Grid: {:3}x{:3}x{:3}, Cells: {:9}, Density: {:.3}", size, grid_res, grid_res, grid_res, total_cells, density);
 
         group.bench_with_input(BenchmarkId::new("grid", size), &size, |b, &s| {
-            let mut tess = Tessellation::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();

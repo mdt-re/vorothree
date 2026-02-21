@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, TessellationEdges, TessellationMoctree};
+use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -56,7 +56,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
             .unwrap();
 
         group.bench_with_input(BenchmarkId::new("grid", num_threads), &num_threads, |b, &_s| {
-            let mut tess = Tessellation::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {

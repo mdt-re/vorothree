@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, TessellationEdges, TessellationMoctree};
+use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -48,7 +48,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         println!("Cap: {:.1}, Grid Res: {}, Moctree Cap: {}", cap, grid_res, moctree_cap);
 
         group.bench_with_input(BenchmarkId::new("grid", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();

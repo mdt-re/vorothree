@@ -1,5 +1,6 @@
 use crate::bounds::BoundingBox;
-use crate::cell::{BOX_BOTTOM, BOX_TOP, BOX_FRONT, BOX_BACK, BOX_LEFT, BOX_RIGHT};
+use crate::bounds::{BOX_BOTTOM, BOX_TOP, BOX_FRONT, BOX_BACK, BOX_LEFT, BOX_RIGHT};
+use crate::tessellation::Cell;
 use wasm_bindgen::prelude::*;
 use std::collections::HashSet;
 
@@ -614,5 +615,32 @@ impl CellEdges {
             }
         }
         (counts, indices, neighbors)
+    }
+}
+
+impl Cell for CellEdges {
+    type Scratch = CellEdgesScratch;
+
+    #[inline]
+    fn new(id: usize, bounds: BoundingBox) -> Self {
+        CellEdges::new(id, bounds)
+    }
+
+    #[inline]
+    fn clip(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32, scratch: &mut Self::Scratch, generator: Option<&[f64]>) -> (bool, f64) {
+        self.clip_with_scratch(point, normal, neighbor_id, scratch, generator)
+    }
+
+    #[inline]
+    fn max_radius_sq(&self, center: &[f64]) -> f64 {
+        self.max_radius_sq(center)
+    }
+
+    fn centroid(&self) -> Vec<f64> {
+        self.centroid()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.vertices.is_empty()
     }
 }

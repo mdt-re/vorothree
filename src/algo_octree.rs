@@ -11,16 +11,16 @@ struct Point {
     z: f64,
 }
 
-pub struct Moctree {
+pub struct AlgorithmOctree {
     bounds: BoundingBox,
     capacity: usize,
     points: Vec<Point>,
-    children: Option<Box<[Moctree; 8]>>,
+    children: Option<Box<[AlgorithmOctree; 8]>>,
 }
 
-impl Moctree {
-    pub fn new(bounds: BoundingBox, capacity: usize) -> Moctree {
-        Moctree {
+impl AlgorithmOctree {
+    pub fn new(bounds: BoundingBox, capacity: usize) -> AlgorithmOctree {
+        AlgorithmOctree {
             bounds,
             capacity,
             points: Vec::new(),
@@ -59,12 +59,6 @@ impl Moctree {
         self.children = None;
     }
 
-    // pub fn query(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> Vec<usize> {
-    //     let mut results = Vec::new();
-    //     self.query_recursive(min_x, min_y, min_z, max_x, max_y, max_z, &mut results);
-    //     results
-    // }
-
     pub fn nearest_iter(&self, x: f64, y: f64, z: f64) -> NearestIterator<'_> {
         let mut queue = BinaryHeap::new();
         
@@ -85,32 +79,6 @@ impl Moctree {
         }
     }
 
-    // fn query_recursive(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, results: &mut Vec<usize>) {
-    //     if !self.intersects_range(min_x, min_y, min_z, max_x, max_y, max_z) {
-    //         return;
-    //     }
-
-    //     for p in &self.points {
-    //         if p.x >= min_x && p.x <= max_x &&
-    //            p.y >= min_y && p.y <= max_y &&
-    //            p.z >= min_z && p.z <= max_z {
-    //             results.push(p.index);
-    //         }
-    //     }
-
-    //     if let Some(children) = &self.children {
-    //         for child in children.iter() {
-    //             child.query_recursive(min_x, min_y, min_z, max_x, max_y, max_z, results);
-    //         }
-    //     }
-    // }
-
-    // fn intersects_range(&self, min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> bool {
-    //     self.bounds.max_x >= min_x && self.bounds.min_x <= max_x &&
-    //     self.bounds.max_y >= min_y && self.bounds.min_y <= max_y &&
-    //     self.bounds.max_z >= min_z && self.bounds.min_z <= max_z
-    // }
-
     fn contains(&self, x: f64, y: f64, z: f64) -> bool {
         x >= self.bounds.min_x && x <= self.bounds.max_x &&
         y >= self.bounds.min_y && y <= self.bounds.max_y &&
@@ -130,14 +98,14 @@ impl Moctree {
         let mid_z = (min_z + max_z) / 2.0;
 
         let mut children = Box::new([
-            Moctree::new(BoundingBox::new(min_x, min_y, min_z, mid_x, mid_y, mid_z), self.capacity),
-            Moctree::new(BoundingBox::new(mid_x, min_y, min_z, max_x, mid_y, mid_z), self.capacity),
-            Moctree::new(BoundingBox::new(min_x, mid_y, min_z, mid_x, max_y, mid_z), self.capacity),
-            Moctree::new(BoundingBox::new(mid_x, mid_y, min_z, max_x, max_y, mid_z), self.capacity),
-            Moctree::new(BoundingBox::new(min_x, min_y, mid_z, mid_x, mid_y, max_z), self.capacity),
-            Moctree::new(BoundingBox::new(mid_x, min_y, mid_z, max_x, mid_y, max_z), self.capacity),
-            Moctree::new(BoundingBox::new(min_x, mid_y, mid_z, mid_x, max_y, max_z), self.capacity),
-            Moctree::new(BoundingBox::new(mid_x, mid_y, mid_z, max_x, max_y, max_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(min_x, min_y, min_z, mid_x, mid_y, mid_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(mid_x, min_y, min_z, max_x, mid_y, mid_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(min_x, mid_y, min_z, mid_x, max_y, mid_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(mid_x, mid_y, min_z, max_x, max_y, mid_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(min_x, min_y, mid_z, mid_x, mid_y, max_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(mid_x, min_y, mid_z, max_x, mid_y, max_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(min_x, mid_y, mid_z, mid_x, max_y, max_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new(mid_x, mid_y, mid_z, max_x, max_y, max_z), self.capacity),
         ]);
 
         let points = std::mem::take(&mut self.points);
@@ -153,7 +121,7 @@ impl Moctree {
     }
 }
 
-impl SpatialAlgorithm for Moctree {
+impl SpatialAlgorithm for AlgorithmOctree {
     fn set_generators(&mut self, generators: &[f64], _bounds: &BoundingBox) {
         self.clear();
         let count = generators.len() / 3;
@@ -163,7 +131,7 @@ impl SpatialAlgorithm for Moctree {
     }
 
     fn update_generator(&mut self, _index: usize, _old_pos: &[f64], _new_pos: &[f64], _bounds: &BoundingBox) {
-        // Moctree doesn't support efficient single updates easily without removal support.
+        // AlgorithmOctree doesn't support efficient single updates easily without removal support.
         // For now, we might need to rebuild or implement remove.
         // Given the current API usage, full rebuild is often acceptable or we can implement remove later.
         // For this refactor, we'll leave it as a no-op or full rebuild if critical, but typically set_generators is used.
@@ -180,7 +148,7 @@ impl SpatialAlgorithm for Moctree {
     ) where
         F: FnMut(usize, [f64; 3], f64) -> f64,
     {
-        // Moctree nearest_iter yields neighbors. We can iterate until we exceed max_dist_sq?
+        // AlgorithmOctree nearest_iter yields neighbors. We can iterate until we exceed max_dist_sq?
         // The generic calculate loop checks distance, so we just need to feed candidates.
         // nearest_iter is good because it yields closest first.
         for j in self.nearest_iter(pos[0], pos[1], pos[2]) {
@@ -195,7 +163,7 @@ impl SpatialAlgorithm for Moctree {
 
 struct SearchItem<'a> {
     dist_sq: f64,
-    node: Option<&'a Moctree>,
+    node: Option<&'a AlgorithmOctree>,
     point: Option<&'a Point>,
 }
 

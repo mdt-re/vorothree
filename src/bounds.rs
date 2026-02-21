@@ -1,5 +1,25 @@
 use wasm_bindgen::prelude::*;
 
+// Constants for boundary walls
+#[wasm_bindgen(typescript_custom_section)]
+const TS_CONSTANTS: &'static str = r#"
+export const BOX_BOTTOM = -1;
+export const BOX_TOP = -2;
+export const BOX_FRONT = -3;
+export const BOX_BACK = -4;
+export const BOX_LEFT = -5;
+export const BOX_RIGHT = -6;
+"#;
+
+/// Wall IDs for the bounding box walls, these are negative to prevent conflicts with generator IDs.
+pub const BOX_BOTTOM: i32 = -1;
+pub const BOX_TOP: i32 = -2;
+pub const BOX_FRONT: i32 = -3;
+pub const BOX_BACK: i32 = -4;
+pub const BOX_LEFT: i32 = -5;
+pub const BOX_RIGHT: i32 = -6;
+
+
 /// Represents an axis-aligned bounding box in 3D space.
 ///
 /// This struct defines the spatial limits for the Voronoi tessellation.

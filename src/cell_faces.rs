@@ -1,28 +1,12 @@
 use crate::bounds::BoundingBox;
+use crate::bounds::{BOX_BOTTOM, BOX_TOP, BOX_FRONT, BOX_BACK, BOX_LEFT, BOX_RIGHT};
+use crate::tessellation::Cell;
 use wasm_bindgen::prelude::*;
-
-// Constants for boundary walls
-#[wasm_bindgen(typescript_custom_section)]
-const TS_CONSTANTS: &'static str = r#"
-export const BOX_BOTTOM = -1;
-export const BOX_TOP = -2;
-export const BOX_FRONT = -3;
-export const BOX_BACK = -4;
-export const BOX_LEFT = -5;
-export const BOX_RIGHT = -6;
-"#;
-
-pub const BOX_BOTTOM: i32 = -1;
-pub const BOX_TOP: i32 = -2;
-pub const BOX_FRONT: i32 = -3;
-pub const BOX_BACK: i32 = -4;
-pub const BOX_LEFT: i32 = -5;
-pub const BOX_RIGHT: i32 = -6;
 
 /// Scratch buffer to reuse allocations during clipping.
 #[wasm_bindgen]
 #[derive(Default, Clone)]
-pub struct ClipScratch {
+pub struct CellFacesScratch {
     vertices: Vec<f64>,
     face_counts: Vec<u8>,
     face_indices: Vec<u16>,
@@ -40,7 +24,7 @@ pub struct ClipScratch {
 /// A Voronoi cell containing vertices and face information.
 #[wasm_bindgen]
 #[derive(Clone)]
-pub struct Cell {
+pub struct CellFaces {
     pub(crate) id: usize,
     // Flat array of vertices [x, y, z, x, y, z, ...]
     pub(crate) vertices: Vec<f64>,
@@ -53,9 +37,9 @@ pub struct Cell {
 }
 
 #[wasm_bindgen]
-impl Cell {
+impl CellFaces {
     #[wasm_bindgen(constructor)]
-    pub fn new(id: usize, bounds: BoundingBox) -> Cell {
+    pub fn new(id: usize, bounds: BoundingBox) -> CellFaces {
         let vertices: Vec<f64> = vec![
             bounds.min_x, bounds.min_y, bounds.min_z, // 0
             bounds.max_x, bounds.min_y, bounds.min_z, // 1
@@ -78,7 +62,7 @@ impl Cell {
             1, 2, 6, 5, // Right (x+)
         ];
 
-        Cell {
+        CellFaces {
             id,
             vertices,
             face_counts,
@@ -125,7 +109,7 @@ impl Cell {
     }
 
     pub fn clip(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32) {
-        let mut scratch = ClipScratch::default();
+        let mut scratch = CellFacesScratch::default();
         self.clip_with_scratch(point, normal, neighbor_id, &mut scratch, None);
     }
 
@@ -296,7 +280,7 @@ impl Cell {
     }
 }
 
-impl Cell {
+impl CellFaces {
     pub fn faces(&self) -> Vec<Vec<usize>> {
         let mut faces: Vec<Vec<usize>> = Vec::with_capacity(self.face_counts.len());
         let mut offset: usize = 0;
@@ -329,7 +313,7 @@ impl Cell {
         max_d2
     }
 
-    pub fn clip_with_scratch(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32, scratch: &mut ClipScratch, generator: Option<&[f64]>) -> (bool, f64) {
+    pub fn clip_with_scratch(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32, scratch: &mut CellFacesScratch, generator: Option<&[f64]>) -> (bool, f64) {
         let px = point[0];
         let py = point[1];
         let pz = point[2];
@@ -544,5 +528,32 @@ impl Cell {
         std::mem::swap(&mut self.face_neighbors, &mut scratch.face_neighbors);
 
         (true, max_d2)
+    }
+}
+
+impl Cell for CellFaces {
+    type Scratch = CellFacesScratch;
+
+    #[inline]
+    fn new(id: usize, bounds: BoundingBox) -> Self {
+        CellFaces::new(id, bounds)
+    }
+
+    #[inline]
+    fn clip(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32, scratch: &mut Self::Scratch, generator: Option<&[f64]>) -> (bool, f64) {
+        self.clip_with_scratch(point, normal, neighbor_id, scratch, generator)
+    }
+
+    #[inline]
+    fn max_radius_sq(&self, center: &[f64]) -> f64 {
+        self.max_radius_sq(center)
+    }
+
+    fn centroid(&self) -> Vec<f64> {
+        self.centroid()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.vertices.is_empty()
     }
 }

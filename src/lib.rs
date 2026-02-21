@@ -20,21 +20,25 @@
 //! The primary entry point is the [`Tessellation`] struct, which manages the grid and generators.
 
 mod bounds;
-mod cell;
+mod cell_faces;
 mod cell_edges;
 pub mod geometries;
-mod moctree;
-mod tessellation;
+//mod moctree;
+mod algo_grid;
+mod algo_octree;
+mod tessellation_grid;
 mod tessellation_edges;
 mod tessellation_moctree;
+mod tessellation;
 mod wall;
 
 
 pub use bounds::BoundingBox;
-pub use cell::Cell;
+pub use cell_faces::CellFaces;
 pub use cell_edges::CellEdges;
-pub use tessellation::Tessellation;
+pub use tessellation_grid::TessellationGrid;
 pub use tessellation_edges::TessellationEdges;
 pub use tessellation_moctree::TessellationMoctree;
+pub use tessellation::Tessellation;
 pub use wall::Wall;
 pub use wall::WallGeometry;

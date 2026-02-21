@@ -1,9 +1,9 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use vorothree::{BoundingBox, Tessellation};
+use vorothree::{BoundingBox, TessellationGrid};
 
 fn benchmark_cell_volume(c: &mut Criterion) {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = Tessellation::new(bounds, 10, 10, 10);
+    let mut tess = TessellationGrid::new(bounds, 10, 10, 10);
 
     let mut generators: Vec<f64> = Vec::with_capacity(3000);
     for i in 0..10000 {
@@ -30,7 +30,7 @@ fn benchmark_cell_volume(c: &mut Criterion) {
 
 fn benchmark_cell_centroid(c: &mut Criterion) {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = Tessellation::new(bounds, 10, 10, 10);
+    let mut tess = TessellationGrid::new(bounds, 10, 10, 10);
 
     let mut generators: Vec<f64> = Vec::with_capacity(3000);
     for i in 0..10000 {
