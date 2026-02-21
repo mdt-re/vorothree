@@ -27,7 +27,7 @@ struct ConfidenceInterval {
 
 // Test for a given number of points and a range of capacities (generators per bin/leaf)
 const N_POINTS: usize = 100_000;
-const CAPACITIES: [f64; 9] = [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 20.0];
+const CAPACITIES: [f64; 10] = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 20.0];
 
 
 fn benchmark_capacity(c: &mut Criterion) {

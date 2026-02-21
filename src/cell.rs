@@ -24,16 +24,17 @@ pub const BOX_RIGHT: i32 = -6;
 #[derive(Default, Clone)]
 pub struct ClipScratch {
     vertices: Vec<f64>,
-    face_counts: Vec<u32>,
-    face_indices: Vec<u32>,
+    face_counts: Vec<u8>,
+    face_indices: Vec<u16>,
     face_neighbors: Vec<i32>,
     dists: Vec<f64>,
     is_intersection: Vec<bool>,
-    old_to_new: Vec<Option<u32>>,
-    intersection_map: Vec<((usize, usize), u32)>,
-    lid_segments: Vec<(u32, u32)>,
-    face_buffer: Vec<u32>,
-    lid_buffer: Vec<u32>,
+    old_to_new: Vec<Option<u16>>,
+    intersection_map: Vec<(u32, u16)>,
+    lid_segments: Vec<(u16, u16)>,
+    face_buffer: Vec<u16>,
+    lid_buffer: Vec<u16>,
+    lid_map: Vec<u16>,
 }
 
 /// A Voronoi cell containing vertices and face information.
@@ -44,9 +45,9 @@ pub struct Cell {
     // Flat array of vertices [x, y, z, x, y, z, ...]
     pub(crate) vertices: Vec<f64>,
     // Number of vertices for each face
-    pub(crate) face_counts: Vec<u32>,
+    pub(crate) face_counts: Vec<u8>,
     // Flattened indices for all faces
-    pub(crate) face_indices: Vec<u32>,
+    pub(crate) face_indices: Vec<u16>,
     // Neighbor ID for each face. Negative values indicate walls/boundaries.
     pub(crate) face_neighbors: Vec<i32>,
 }
@@ -66,9 +67,9 @@ impl Cell {
             bounds.min_x, bounds.max_y, bounds.max_z, // 7
         ];
 
-        let face_counts: Vec<u32> = vec![4, 4, 4, 4, 4, 4];
+        let face_counts: Vec<u8> = vec![4, 4, 4, 4, 4, 4];
 
-        let face_indices: Vec<u32> = vec![
+        let face_indices: Vec<u16> = vec![
             3, 2, 1, 0, // Bottom (z-)
             4, 5, 6, 7, // Top (z+)
             0, 1, 5, 4, // Front (y-)
@@ -108,13 +109,13 @@ impl Cell {
     /// Number of vertices for each face.
     #[wasm_bindgen(getter)]
     pub fn face_counts(&self) -> Vec<u32> {
-        self.face_counts.clone()
+        self.face_counts.iter().map(|&c| c as u32).collect()
     }
 
     /// Flattened indices for all faces.
     #[wasm_bindgen(getter)]
     pub fn face_indices(&self) -> Vec<u32> {
-        self.face_indices.clone()
+        self.face_indices.iter().map(|&i| i as u32).collect()
     }
 
     /// Neighbor ID for each face. Negative values indicate walls/boundaries.
@@ -140,14 +141,14 @@ impl Cell {
             }
 
             // Use the first vertex of the face as a pivot for fan triangulation
-            let idx0: usize = self.face_indices[index_offset] as usize;
+            let idx0 = self.face_indices[index_offset] as usize;
             let v0_x: f64 = self.vertices[idx0 * 3];
             let v0_y: f64 = self.vertices[idx0 * 3 + 1];
             let v0_z: f64 = self.vertices[idx0 * 3 + 2];
 
             for i in 1..count - 1 {
-                let idx1: usize = self.face_indices[index_offset + i] as usize;
-                let idx2: usize = self.face_indices[index_offset + i + 1] as usize;
+                let idx1 = self.face_indices[index_offset + i] as usize;
+                let idx2 = self.face_indices[index_offset + i + 1] as usize;
 
                 let v1_x: f64 = self.vertices[idx1 * 3];
                 let v1_y: f64 = self.vertices[idx1 * 3 + 1];
@@ -181,14 +182,14 @@ impl Cell {
                 continue;
             }
 
-            let idx0: usize = self.face_indices[index_offset] as usize;
+            let idx0 = self.face_indices[index_offset] as usize;
             let v0_x: f64 = self.vertices[idx0 * 3];
             let v0_y: f64 = self.vertices[idx0 * 3 + 1];
             let v0_z: f64 = self.vertices[idx0 * 3 + 2];
 
             for i in 1..count - 1 {
-                let idx1: usize = self.face_indices[index_offset + i] as usize;
-                let idx2: usize = self.face_indices[index_offset + i + 1] as usize;
+                let idx1 = self.face_indices[index_offset + i] as usize;
+                let idx2 = self.face_indices[index_offset + i + 1] as usize;
 
                 let v1_x: f64 = self.vertices[idx1 * 3];
                 let v1_y: f64 = self.vertices[idx1 * 3 + 1];
@@ -287,7 +288,7 @@ impl Cell {
             let count = count as usize;
             let end = offset + count;
             let face_slice = &self.face_indices[offset..end];
-            let js_face = js_sys::Uint32Array::from(face_slice);
+            let js_face = js_sys::Uint16Array::from(face_slice);
             result.set(i as u32, js_face.into());
             offset = end;
         }
@@ -380,13 +381,14 @@ impl Cell {
 
         scratch.intersection_map.clear();
         scratch.lid_segments.clear();
+        scratch.lid_map.clear();
 
         let mut max_d2 = 0.0;
 
         // Keep existing vertices that are inside
         for i in 0..num_verts {
             if scratch.dists[i] <= 1e-9 {
-                let new_idx = (scratch.vertices.len() / 3) as u32;
+                let new_idx = (scratch.vertices.len() / 3) as u16;
                 scratch.vertices.push(self.vertices[i * 3]);
                 scratch.vertices.push(self.vertices[i * 3 + 1]);
                 scratch.vertices.push(self.vertices[i * 3 + 2]);
@@ -409,8 +411,8 @@ impl Cell {
         let mut index_offset = 0;
 
         // 3. Clip each face
-        for (face_idx, &count) in self.face_counts.iter().enumerate() {
-            let count = count as usize;
+        for (face_idx, &count_u8) in self.face_counts.iter().enumerate() {
+            let count = count_u8 as usize;
             let face_neighbor = self.face_neighbors[face_idx];
             let current_indices = &self.face_indices[index_offset..index_offset + count];
             index_offset += count;
@@ -430,14 +432,14 @@ impl Cell {
                         if let Some(idx) = scratch.old_to_new[idx_e] { scratch.face_buffer.push(idx); }
                     } else {
                         // Start In, End Out -> Intersection
-                        let key = if idx_s < idx_e { (idx_s, idx_e) } else { (idx_e, idx_s) };
+                        let key = if idx_s < idx_e { (idx_s as u32) << 16 | (idx_e as u32) } else { (idx_e as u32) << 16 | (idx_s as u32) };
                         let idx = if let Some(&(_, id)) = scratch.intersection_map.iter().find(|&&(k, _)| k == key) {
                             id
                         } else {
                             let t = (d_s / (d_s - d_e)).clamp(0.0, 1.0);
                             let ax = self.vertices[idx_s * 3]; let ay = self.vertices[idx_s * 3 + 1]; let az = self.vertices[idx_s * 3 + 2];
                             let bx = self.vertices[idx_e * 3]; let by = self.vertices[idx_e * 3 + 1]; let bz = self.vertices[idx_e * 3 + 2];
-                            let new_idx = (scratch.vertices.len() / 3) as u32;
+                            let new_idx = (scratch.vertices.len() / 3) as u16;
                             let nx = ax + t * (bx - ax);
                             let ny = ay + t * (by - ay);
                             let nz = az + t * (bz - az);
@@ -461,14 +463,14 @@ impl Cell {
                     }
                 } else if e_in {
                     // Start Out, End In -> Intersection then End
-                    let key = if idx_s < idx_e { (idx_s, idx_e) } else { (idx_e, idx_s) };
+                    let key = if idx_s < idx_e { (idx_s as u32) << 16 | (idx_e as u32) } else { (idx_e as u32) << 16 | (idx_s as u32) };
                     let idx = if let Some(&(_, id)) = scratch.intersection_map.iter().find(|&&(k, _)| k == key) {
                         id
                     } else {
                         let t = (d_s / (d_s - d_e)).clamp(0.0, 1.0);
                         let ax = self.vertices[idx_s * 3]; let ay = self.vertices[idx_s * 3 + 1]; let az = self.vertices[idx_s * 3 + 2];
                         let bx = self.vertices[idx_e * 3]; let by = self.vertices[idx_e * 3 + 1]; let bz = self.vertices[idx_e * 3 + 2];
-                        let new_idx = (scratch.vertices.len() / 3) as u32;
+                        let new_idx = (scratch.vertices.len() / 3) as u16;
                         let nx = ax + t * (bx - ax);
                         let ny = ay + t * (by - ay);
                         let nz = az + t * (bz - az);
@@ -494,7 +496,7 @@ impl Cell {
             }
 
             if scratch.face_buffer.len() >= 3 {
-                scratch.face_counts.push(scratch.face_buffer.len() as u32);
+                scratch.face_counts.push(scratch.face_buffer.len() as u8);
                 scratch.face_neighbors.push(face_neighbor);
                 
                 // Identify the segment on the clipping plane (connecting two intersection points)
@@ -512,37 +514,34 @@ impl Cell {
         // 4. Reconstruct the "lid" face from segments
         if !scratch.lid_segments.is_empty() {
             scratch.lid_buffer.clear();
+            
+            // Build adjacency map for O(1) lookup
+            scratch.lid_map.resize(scratch.vertices.len() / 3, u16::MAX);
+            for &(u, v) in &scratch.lid_segments {
+                scratch.lid_map[u as usize] = v;
+            }
+
             let (start, next) = scratch.lid_segments[0];
             scratch.lid_buffer.push(start);
             
             let mut current = next;
             while current != start && scratch.lid_buffer.len() <= scratch.lid_segments.len() {
                 scratch.lid_buffer.push(current);
-                if let Some(&(_, v)) = scratch.lid_segments.iter().find(|&&(u, _)| u == current) {
-                    current = v;
-                } else { break; } // Should not happen for convex poly
+                current = scratch.lid_map[current as usize];
+                if current == u16::MAX { break; } // Should not happen for convex poly
             }
             
             if scratch.lid_buffer.len() >= 3 {
-                scratch.face_counts.push(scratch.lid_buffer.len() as u32);
+                scratch.face_counts.push(scratch.lid_buffer.len() as u8);
                 scratch.face_indices.extend_from_slice(&scratch.lid_buffer);
                 scratch.face_neighbors.push(neighbor_id);
             }
         }
 
-        // Instead of swapping (which transfers the small capacity of 'self' back to 'scratch'),
-        // we copy the data to 'self' so 'scratch' retains its large capacity for reuse.
-        self.vertices.clear();
-        self.vertices.extend_from_slice(&scratch.vertices);
-
-        self.face_counts.clear();
-        self.face_counts.extend_from_slice(&scratch.face_counts);
-
-        self.face_indices.clear();
-        self.face_indices.extend_from_slice(&scratch.face_indices);
-
-        self.face_neighbors.clear();
-        self.face_neighbors.extend_from_slice(&scratch.face_neighbors);
+        std::mem::swap(&mut self.vertices, &mut scratch.vertices);
+        std::mem::swap(&mut self.face_counts, &mut scratch.face_counts);
+        std::mem::swap(&mut self.face_indices, &mut scratch.face_indices);
+        std::mem::swap(&mut self.face_neighbors, &mut scratch.face_neighbors);
 
         (true, max_d2)
     }

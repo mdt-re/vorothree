@@ -8,18 +8,18 @@ use std::collections::HashSet;
 #[derive(Default, Clone)]
 pub struct CellEdgesScratch {
     vertices: Vec<f64>,
-    edge_buffer: Vec<usize>,
+    edge_buffer: Vec<u16>,
     neighbor_buffer: Vec<i32>,
-    vertex_offsets: Vec<usize>,
-    vertex_counts: Vec<usize>,
+    vertex_offsets: Vec<u16>,
+    vertex_counts: Vec<u8>,
     
     dists: Vec<f64>,
-    old_to_new: Vec<Option<usize>>,
+    old_to_new: Vec<Option<u16>>,
     
     // (FaceID, new_vertex_idx, is_left_of_edge)
-    face_cut_map: Vec<(i32, usize, bool)>,
+    face_cut_map: Vec<(i32, u16, bool)>,
     // (p_idx, u_idx, F_left, F_right)
-    cut_infos: Vec<(usize, usize, i32, i32)>,
+    cut_infos: Vec<(u16, u16, i32, i32)>,
 }
 
 /// A Voronoi cell represented as a graph of vertices and edges.
@@ -33,11 +33,11 @@ pub struct CellEdges {
     pub(crate) vertices: Vec<f64>,
     // Flat adjacency list. 
     // Edges for vertex i are at edge_buffer[vertex_offsets[i] .. vertex_offsets[i] + vertex_counts[i]]
-    pub(crate) edge_buffer: Vec<usize>,
+    pub(crate) edge_buffer: Vec<u16>,
     // Corresponding face IDs. neighbor_buffer[k] is the face ID to the "left" of the edge at edge_buffer[k]
     pub(crate) neighbor_buffer: Vec<i32>,
-    pub(crate) vertex_offsets: Vec<usize>,
-    pub(crate) vertex_counts: Vec<usize>,
+    pub(crate) vertex_offsets: Vec<u16>,
+    pub(crate) vertex_counts: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -63,45 +63,45 @@ impl CellEdges {
         let mut edge_buffer = Vec::with_capacity(24);
         let mut neighbor_buffer = Vec::with_capacity(24);
         let mut vertex_offsets = Vec::with_capacity(8);
-        let vertex_counts = vec![3; 8];
+        let vertex_counts = vec![3u8; 8];
 
         // Vertex 0
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[1, 4, 3]);
         neighbor_buffer.extend_from_slice(&[BOX_FRONT, BOX_LEFT, BOX_BOTTOM]);
 
         // Vertex 1
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[2, 5, 0]);
         neighbor_buffer.extend_from_slice(&[BOX_RIGHT, BOX_FRONT, BOX_BOTTOM]);
 
         // Vertex 2
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[3, 6, 1]);
         neighbor_buffer.extend_from_slice(&[BOX_BACK, BOX_RIGHT, BOX_BOTTOM]);
 
         // Vertex 3
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[0, 7, 2]);
         neighbor_buffer.extend_from_slice(&[BOX_LEFT, BOX_BACK, BOX_BOTTOM]);
 
         // Vertex 4
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[5, 0, 7]);
         neighbor_buffer.extend_from_slice(&[BOX_FRONT, BOX_LEFT, BOX_TOP]);
 
         // Vertex 5
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[1, 6, 4]);
         neighbor_buffer.extend_from_slice(&[BOX_RIGHT, BOX_TOP, BOX_FRONT]);
 
         // Vertex 6
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[2, 7, 5]);
         neighbor_buffer.extend_from_slice(&[BOX_BACK, BOX_TOP, BOX_RIGHT]);
 
         // Vertex 7
-        vertex_offsets.push(edge_buffer.len());
+        vertex_offsets.push(edge_buffer.len() as u16);
         edge_buffer.extend_from_slice(&[3, 4, 6]);
         neighbor_buffer.extend_from_slice(&[BOX_LEFT, BOX_TOP, BOX_BACK]);
 
@@ -399,7 +399,7 @@ impl CellEdges {
         // 1. Keep inside vertices and identify cuts
         for i in 0..num_verts {
             if scratch.dists[i] <= 1e-9 {
-                let new_idx = (scratch.vertices.len() / 3) as usize;
+                let new_idx = (scratch.vertices.len() / 3) as u16;
                 scratch.vertices.push(self.vertices[i * 3]);
                 scratch.vertices.push(self.vertices[i * 3 + 1]);
                 scratch.vertices.push(self.vertices[i * 3 + 2]);
@@ -414,13 +414,13 @@ impl CellEdges {
                 }
 
                 // Process edges
-                let start = self.vertex_offsets[i];
-                let count = self.vertex_counts[i];
-                scratch.vertex_offsets.push(scratch.edge_buffer.len());
+                let start = self.vertex_offsets[i] as usize;
+                let count = self.vertex_counts[i] as usize;
+                scratch.vertex_offsets.push(scratch.edge_buffer.len() as u16);
                 scratch.vertex_counts.push(0); // Placeholder
                 
                 for k in 0..count {
-                    let neighbor_idx = self.edge_buffer[start + k];
+                    let neighbor_idx = self.edge_buffer[start + k] as usize;
                     let face_left = self.neighbor_buffer[start + k];
                     
                     if scratch.dists[neighbor_idx] <= 1e-9 {
@@ -442,7 +442,7 @@ impl CellEdges {
                         let ny = ay + t * (by - ay);
                         let nz = az + t * (bz - az);
                         
-                        let p_idx = (scratch.vertices.len() / 3) as usize;
+                        let p_idx = (scratch.vertices.len() / 3) as u16;
                         scratch.vertices.push(nx);
                         scratch.vertices.push(ny);
                         scratch.vertices.push(nz);
@@ -476,12 +476,12 @@ impl CellEdges {
         // 2. Build edges for kept vertices
         for i in 0..num_verts {
             if let Some(new_idx) = scratch.old_to_new[i] {
-                let start = self.vertex_offsets[i];
-                let count = self.vertex_counts[i];
+                let start = self.vertex_offsets[i] as usize;
+                let count = self.vertex_counts[i] as usize;
                 let mut new_count = 0;
                 
                 for k in 0..count {
-                    let neighbor_idx = self.edge_buffer[start + k];
+                    let neighbor_idx = self.edge_buffer[start + k] as usize;
                     let face_left = self.neighbor_buffer[start + k];
                     
                     if let Some(new_neighbor_idx) = scratch.old_to_new[neighbor_idx] {
@@ -504,14 +504,14 @@ impl CellEdges {
                         }
                     }
                 }
-                scratch.vertex_counts[new_idx] = new_count;
+                scratch.vertex_counts[new_idx as usize] = new_count as u8;
             }
         }
 
         // 3. Build edges for new cut vertices
         // Need to link them to form the lid.
         for &(p_idx, u_idx, f_left, f_right) in &scratch.cut_infos {
-            scratch.vertex_offsets[p_idx] = scratch.edge_buffer.len();
+            scratch.vertex_offsets[p_idx as usize] = scratch.edge_buffer.len() as u16;
             
             // 1. Connection back to u
             // Face to the left of p->u is f_right.
@@ -520,7 +520,7 @@ impl CellEdges {
             
             // 2. Connection to p_prev (on f_right)
             // Find other cut on f_right.
-            let mut p_prev = usize::MAX;
+            let mut p_prev = u16::MAX;
             for &(f, idx, _) in &scratch.face_cut_map {
                 if f == f_right && idx != p_idx {
                     // On f_right, p is "right" (end). We need "left" (start).
@@ -538,23 +538,23 @@ impl CellEdges {
                     break;
                 }
             }
-            if p_prev == usize::MAX { p_prev = p_idx; }
+            if p_prev == u16::MAX { p_prev = p_idx; }
             scratch.edge_buffer.push(p_prev);
             scratch.neighbor_buffer.push(neighbor_id);
 
             // 3. Connection to p_next (on f_left)
-            let mut p_next = usize::MAX;
+            let mut p_next = u16::MAX;
             for &(f, idx, _) in &scratch.face_cut_map {
                 if f == f_left && idx != p_idx {
                     p_next = idx;
                     break;
                 }
             }
-            if p_next == usize::MAX { p_next = p_idx; }
+            if p_next == u16::MAX { p_next = p_idx; }
             scratch.edge_buffer.push(p_next);
             scratch.neighbor_buffer.push(f_left);
             
-            scratch.vertex_counts[p_idx] = 3;
+            scratch.vertex_counts[p_idx as usize] = 3;
         }
 
         std::mem::swap(&mut self.vertices, &mut scratch.vertices);
@@ -574,10 +574,10 @@ impl CellEdges {
         let mut visited = HashSet::new(); // (u, v)
         
         for u in 0..self.vertex_counts.len() {
-            let start = self.vertex_offsets[u];
-            let count = self.vertex_counts[u];
+            let start = self.vertex_offsets[u] as usize;
+            let count = self.vertex_counts[u] as usize;
             for k in 0..count {
-                let v = self.edge_buffer[start + k];
+                let v = self.edge_buffer[start + k] as usize;
                 if visited.contains(&(u, v)) { continue; }
                 
                 let face_id = self.neighbor_buffer[start + k];
@@ -592,13 +592,13 @@ impl CellEdges {
                     visited.insert((curr, next));
                     
                     // Find edge from next that has face_id on left
-                    let n_start = self.vertex_offsets[next];
-                    let n_count = self.vertex_counts[next];
+                    let n_start = self.vertex_offsets[next] as usize;
+                    let n_count = self.vertex_counts[next] as usize;
                     let mut found = false;
                     for m in 0..n_count {
                         if self.neighbor_buffer[n_start + m] == face_id {
                             curr = next;
-                            next = self.edge_buffer[n_start + m];
+                            next = self.edge_buffer[n_start + m] as usize;
                             found = true;
                             break;
                         }
