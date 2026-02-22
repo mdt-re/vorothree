@@ -1,49 +1,25 @@
 # vorothree
 
-Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (WASM). It provides efficient management of 3D generator points and spatial partitioning to facilitate cellular computations.
+Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (WASM). It provides a flexible and feature-rich implementation to calculate the individual cells by a clipping procedure based on the generating points, the bounding box and possible walls. The tessellation struct takes a spatial algorithm to calculate the nearest neighbours efficiently and a cell struct which manages cell data and clipping. The combination of algorithm and cell can then be chosen based on the application.
 
-## Features
+## WASM and Web Usage
 
-- **WASM-first**: Built with `wasm-bindgen` for seamless integration with JavaScript and TypeScript.
-- **Spatial Partitioning**: Implements a configurable grid-based binning strategy for spatial lookups.
-- **Dynamic Updates**: Supports updating individual generators or bulk setting of points with automatic grid re-binning.
-
-## Prerequisites
-
-- Rust toolchain
-- `wasm-pack`
-
-## Building
-
-To build the project for web usage:
-
+This library is designed to directly compile to WASM. To build the project for web usage:
 ```bash
 wasm-pack build --target web
 ```
+Consult the [www](www/) folder for examples and more details on how to use with TypeScript and in an web environment.
 
-## Examples
 
-This directory contains examples demonstrating how to use the `vorothree` library. Run them locally using:
+## Development
 
-```bash
-cargo run --example <example>
-```
-
-## Tests
-
-The test directory contains integrations tests. Run them using:
-
+More information on the [tests](tests/), [benchmarks](benches/) and [examples](examples/) is in their respective directories. They can be run by:
 ```bash
 cargo test
-```
-
-## Benches
-
-This directory contains the benchmarks for this library, results are found in the README. Run them using:
-
-```bash
 cargo bench
+cargo example --example <example>
 ```
+Contributing is highly appreciated via [Issues](https://github.com/mdt-re/vorothree/issues) and [Pull Requests](https://github.com/mdt-re/vorothree/pulls).
 
 ## License
 
