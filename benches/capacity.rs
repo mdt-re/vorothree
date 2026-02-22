@@ -99,9 +99,9 @@ fn plot_capacity_results() -> Result<(), Box<dyn std::error::Error>> {
                 let estimates: Estimates = serde_json::from_reader(reader)?;
                 points.push((
                     cap,
-                    estimates.mean.point_estimate,
-                    estimates.mean.confidence_interval.lower_bound,
-                    estimates.mean.confidence_interval.upper_bound,
+                    estimates.mean.point_estimate / 1_000_000.0,
+                    estimates.mean.confidence_interval.lower_bound / 1_000_000.0,
+                    estimates.mean.confidence_interval.upper_bound / 1_000_000.0,
                 ));
             }
         }
@@ -141,7 +141,7 @@ fn plot_capacity_results() -> Result<(), Box<dyn std::error::Error>> {
 
     chart.configure_mesh()
         .x_desc("Capacity (Points per Bin/Leaf)")
-        .y_desc("Time (ns)")
+        .y_desc("Time (ms)")
         .draw()?;
 
     let colors = [RED, BLUE, GREEN, MAGENTA, CYAN];

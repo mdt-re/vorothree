@@ -16,6 +16,13 @@ struct Estimates {
 #[derive(Deserialize)]
 struct Stats {
     point_estimate: f64,
+    confidence_interval: ConfidenceInterval,
+}
+
+#[derive(Deserialize)]
+struct ConfidenceInterval {
+    lower_bound: f64,
+    upper_bound: f64,
 }
 
 //const SIZES: [usize; 7] = [10, 100, 1000, 10_000, 100_000, 1_000_000, 10_000_000];
@@ -71,7 +78,7 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let mut data: BTreeMap<&str, Vec<(usize, f64)>> = BTreeMap::new();
+    let mut data: BTreeMap<&str, Vec<(usize, f64, f64, f64)>> = BTreeMap::new();
 
     for &method in &methods {
         let mut points = Vec::new();
@@ -85,7 +92,12 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
                 let file = File::open(&path)?;
                 let reader = BufReader::new(file);
                 let estimates: Estimates = serde_json::from_reader(reader)?;
-                points.push((size, estimates.mean.point_estimate));
+                points.push((
+                    size,
+                    estimates.mean.point_estimate / 1_000_000.0,
+                    estimates.mean.confidence_interval.lower_bound / 1_000_000.0,
+                    estimates.mean.confidence_interval.upper_bound / 1_000_000.0,
+                ));
             }
         }
         if !points.is_empty() {
@@ -109,8 +121,8 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
     let root_area = BitMapBackend::new(&out_file, (1024, 768)).into_drawing_area();
     root_area.fill(&WHITE)?;
 
-    let min_y = data.values().flat_map(|v| v.iter().map(|p| p.1)).fold(f64::INFINITY, f64::min);
-    let max_y = data.values().flat_map(|v| v.iter().map(|p| p.1)).fold(f64::NEG_INFINITY, f64::max);
+    let min_y = data.values().flat_map(|v| v.iter().map(|p| p.2)).fold(f64::INFINITY, f64::min);
+    let max_y = data.values().flat_map(|v| v.iter().map(|p| p.3)).fold(f64::NEG_INFINITY, f64::max);
 
     let mut chart = ChartBuilder::on(&root_area)
         .caption("Scaling Benchmark Results", ("sans-serif", 40).into_font())
@@ -124,12 +136,12 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
 
     chart.configure_mesh()
         .x_desc("Number of Points (N)")
-        .y_desc("Time (ns)")
+        .y_desc("Time (ms)")
         .draw()?;
 
     // Draw Linear and Quadratic Scaling References (Dotted Lines)
     if let Some(first_series) = data.values().next() {
-        if let Some(&(start_n, start_t)) = first_series.first() {
+        if let Some(&(start_n, start_t, _, _)) = first_series.first() {
             let start_n = start_n as f64;
             let end_n = *SIZES.last().unwrap() as f64;
             
@@ -179,16 +191,29 @@ fn plot_scaling_results() -> Result<(), Box<dyn std::error::Error>> {
     for (i, (method, points)) in data.iter().enumerate() {
         let color = colors[i % colors.len()];
 
+        let mut band_points = Vec::new();
+        for (x, _, _, u) in points.iter() {
+            band_points.push((*x as f64, *u));
+        }
+        for (x, _, l, _) in points.iter().rev() {
+            band_points.push((*x as f64, *l));
+        }
+
+        chart.draw_series(std::iter::once(Polygon::new(
+            band_points,
+            color.mix(0.2).filled(),
+        )))?;
+
         chart
             .draw_series(LineSeries::new(
-                points.iter().map(|(x, y)| (*x as f64, *y)),
+                points.iter().map(|(x, y, _, _)| (*x as f64, *y)),
                 &color,
             ))?
             .label(*method)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &color));
 
         chart.draw_series(PointSeries::of_element(
-            points.iter().map(|(x, y)| (*x as f64, *y)),
+            points.iter().map(|(x, y, _, _)| (*x as f64, *y)),
             5,
             &color,
             &|c, s, st| {

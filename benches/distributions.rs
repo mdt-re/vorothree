@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, TessellationGrid, TessellationMoctree, Wall};
+use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree, Wall};
 use vorothree::geometries::TrefoilKnotGeometry;
 use rand::prelude::*;
 use plotters::prelude::*;
@@ -42,6 +42,14 @@ fn benchmark_distributions(c: &mut Criterion) {
             })
         });
 
+        group.bench_with_input(BenchmarkId::new("uniform/edges", size), &size, |b, &s| {
+            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            tess.random_generators(s);
+            b.iter(|| {
+                tess.calculate();
+            })
+        });
+
         group.bench_with_input(BenchmarkId::new("uniform/moctree", size), &size, |b, &s| {
             let mut tess = TessellationMoctree::new(bounds, 8);
             tess.random_generators(s);
@@ -59,6 +67,15 @@ fn benchmark_distributions(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("trefoil/grid", size), &size, |b, &s| {
             let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            tess.add_wall(Wall::new(-10, Box::new(TrefoilKnotGeometry::new([cx, cy, cz], scale, tube_radius, 100))));
+            tess.random_generators(s);
+            b.iter(|| {
+                tess.calculate();
+            })
+        });
+
+        group.bench_with_input(BenchmarkId::new("trefoil/edges", size), &size, |b, &s| {
+            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
             tess.add_wall(Wall::new(-10, Box::new(TrefoilKnotGeometry::new([cx, cy, cz], scale, tube_radius, 100))));
             tess.random_generators(s);
             b.iter(|| {
@@ -86,6 +103,14 @@ fn benchmark_distributions(c: &mut Criterion) {
             })
         });
 
+        group.bench_with_input(BenchmarkId::new("axes/edges", size), &size, |b, &_s| {
+            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            tess.set_generators(&axes_points);
+            b.iter(|| {
+                tess.calculate();
+            })
+        });
+
         group.bench_with_input(BenchmarkId::new("axes/moctree", size), &size, |b, &_s| {
             let mut tess = TessellationMoctree::new(bounds, 8);
             tess.set_generators(&axes_points);
@@ -105,6 +130,14 @@ fn benchmark_distributions(c: &mut Criterion) {
             })
         });
 
+        group.bench_with_input(BenchmarkId::new("central/edges", size), &size, |b, &_s| {
+            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            tess.set_generators(&central_points);
+            b.iter(|| {
+                tess.calculate();
+            })
+        });
+
         group.bench_with_input(BenchmarkId::new("central/moctree", size), &size, |b, &_s| {
             let mut tess = TessellationMoctree::new(bounds, 8);
             tess.set_generators(&central_points);
@@ -118,6 +151,14 @@ fn benchmark_distributions(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("sphere/grid", size), &size, |b, &_s| {
             let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            tess.set_generators(&sphere_points);
+            b.iter(|| {
+                tess.calculate();
+            })
+        });
+
+        group.bench_with_input(BenchmarkId::new("sphere/edges", size), &size, |b, &_s| {
+            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
             tess.set_generators(&sphere_points);
             b.iter(|| {
                 tess.calculate();
@@ -219,7 +260,7 @@ fn generate_sphere_surface_points(count: usize, bounds: &BoundingBox) -> Vec<f64
 
 fn plot_distribution_results() -> Result<(), Box<dyn std::error::Error>> {
     let distributions = ["uniform", "trefoil", "axes", "central", "sphere"];
-    let methods = ["grid", "moctree"];
+    let methods = ["grid", "edges", "moctree"];
     let root = Path::new("target/criterion/distributions");
 
     if !root.exists() {
@@ -247,7 +288,7 @@ fn plot_distribution_results() -> Result<(), Box<dyn std::error::Error>> {
                     let file = File::open(&path)?;
                     let reader = BufReader::new(file);
                     let estimates: Estimates = serde_json::from_reader(reader)?;
-                    data.entry(dist).or_insert_with(BTreeMap::new).insert(method, estimates.mean.point_estimate);
+                    data.entry(dist).or_insert_with(BTreeMap::new).insert(method, estimates.mean.point_estimate / 1_000_000.0);
                 }
             }
         }
@@ -284,10 +325,10 @@ fn plot_distribution_results() -> Result<(), Box<dyn std::error::Error>> {
                     "".to_string()
                 }
             })
-            .y_desc("Time (ns)")
+            .y_desc("Time (ms)")
             .draw()?;
 
-        let colors = [RED, BLUE];
+        let colors = [RED, GREEN, BLUE];
 
         for (i, method) in methods.iter().enumerate() {
             let color = colors[i % colors.len()];

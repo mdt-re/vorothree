@@ -157,7 +157,6 @@ fn plot_parallelism_results() -> Result<(), Box<dyn std::error::Error>> {
     let root_area = BitMapBackend::new(&out_file, (1024, 768)).into_drawing_area();
     root_area.fill(&WHITE)?;
 
-    let min_y = data.values().flat_map(|v| v.iter().map(|p| p.2)).fold(f64::INFINITY, f64::min);
     let max_y = data.values().flat_map(|v| v.iter().map(|p| p.3)).fold(f64::NEG_INFINITY, f64::max);
     
     let min_x = cores_list[0];
