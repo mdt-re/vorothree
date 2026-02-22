@@ -1,2 +1,2 @@
-createSrcSidebar('[["vorothree",["",[],["algo_grid.rs","algo_octree.rs","bounds.rs","cell_edges.rs","cell_faces.rs","geometries.rs","lib.rs","tessellation.rs","tessellation_edges.rs","tessellation_grid.rs","tessellation_moctree.rs","tessellation_wasm.rs","wall.rs"]]]]');
-//{"start":19,"fragment_lengths":[248]}
+createSrcSidebar('[["vorothree",["",[],["algo_grid.rs","algo_octree.rs","bounds.rs","cell_edges.rs","cell_faces.rs","geometries.rs","lib.rs","tessellation.rs","tessellation_wasm.rs","wall.rs"]]]]');
+//{"start":19,"fragment_lengths":[175]}
