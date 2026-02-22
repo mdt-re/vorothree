@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_seed"],"struct":["Tessellation"],"trait":["Cell","SpatialAlgorithm"]};

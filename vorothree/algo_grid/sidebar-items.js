@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_min_dist_sq"],"struct":["AlgorithmGrid"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["BOX_ID_BACK","BOX_ID_BOTTOM","BOX_ID_FRONT","BOX_ID_LEFT","BOX_ID_RIGHT","BOX_ID_TOP"],"struct":["BoundingBox"]};
