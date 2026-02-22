@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { Tessellation, TessellationMoctree, BoundingBox } from 'vorothree';
+import { Tessellation/*, TessellationMoctree*/, BoundingBox } from 'vorothree';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = ''; // Clear existing content
@@ -157,8 +157,10 @@ export async function run(app: HTMLElement) {
                 // 3. Moctree Benchmark
                 const t1m = performance.now();
                 const boundsMoc = new BoundingBox(-half, -half, -half, half, half, half);
-                const tessMoc = new TessellationMoctree(boundsMoc, params.capacity);
-                
+                // TODO: export mulitiple Tessellation option for WASM.
+                // const tessMoc = new TessellationMoctree(boundsMoc, params.capacity);
+                const tessMoc = new Tessellation(bounds, params.n, params.n, params.n);
+
                 tessMoc.set_generators(points);
                 const tInsertMoc = performance.now() - t1m;
 

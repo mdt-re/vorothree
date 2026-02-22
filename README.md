@@ -1,6 +1,50 @@
+[![examples](https://github.com/mdt-re/vorothree/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/mdt-re/vorothree/actions/workflows/deploy.yml)
+[![tests](https://github.com/mdt-re/vorothree/actions/workflows/test.yml/badge.svg)](https://github.com/mdt-re/vorothree/actions/workflows/test.yml)
+
 # vorothree
 
-Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (WASM). It provides a flexible and feature-rich implementation to calculate the individual cells by a clipping procedure based on the generating points, the bounding box and possible walls. The tessellation struct takes a spatial algorithm to calculate the nearest neighbours efficiently and a cell struct which manages cell data and clipping. The combination of algorithm and cell can then be chosen based on the application.
+Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (WASM). It provides a flexible and feature-rich implementation to calculate the individual cells by a clipping procedure based on the generating points, the bounding box and possible walls. The tessellation struct takes a spatial algorithm to calculate the nearest neighbours efficiently and a cell struct which manages cell data and clipping. The combination of algorithm and cell can then be chosen based on the application. Some interactive examples are shown below.
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=moving_cell">
+        <img src="www/src/assets/moving_cell.png" width="180px" alt="moving cell" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=walls">
+        <img src="www/src//assets/walls.png" width="180px" alt="walls" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=benchmark">
+        <img src="www/src//assets/benchmark.png" width="180px" alt="benchmark" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=relaxation">
+        <img src="www/src//assets/relaxation.png" width="180px" alt="relaxation" /><br />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=transition">
+        <img src="www/src//assets/transition.png" width="180px" alt="transition" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=granular_flow">
+        <img src="www/src//assets/granular_flow.png" width="180px" alt="granular flow" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=pathfinding">
+        <img src="www/src//assets/pathfinding.png" width="180px" alt="pathfinding" /><br />
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## WASM and Web Usage
 
