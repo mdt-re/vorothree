@@ -1,19 +1,30 @@
 use crate::bounds::BoundingBox;
-use crate::cell_edges::CellEdges;
+use crate::cell_faces::CellFaces;
 use crate::tessellation::Tessellation;
 use crate::wall::Wall;
-
 use crate::algo_grid::AlgorithmGrid;
+use wasm_bindgen::prelude::*;
 
-/// The main container for performing 3D Voronoi tessellations using the graph-based CellEdges.
-pub struct TessellationEdges {
-    inner: Tessellation<CellEdges, AlgorithmGrid>,
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_rayon::init_thread_pool;
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn init_threads(n: usize) -> js_sys::Promise {
+    init_thread_pool(n)
 }
 
-impl TessellationEdges {
-    pub fn new(bounds: BoundingBox, nx: usize, ny: usize, nz: usize) -> TessellationEdges {
+#[wasm_bindgen(js_name = Tessellation)]
+pub struct TessellationWASM {
+    inner: Tessellation<CellFaces, AlgorithmGrid>,
+}
+
+#[wasm_bindgen(js_class = Tessellation)]
+impl TessellationWASM {
+    #[wasm_bindgen(constructor)]
+    pub fn new(bounds: BoundingBox, nx: usize, ny: usize, nz: usize) -> TessellationWASM {
         let algorithm = AlgorithmGrid::new(nx, ny, nz, &bounds);
-        TessellationEdges {
+        TessellationWASM {
             inner: Tessellation::new(bounds, algorithm),
         }
     }
@@ -23,17 +34,20 @@ impl TessellationEdges {
     }
 
     pub fn clear_walls(&mut self) {
-        self.inner.walls.clear();
+        self.inner.clear_walls();
     }
 
+    #[wasm_bindgen(getter)]
     pub fn count_cells(&self) -> usize {
         self.inner.cells.len()
     }
 
+    #[wasm_bindgen(getter)]
     pub fn generators(&self) -> Vec<f64> {
         self.inner.generators.clone()
     }
 
+    #[wasm_bindgen(getter)]
     pub fn count_generators(&self) -> usize {
         self.inner.generators.len() / 3
     }
@@ -60,7 +74,7 @@ impl TessellationEdges {
         self.inner.set_generators(&current_gens);
     }
 
-    pub fn get(&self, index: usize) -> Option<CellEdges> {
+    pub fn get(&self, index: usize) -> Option<CellFaces> {
         self.inner.cells.get(index).cloned()
     }
 

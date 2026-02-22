@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use rand::prelude::*;
 use rand::rngs::StdRng;
 
-/// A geometry-based Voronoi tessellation that unifies Cells, SpatialAlgorithms, and Walls.
+/// A geometry-based Voronoi tessellation that unifies the [`Cell`], [`SpatialAlgorithm`], and [`Wall`] traits.
 pub struct Tessellation<C: Cell, A: SpatialAlgorithm> {
     pub bounds: BoundingBox,
     pub generators: Vec<f64>,
@@ -22,11 +22,6 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
             walls: Vec::new(),
             algorithm,
         }
-    }
-
-    pub fn add_wall(&mut self, wall: Wall) {
-        self.walls.push(wall);
-        self.prune_outside_generators();
     }
 
     /// Update all generators at once.
@@ -61,6 +56,34 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         self.algorithm.set_generators(&self.generators, &self.bounds);
     }
 
+    /// Update the position of a single generator by index.
+    pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
+        let offset = index * 3;
+        if offset + 2 >= self.generators.len() {
+            return;
+        }
+
+        for wall in &self.walls {
+            if !wall.contains(x, y, z) {
+                return;
+            }
+        }
+
+        let old_pos = [
+            self.generators[offset],
+            self.generators[offset + 1],
+            self.generators[offset + 2],
+        ];
+        let new_pos = [x, y, z];
+
+        self.algorithm
+            .update_generator(index, &old_pos, &new_pos, &self.bounds);
+
+        self.generators[offset] = x;
+        self.generators[offset + 1] = y;
+        self.generators[offset + 2] = z;
+    }
+
     /// Generates random points within the bounds and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
         let mut rng = StdRng::seed_from_u64(get_seed());
@@ -93,7 +116,7 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
 
     /// Removes generators that are not inside the defined walls.
     /// Note: This changes the indices of the remaining generators.
-    pub fn prune_outside_generators(&mut self) {
+    fn prune_outside_generators(&mut self) {
         let mut new_generators = Vec::with_capacity(self.generators.len());
         let count = self.generators.len() / 3;
         
@@ -115,6 +138,23 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         }
     }
 
+    /// Adds a wall to the tessellation to clip the Voronoi cells.
+    pub fn add_wall(&mut self, wall: Wall) {
+        self.walls.push(wall);
+        self.prune_outside_generators();
+    }
+
+    /// Removes all walls from the tessellation.
+    pub fn clear_walls(&mut self) {
+        self.walls.clear();
+    }
+
+    /// Calculates all cells based on the current generators.
+    ///
+    /// This method applies the SpatialAlgorithm to efficiently find the closest generators
+    /// and clips the cells against the generators, the bounding box and any added walls.
+    /// For the clipping it applies the algoritm as defined in the Cell implementation.
+    /// It runs in parallel if the `rayon` feature is enabled (which is default).
     pub fn calculate(&mut self) {
         let count = self.generators.len() / 3;
         let generators = &self.generators;
@@ -126,57 +166,114 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
             .into_par_iter()
             .map_init(
                 || C::Scratch::default(),
-                |scratch, i| {
-                    let gx = generators[i * 3];
-                    let gy = generators[i * 3 + 1];
-                    let gz = generators[i * 3 + 2];
-                    let g_pos = [gx, gy, gz];
-
-                    let mut cell = C::new(i, *bounds);
-
-                    // 1. Clip against walls
-                    for wall in walls {
-                        wall.cut(&g_pos, &mut |point, normal| {
-                            cell.clip(&point, &normal, wall.id(), scratch, None);
-                        });
-                    }
-
-                    let mut current_max_dist_sq = cell.max_radius_sq(&g_pos);
-
-                    // 2. Clip against neighbors found by the SpatialAlgorithm
-                    algorithm.visit_neighbors(generators, i, g_pos, &mut current_max_dist_sq, |j, n_pos, cur_dist| {
-                        let dx = n_pos[0] - gx;
-                        let dy = n_pos[1] - gy;
-                        let dz = n_pos[2] - gz;
-                        
-                        // Note: Some indices might not filter exact distance, so we check here
-                        let dist_sq = dx * dx + dy * dy + dz * dz;
-                        if dist_sq > 4.0 * cur_dist {
-                            return cur_dist;
-                        }
-
-                        let mx = gx + dx * 0.5;
-                        let my = gy + dy * 0.5;
-                        let mz = gz + dz * 0.5;
-
-                        if let (true, new_radius) =
-                            cell.clip(&[mx, my, mz], &[dx, dy, dz], j as i32, scratch, Some(&g_pos))
-                        {
-                            return new_radius;
-                        }
-                        cur_dist
-                    });
-
-                    cell
-                },
+                |scratch, i| Self::compute_cell(i, generators, bounds, walls, algorithm, scratch),
             )
             .collect();
+    }
+
+    fn compute_cell(
+        i: usize,
+        generators: &[f64],
+        bounds: &BoundingBox,
+        walls: &[Wall],
+        algorithm: &A,
+        scratch: &mut C::Scratch,
+    ) -> C {
+        let gx = generators[i * 3];
+        let gy = generators[i * 3 + 1];
+        let gz = generators[i * 3 + 2];
+        let g_pos = [gx, gy, gz];
+
+        let mut cell = C::new(i, *bounds);
+
+        // 1. Clip against walls
+        for wall in walls {
+            wall.cut(&g_pos, &mut |point, normal| {
+                cell.clip(&point, &normal, wall.id(), scratch, None);
+            });
+            if cell.is_empty() {
+                return cell;
+            }
+        }
+
+        let mut current_max_dist_sq = cell.max_radius_sq(&g_pos);
+
+        // 2. Clip against neighbors found by the SpatialAlgorithm
+        algorithm.visit_neighbors(
+            generators,
+            i,
+            g_pos,
+            &mut current_max_dist_sq,
+            |j, n_pos, cur_dist| {
+                let dx = n_pos[0] - gx;
+                let dy = n_pos[1] - gy;
+                let dz = n_pos[2] - gz;
+
+                // Note: Some indices might not filter exact distance, so we check here
+                let dist_sq = dx * dx + dy * dy + dz * dz;
+                if dist_sq > 4.0 * cur_dist {
+                    return cur_dist;
+                }
+
+                let mx = gx + dx * 0.5;
+                let my = gy + dy * 0.5;
+                let mz = gz + dz * 0.5;
+
+                if let (true, new_radius) =
+                    cell.clip(&[mx, my, mz], &[dx, dy, dz], j as i32, scratch, Some(&g_pos))
+                {
+                    if cell.is_empty() {
+                        return 0.0;
+                    }
+                    return new_radius;
+                }
+                cur_dist
+            },
+        );
+
+        cell
+    }
+
+    /// Returns the number of generators in the tessellation.
+    pub fn count_generators(&self) -> usize {
+        self.generators.len() / 3
+    }
+
+    /// Returns the number of computed cells.
+    pub fn count_cells(&self) -> usize {
+        self.cells.len()
+    }
+
+    /// Retrieves the position as `[f64; 3]` of a generator by its index.
+    pub fn get_generator(&self, index: usize) -> [f64; 3] {
+        let offset = index * 3;
+        [
+            self.generators[offset],
+            self.generators[offset + 1],
+            self.generators[offset + 2],
+        ]
+    }
+
+    /// Retrieves a cell by its index.
+    pub fn get_cell(&self, index: usize) -> Option<C> {
+        self.cells.get(index).cloned()
+    }
+
+    /// Returns a copy of all generator positions as a flat vector.
+    pub fn generators(&self) -> Vec<f64> {
+        self.generators.clone()
+    }
+
+    /// Returns a copy of all computed cells.
+    pub fn get_cells(&self) -> Vec<C> {
+        self.cells.clone()
     }
 
     /// Performs one step of Lloyd's relaxation.
     ///
     /// This moves each generator to the centroid of its calculated Voronoi cell,
-    /// which tends to make the cells more uniform in size and shape.
+    /// which tends to make the cells more uniform in size and shape. A calculation
+    /// step must be invoked separately to get the new Voronoi cells.
     pub fn relax(&mut self) {
         let new_generators: Vec<f64> = self.cells.par_iter()
             .zip(self.generators.par_chunks(3))
@@ -196,7 +293,7 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
 
 /// Trait defining the behavior of a Voronoi cell.
 /// This allows swapping between simple Polygon cells (`Cell`) and Graph-based cells (`CellEdges`).
-pub trait Cell: Send + Sync + Sized {
+pub trait Cell: Send + Sync + Sized + Clone {
     /// Scratch buffer used to avoid allocations during clipping.
     type Scratch: Default + Clone + Send;
 
@@ -256,6 +353,6 @@ fn get_seed() -> u64 {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        123456789
+        rand::thread_rng().next_u64()
     }
 }

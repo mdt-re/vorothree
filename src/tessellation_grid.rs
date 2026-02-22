@@ -1,19 +1,10 @@
 use crate::bounds::BoundingBox;
 use crate::cell_faces::{CellFaces};
 use crate::tessellation::Tessellation;
-use crate::tessellation::SpatialAlgorithm;
 use crate::wall::Wall;
-use wasm_bindgen::prelude::*;
 use crate::algo_grid::AlgorithmGrid;
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_rayon::init_thread_pool;
 
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn init_threads(n: usize) -> js_sys::Promise {
-    init_thread_pool(n)
-}
 
 /// The main container for performing 3D Voronoi tessellations.
 ///
@@ -22,12 +13,10 @@ pub fn init_threads(n: usize) -> js_sys::Promise {
 /// - The **generators** (points) that define the Voronoi cells.
 /// - The **walls** that clip the cells.
 /// - The **grid** used for spatial partitioning acceleration.
-#[wasm_bindgen]
 pub struct TessellationGrid {
     inner: Tessellation<CellFaces, AlgorithmGrid>,
 }
 
-#[wasm_bindgen]
 impl TessellationGrid {
     /// Creates a new `TessellationGrid` instance with the specified bounds and grid resolution.
     ///
@@ -40,7 +29,6 @@ impl TessellationGrid {
     /// * `nx` - Number of grid bins along the X axis.
     /// * `ny` - Number of grid bins along the Y axis.
     /// * `nz` - Number of grid bins along the Z axis.
-    #[wasm_bindgen(constructor)]
     pub fn new(bounds: BoundingBox, nx: usize, ny: usize, nz: usize) -> TessellationGrid {
         let algorithm = AlgorithmGrid::new(nx, ny, nz, &bounds);
         TessellationGrid {
@@ -58,17 +46,14 @@ impl TessellationGrid {
         self.inner.walls.clear();
     }
 
-    #[wasm_bindgen(getter)]
     pub fn count_cells(&self) -> usize {
         self.inner.cells.len()
     }
 
-    #[wasm_bindgen(getter)]
     pub fn generators(&self) -> Vec<f64> {
         self.inner.generators.clone()
     }
 
-    #[wasm_bindgen(getter)]
     pub fn count_generators(&self) -> usize {
         self.inner.generators.len() / 3
     }
@@ -100,23 +85,7 @@ impl TessellationGrid {
 
     /// Update the position of a single generator by index.
     pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
-        let offset = index * 3;
-        if offset + 2 < self.inner.generators.len() {
-            for wall in &self.inner.walls {
-                if !wall.contains(x, y, z) {
-                    return;
-                }
-            }
-
-            let old_pos = [self.inner.generators[offset], self.inner.generators[offset+1], self.inner.generators[offset+2]];
-            let new_pos = [x, y, z];
-            
-            self.inner.algorithm.update_generator(index, &old_pos, &new_pos, &self.inner.bounds);
-            
-            self.inner.generators[offset] = x;
-            self.inner.generators[offset + 1] = y;
-            self.inner.generators[offset + 2] = z;
-        }
+        self.inner.set_generator(index, x, y, z);
     }
 
     /// Resizes the internal spatial partitioning grid.
@@ -134,12 +103,6 @@ impl TessellationGrid {
     /// Generates random points within the bounds and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
         self.inner.random_generators(count);
-    }
-
-    /// Removes generators that are not inside the defined walls.
-    /// Note: This changes the indices of the remaining generators.
-    pub fn prune_outside_generators(&mut self) {
-        self.inner.prune_outside_generators();
     }
 }
 

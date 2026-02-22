@@ -3,7 +3,6 @@ use crate::cell_faces::CellFaces;
 use crate::tessellation::Tessellation;
 use crate::wall::Wall;
 use crate::algo_octree::AlgorithmOctree;
-use wasm_bindgen::prelude::*;
 
 /// A Voronoi tessellation container that uses an Octree for spatial partitioning.
 ///
@@ -12,12 +11,10 @@ use wasm_bindgen::prelude::*;
 /// - The **generators** (points) that define the Voronoi cells.
 /// - The **walls** that clip the cells.
 /// - The **octree** used for accelerating nearest-neighbor searches.
-#[wasm_bindgen]
 pub struct TessellationMoctree {
     inner: Tessellation<CellFaces, AlgorithmOctree>,
 }
 
-#[wasm_bindgen]
 impl TessellationMoctree {
     /// Creates a new `TessellationMoctree` instance with the specified bounds and octree node capacity.
     ///
@@ -25,7 +22,6 @@ impl TessellationMoctree {
     ///
     /// * `bounds` - The spatial boundaries of the tessellation.
     /// * `capacity` - The maximum number of points in a leaf node before subdivision occurs.
-    #[wasm_bindgen(constructor)]
     pub fn new(bounds: BoundingBox, capacity: usize) -> TessellationMoctree {
         let algorithm = AlgorithmOctree::new(bounds, capacity);
         TessellationMoctree {
@@ -44,19 +40,16 @@ impl TessellationMoctree {
     }
 
     /// Returns the number of cells in the tessellation.
-    #[wasm_bindgen(getter)]
     pub fn count_cells(&self) -> usize {
         self.inner.cells.len()
     }
 
     /// Returns a flat array of all generator coordinates [x, y, z, x, y, z, ...].
-    #[wasm_bindgen(getter)]
     pub fn generators(&self) -> Vec<f64> {
         self.inner.generators.clone()
     }
 
     /// Returns the number of generators.
-    #[wasm_bindgen(getter)]
     pub fn count_generators(&self) -> usize {
         self.inner.generators.len() / 3
     }
@@ -118,11 +111,5 @@ impl TessellationMoctree {
     /// Generates random points within the bounds and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
         self.inner.random_generators(count);
-    }
-
-    /// Removes generators that are not inside the defined walls.
-    /// Note: This changes the indices of the remaining generators.
-    pub fn prune_outside_generators(&mut self) {
-        self.inner.prune_outside_generators();
     }
 }

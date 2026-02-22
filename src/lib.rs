@@ -19,15 +19,16 @@
 //!
 //! The primary entry point is the [`Tessellation`] struct, which manages the grid and generators.
 
-mod bounds;
-mod cell_faces;
-mod cell_edges;
-pub mod geometries;
 mod algo_grid;
 mod algo_octree;
+mod bounds;
+mod cell_edges;
+mod cell_faces;
+pub mod geometries;
 mod tessellation_grid;
 mod tessellation_edges;
 mod tessellation_moctree;
+mod tessellation_wasm;
 mod tessellation;
 mod wall;
 
