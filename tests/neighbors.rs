@@ -1,11 +1,11 @@
-use vorothree::{BoundingBox, TessellationGrid, Wall};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, CellFaces, Wall};
 use vorothree::geometries::{SphereGeometry, PlaneGeometry, TrefoilKnotGeometry};
 use rand::Rng;
 
 #[test]
 fn test_two_cells_neighbors() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
-    let mut tess = TessellationGrid::new(bounds, 1, 1, 1);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(1, 1, 1, &bounds));
 
     // Two points: one at left, one at right
     let generators = vec![
@@ -16,8 +16,8 @@ fn test_two_cells_neighbors() {
     tess.set_generators(&generators);
     tess.calculate();
 
-    let c0 = tess.get(0).unwrap();
-    let c1 = tess.get(1).unwrap();
+    let c0 = tess.get_cell(0).unwrap();
+    let c1 = tess.get_cell(1).unwrap();
 
     // c0 should have neighbor 1
     assert!(c0.face_neighbors().contains(&1));
@@ -28,7 +28,7 @@ fn test_two_cells_neighbors() {
 #[test]
 fn test_neighbor_reciprocity_random() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
-    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(5, 5, 5, &bounds));
 
     // 27 random points
     let mut rng = rand::thread_rng();
@@ -44,13 +44,13 @@ fn test_neighbor_reciprocity_random() {
 
     let count = tess.count_cells();
     for i in 0..count {
-        let cell = tess.get(i).unwrap();
+        let cell = tess.get_cell(i).unwrap();
         let neighbors = cell.face_neighbors();
 
         for &n_id in &neighbors {
             if n_id >= 0 {
                 let n_idx = n_id as usize;
-                let neighbor_cell = tess.get(n_idx).unwrap();
+                let neighbor_cell = tess.get_cell(n_idx).unwrap();
                 let neighbor_neighbors = neighbor_cell.face_neighbors();
 
                 if !neighbor_neighbors.contains(&(i as i32)) {
@@ -73,7 +73,7 @@ fn test_neighbor_reciprocity_random() {
 #[test]
 fn test_neighbor_reciprocity_half_sphere() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
-    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(5, 5, 5, &bounds));
 
     // 50 random points
     let mut rng = rand::thread_rng();
@@ -96,7 +96,7 @@ fn test_neighbor_reciprocity_half_sphere() {
 
     let count = tess.count_cells();
     for i in 0..count {
-        let cell = tess.get(i).unwrap();
+        let cell = tess.get_cell(i).unwrap();
         
         // Skip empty cells (fully clipped by walls)
         if cell.vertices().is_empty() {
@@ -109,7 +109,7 @@ fn test_neighbor_reciprocity_half_sphere() {
         for &n_id in &neighbors {
             if n_id >= 0 {
                 let n_idx = n_id as usize;
-                let neighbor_cell = tess.get(n_idx).unwrap();
+                let neighbor_cell = tess.get_cell(n_idx).unwrap();
                 let neighbor_neighbors = neighbor_cell.face_neighbors();
 
                 if !neighbor_neighbors.contains(&(i as i32)) {
@@ -132,7 +132,7 @@ fn test_neighbor_reciprocity_half_sphere() {
 #[test]
 fn test_neighbor_reciprocity_sphere_small() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 20.0, 20.0, 20.0);
-    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(5, 5, 5, &bounds));
 
     // Sphere wall: center (10, 10, 10), radius 8. ID -10.
     tess.add_wall(Wall::new(-10, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
@@ -144,7 +144,7 @@ fn test_neighbor_reciprocity_sphere_small() {
 
     let count = tess.count_cells();
     for i in 0..count {
-        let cell = tess.get(i).unwrap();
+        let cell = tess.get_cell(i).unwrap();
         
         // Skip empty cells (fully clipped by walls)
         if cell.vertices().is_empty() {
@@ -157,7 +157,7 @@ fn test_neighbor_reciprocity_sphere_small() {
         for &n_id in &neighbors {
             if n_id >= 0 {
                 let n_idx = n_id as usize;
-                let neighbor_cell = tess.get(n_idx).unwrap();
+                let neighbor_cell = tess.get_cell(n_idx).unwrap();
                 let neighbor_neighbors = neighbor_cell.face_neighbors();
 
                 assert!(
@@ -175,7 +175,7 @@ fn test_neighbor_reciprocity_sphere_small() {
 #[test]
 fn test_neighbor_reciprocity_trefoil_knot() {
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 30.0, 30.0, 30.0);
-    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(5, 5, 5, &bounds));
 
     // 100 random points
     let mut rng = rand::thread_rng();
@@ -195,7 +195,7 @@ fn test_neighbor_reciprocity_trefoil_knot() {
 
     let count = tess.count_cells();
     for i in 0..count {
-        let cell = tess.get(i).unwrap();
+        let cell = tess.get_cell(i).unwrap();
         
         // Skip empty cells (fully clipped by walls)
         if cell.vertices().is_empty() {
@@ -207,7 +207,7 @@ fn test_neighbor_reciprocity_trefoil_knot() {
         for &n_id in &neighbors {
             if n_id >= 0 {
                 let n_idx = n_id as usize;
-                let neighbor_cell = tess.get(n_idx).unwrap();
+                let neighbor_cell = tess.get_cell(n_idx).unwrap();
                 let neighbor_neighbors = neighbor_cell.face_neighbors();
 
                 if !neighbor_neighbors.contains(&(i as i32)) {

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, CellFaces, CellEdges};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -48,7 +48,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         println!("Cap: {:.1}, Grid Res: {}, Moctree Cap: {}", cap, grid_res, moctree_cap);
 
         group.bench_with_input(BenchmarkId::new("grid", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
@@ -56,7 +56,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("edges", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
@@ -64,7 +64,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("moctree", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = TessellationMoctree::new(bounds, moctree_cap);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, moctree_cap));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree, Wall};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, Wall, CellFaces, CellEdges};
 use vorothree::geometries::TrefoilKnotGeometry;
 use rand::prelude::*;
 use plotters::prelude::*;
@@ -35,7 +35,7 @@ fn benchmark_distributions(c: &mut Criterion) {
 
         // Uniform Distribution
         group.bench_with_input(BenchmarkId::new("uniform/grid", size), &size, |b, &s| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();
@@ -43,7 +43,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("uniform/edges", size), &size, |b, &s| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();
@@ -51,7 +51,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("uniform/moctree", size), &size, |b, &s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();
@@ -66,7 +66,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         let tube_radius = scale * 0.3;
 
         group.bench_with_input(BenchmarkId::new("trefoil/grid", size), &size, |b, &s| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.add_wall(Wall::new(-10, Box::new(TrefoilKnotGeometry::new([cx, cy, cz], scale, tube_radius, 100))));
             tess.random_generators(s);
             b.iter(|| {
@@ -75,7 +75,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("trefoil/edges", size), &size, |b, &s| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.add_wall(Wall::new(-10, Box::new(TrefoilKnotGeometry::new([cx, cy, cz], scale, tube_radius, 100))));
             tess.random_generators(s);
             b.iter(|| {
@@ -84,7 +84,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("trefoil/moctree", size), &size, |b, &s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.add_wall(Wall::new(-10, Box::new(TrefoilKnotGeometry::new([cx, cy, cz], scale, tube_radius, 100))));
             tess.random_generators(s);
             b.iter(|| {
@@ -96,7 +96,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         let axes_points = generate_axes_points(size, &bounds);
 
         group.bench_with_input(BenchmarkId::new("axes/grid", size), &size, |b, &_s| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.set_generators(&axes_points);
             b.iter(|| {
                 tess.calculate();
@@ -104,7 +104,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("axes/edges", size), &size, |b, &_s| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.set_generators(&axes_points);
             b.iter(|| {
                 tess.calculate();
@@ -112,7 +112,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("axes/moctree", size), &size, |b, &_s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.set_generators(&axes_points);
             b.iter(|| {
                 tess.calculate();
@@ -123,7 +123,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         let central_points = generate_central_box_points(size, &bounds);
 
         group.bench_with_input(BenchmarkId::new("central/grid", size), &size, |b, &_s| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.set_generators(&central_points);
             b.iter(|| {
                 tess.calculate();
@@ -131,7 +131,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("central/edges", size), &size, |b, &_s| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.set_generators(&central_points);
             b.iter(|| {
                 tess.calculate();
@@ -139,7 +139,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("central/moctree", size), &size, |b, &_s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.set_generators(&central_points);
             b.iter(|| {
                 tess.calculate();
@@ -150,7 +150,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         let sphere_points = generate_sphere_surface_points(size, &bounds);
 
         group.bench_with_input(BenchmarkId::new("sphere/grid", size), &size, |b, &_s| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.set_generators(&sphere_points);
             b.iter(|| {
                 tess.calculate();
@@ -158,7 +158,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("sphere/edges", size), &size, |b, &_s| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.set_generators(&sphere_points);
             b.iter(|| {
                 tess.calculate();
@@ -166,7 +166,7 @@ fn benchmark_distributions(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("sphere/moctree", size), &size, |b, &_s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.set_generators(&sphere_points);
             b.iter(|| {
                 tess.calculate();

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::collections::BTreeMap;
 use rand::Rng;
-use vorothree::{BoundingBox, TessellationGrid, Wall};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, Wall, CellFaces};
 use gltf::json;
 use gltf::json::validation::{Checked, USize64};
 use vorothree::geometries::{ConeGeometry, TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
@@ -468,14 +468,14 @@ impl GltfBuilder {
 }
 
 fn generate_gltf(
-    tess: &TessellationGrid,
+    tess: &Tessellation::<CellFaces, AlgorithmGrid>,
     generators: &[f64],
     filename: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut builder = GltfBuilder::new();
 
     for i in 0..tess.count_cells() {
-        if let Some(cell) = tess.get(i) {
+        if let Some(cell) = tess.get_cell(i) {
             builder.add_cell(&cell.vertices(), &cell.faces());
         }
     }
@@ -501,7 +501,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 1: Plane Wall
     {
-        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
         tess.set_generators(&generators);
 
         tess.add_wall(Wall::new(
@@ -514,7 +514,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 2: Sphere Wall
     {
-        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-11, Box::new(SphereGeometry::new([50.0, 50.0, 50.0], 40.0))));
         tess.calculate();
@@ -523,7 +523,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     
     // Run 3: Cylinder Wall
     {
-        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-12, Box::new(CylinderGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 40.0))));
         tess.calculate();
@@ -532,7 +532,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 4: Torus Wall
     {
-        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-13, Box::new(TorusGeometry::new([50.0, 50.0, 50.0], [0.0, 0.0, 1.0], 35.0, 10.0))));
         tess.calculate();
@@ -541,7 +541,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 5: Cone Wall (Custom)
     {
-        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-14, Box::new(ConeGeometry::new(
             [50.0, 50.0, 10.0],
@@ -554,7 +554,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run 6: Trefoil Knot Wall (Custom)
     {
-        let mut tess = TessellationGrid::new(bounds.clone(), 10, 10, 10);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
         tess.set_generators(&generators);
         tess.add_wall(Wall::new(-15, Box::new(TrefoilKnotGeometry::new(
             [50.0, 50.0, 50.0],

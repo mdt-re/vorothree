@@ -3,6 +3,7 @@ use crate::wall::Wall;
 use rayon::prelude::*;
 use rand::prelude::*;
 use rand::rngs::StdRng;
+use crate::algo_grid::AlgorithmGrid;
 
 /// A geometry-based Voronoi tessellation that unifies the [`Cell`], [`SpatialAlgorithm`], and [`Wall`] traits.
 pub struct Tessellation<C: Cell, A: SpatialAlgorithm> {
@@ -290,6 +291,14 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
     }
 }
 
+impl<C: Cell> Tessellation<C, AlgorithmGrid> {
+    /// Resizes the internal spatial partitioning grid.
+    pub fn set_grid_shape(&mut self, nx: usize, ny: usize, nz: usize) {
+        self.algorithm = AlgorithmGrid::new(nx, ny, nz, &self.bounds);
+        let current_gens = self.generators.clone();
+        self.set_generators(&current_gens);
+    }
+}
 
 /// Trait defining the behavior of a Voronoi cell.
 /// This allows swapping between simple Polygon cells (`Cell`) and Graph-based cells (`CellEdges`).

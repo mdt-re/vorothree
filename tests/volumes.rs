@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, TessellationGrid, Wall, WALL_ID_START};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, CellFaces, Wall, WALL_ID_START};
 use vorothree::geometries::{SphereGeometry, CylinderGeometry};
 
 fn generate_grid(n: usize, size: f64) -> Vec<f64> {
@@ -22,7 +22,7 @@ fn generate_grid(n: usize, size: f64) -> Vec<f64> {
 fn test_sphere_volume() {
     let size = 10.0;
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, size, size, size);
-    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(5, 5, 5, &bounds));
 
     // 20^3 = 8000 points for better precision
     let generators = generate_grid(20, size);
@@ -34,7 +34,7 @@ fn test_sphere_volume() {
     tess.calculate();
 
     let total_volume: f64 = (0..tess.count_cells())
-        .map(|i| tess.get(i).unwrap().volume())
+        .map(|i| tess.get_cell(i).unwrap().volume())
         .sum();
 
     let expected_volume = 4.0 / 3.0 * std::f64::consts::PI * r.powi(3);
@@ -49,7 +49,7 @@ fn test_sphere_volume() {
 fn test_cylinder_volume() {
     let size = 10.0;
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, size, size, size);
-    let mut tess = TessellationGrid::new(bounds, 5, 5, 5);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(5, 5, 5, &bounds));
 
     let generators = generate_grid(20, size);
     tess.set_generators(&generators);
@@ -60,7 +60,7 @@ fn test_cylinder_volume() {
     tess.calculate();
 
     let total_volume: f64 = (0..tess.count_cells())
-        .map(|i| tess.get(i).unwrap().volume())
+        .map(|i| tess.get_cell(i).unwrap().volume())
         .sum();
 
     // Volume = Area * Height. Height is limited by the box (size).

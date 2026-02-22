@@ -75,6 +75,15 @@ impl AlgorithmOctree {
         self.children = None;
     }
 
+    fn collect_all_points(&self, points: &mut Vec<Point>) {
+        points.extend_from_slice(&self.points);
+        if let Some(children) = &self.children {
+            for child in children.iter() {
+                child.collect_all_points(points);
+            }
+        }
+    }
+
     /// Returns an iterator that yields points in the octree ordered by distance from the query point.
     ///
     /// This iterator uses a priority queue to traverse the octree, ensuring that
@@ -150,12 +159,24 @@ impl SpatialAlgorithm for AlgorithmOctree {
         }
     }
 
-    fn update_generator(&mut self, _index: usize, _old_pos: &[f64], _new_pos: &[f64], _bounds: &BoundingBox) {
-        // AlgorithmOctree doesn't support efficient single updates easily without removal support.
-        // For now, we might need to rebuild or implement remove.
-        // Given the current API usage, full rebuild is often acceptable or we can implement remove later.
-        // For this refactor, we'll leave it as a no-op or full rebuild if critical, but typically set_generators is used.
-        // TODO: Implement efficient update
+    fn update_generator(&mut self, index: usize, _old_pos: &[f64], new_pos: &[f64], _bounds: &BoundingBox) {
+        let mut all_points = Vec::new();
+        self.collect_all_points(&mut all_points);
+        
+        let mut found = false;
+        for p in &mut all_points {
+            if p.index == index {
+                p.x = new_pos[0];
+                p.y = new_pos[1];
+                p.z = new_pos[2];
+                found = true;
+                break;
+            }
+        }
+        
+        if found {
+            self.set_generators_from_points(all_points);
+        }
     }
 
     fn visit_neighbors<F>(
@@ -187,6 +208,15 @@ impl SpatialAlgorithm for AlgorithmOctree {
             }
 
             *max_dist_sq = visitor(j, [ox, oy, oz], *max_dist_sq);
+        }
+    }
+}
+
+impl AlgorithmOctree {
+    fn set_generators_from_points(&mut self, points: Vec<Point>) {
+        self.clear();
+        for p in points {
+            self.insert(p.index, p.x, p.y, p.z);
         }
     }
 }

@@ -1,6 +1,6 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{BoundingBox, TessellationGrid};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, CellFaces};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Define the output file and dimensions
@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Setup the tessellation
     let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = TessellationGrid::new(bounds, 10, 10, 10);
+    let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
 
     // Generate random points
     let mut rng = rand::thread_rng();
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Draw the cells with transparency
     // Note: This assumes the Cell API exposes faces and vertices.
     for i in 0..100 {
-        if let Some(cell) = tess.get(i) {
+        if let Some(cell) = tess.get_cell(i) {
             let vertices = cell.vertices();
             for face in cell.faces() {
                 let poly: Vec<(f64, f64, f64)> = face

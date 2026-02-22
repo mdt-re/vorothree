@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, TessellationGrid, TessellationEdges, TessellationMoctree};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, CellFaces, CellEdges};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -56,7 +56,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
             .unwrap();
 
         group.bench_with_input(BenchmarkId::new("grid", num_threads), &num_threads, |b, &_s| {
-            let mut tess = TessellationGrid::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {
@@ -66,7 +66,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("edges", num_threads), &num_threads, |b, &_s| {
-            let mut tess = TessellationEdges::new(bounds, grid_res, grid_res, grid_res);
+            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {
@@ -76,7 +76,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("moctree", num_threads), &num_threads, |b, &_s| {
-            let mut tess = TessellationMoctree::new(bounds, 8);
+            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {
