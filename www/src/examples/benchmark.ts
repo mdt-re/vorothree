@@ -159,7 +159,7 @@ export async function run(app: HTMLElement) {
                 const boundsMoc = new BoundingBox(-half, -half, -half, half, half, half);
                 // TODO: export mulitiple Tessellation option for WASM.
                 // const tessMoc = new TessellationMoctree(boundsMoc, params.capacity);
-                const tessMoc = new Tessellation(bounds, params.n, params.n, params.n);
+                const tessMoc = new Tessellation(boundsMoc, params.n, params.n, params.n);
 
                 tessMoc.set_generators(points);
                 const tInsertMoc = performance.now() - t1m;
