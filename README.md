@@ -6,9 +6,7 @@
 [![docs](https://github.com/mdt-re/vorothree/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/mdt-re/vorothree/actions/workflows/docs.yml)
 
 
-Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (Typescript). It provides a flexible and feature-rich implementation to calculate the individual cells by a clipping procedure based on the generating points, the bounding box and possible walls. The tessellation struct takes a spatial algorithm to calculate the nearest neighbours efficiently and a cell struct which manages cell data and the clipping algorithm. The combination of spatial algorithm and cell can then be mathed to the application and distribution of generators.
-
-## Features Some interactive examples are shown below.
+Rust library for 3D Voronoi tessellations, designed to be used in Rust as well as compiled to WebAssembly (TypeScript interface). It provides a flexible and feature-rich implementation to calculate the individual cells by a clipping procedure based on the generating points, the bounding box and possible walls. The tessellation struct takes a spatial algorithm to calculate the nearest neighbours efficiently and a cell struct which manages cell data and the clipping algorithm. The combination of spatial algorithm and cell can then be matched to the specific application and distribution of generators. A few of [interactive examples](https://mdt-re.github.io/vorothree/) are shown below.
 <table>
   <tr>
     <td align="center">
@@ -18,34 +16,39 @@ Rust library for 3D Voronoi tessellations, designed to be used in Rust as well a
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=walls">
-        <img src="www/src//assets/walls.png" width="180px" alt="walls" /><br />
+        <img src="www/src/assets/walls.png" width="180px" alt="walls" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=benchmark">
-        <img src="www/src//assets/benchmark.png" width="180px" alt="benchmark" /><br />
+        <img src="www/src/assets/benchmark.png" width="180px" alt="benchmark" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=relaxation">
-        <img src="www/src//assets/relaxation.png" width="180px" alt="relaxation" /><br />
+        <img src="www/src/assets/relaxation.png" width="180px" alt="relaxation" /><br />
       </a>
     </td>
   </tr>
   <tr>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=transition">
-        <img src="www/src//assets/transition.png" width="180px" alt="transition" /><br />
+        <img src="www/src/assets/transition.png" width="180px" alt="transition" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=granular_flow">
-        <img src="www/src//assets/granular_flow.png" width="180px" alt="granular flow" /><br />
+        <img src="www/src/assets/granular_flow.png" width="180px" alt="granular flow" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=pathfinding">
-        <img src="www/src//assets/pathfinding.png" width="180px" alt="pathfinding" /><br />
+        <img src="www/src/assets/pathfinding.png" width="180px" alt="pathfinding" /><br />
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://mdt-re.github.io/vorothree/?example=distributions">
+        <img src="www/src/assets/distributions.png" width="180px" alt="distributions" /><br />
       </a>
     </td>
   </tr>
@@ -57,7 +60,7 @@ This library is designed to directly compile to WASM. To build the project for w
 ```bash
 wasm-pack build --target web
 ```
-Consult the [www](www/) folder for examples and more details on how to use with TypeScript and in an web environment.
+Consult the [www](www/) folder for examples and more details on how to use with TypeScript and in a web environment.
 
 
 ## Development
