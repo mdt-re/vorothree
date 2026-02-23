@@ -556,4 +556,29 @@
 <a href=#556 id=556 data-nosnippet>556</a>    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
 <a href=#557 id=557 data-nosnippet>557</a>        <span class="self">self</span>.vertices.is_empty()
 <a href=#558 id=558 data-nosnippet>558</a>    }
-<a href=#559 id=559 data-nosnippet>559</a>}</code></pre></div></section></main></body></html>
+<a href=#559 id=559 data-nosnippet>559</a>}
+<a href=#560 id=560 data-nosnippet>560</a>
+<a href=#561 id=561 data-nosnippet>561</a><span class="attr">#[cfg(test)]
+<a href=#562 id=562 data-nosnippet>562</a></span><span class="kw">mod </span>tests {
+<a href=#563 id=563 data-nosnippet>563</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#564 id=564 data-nosnippet>564</a>
+<a href=#565 id=565 data-nosnippet>565</a>    <span class="attr">#[test]
+<a href=#566 id=566 data-nosnippet>566</a>    </span><span class="kw">fn </span>test_cell_faces_box() {
+<a href=#567 id=567 data-nosnippet>567</a>        <span class="kw">let </span>bounds = BoundingBox::new(<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>);
+<a href=#568 id=568 data-nosnippet>568</a>        <span class="kw">let </span>cell = CellFaces::new(<span class="number">0</span>, bounds);
+<a href=#569 id=569 data-nosnippet>569</a>        
+<a href=#570 id=570 data-nosnippet>570</a>        <span class="macro">assert!</span>((cell.volume() - <span class="number">1.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#571 id=571 data-nosnippet>571</a>        <span class="kw">let </span>c = cell.centroid();
+<a href=#572 id=572 data-nosnippet>572</a>        <span class="macro">assert!</span>((c[<span class="number">0</span>] - <span class="number">0.5</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#573 id=573 data-nosnippet>573</a>    }
+<a href=#574 id=574 data-nosnippet>574</a>
+<a href=#575 id=575 data-nosnippet>575</a>    <span class="attr">#[test]
+<a href=#576 id=576 data-nosnippet>576</a>    </span><span class="kw">fn </span>test_cell_faces_clip() {
+<a href=#577 id=577 data-nosnippet>577</a>        <span class="kw">let </span>bounds = BoundingBox::new(<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>);
+<a href=#578 id=578 data-nosnippet>578</a>        <span class="kw">let </span><span class="kw-2">mut </span>cell = CellFaces::new(<span class="number">0</span>, bounds);
+<a href=#579 id=579 data-nosnippet>579</a>        <span class="kw">let </span><span class="kw-2">mut </span>scratch = CellFacesScratch::default();
+<a href=#580 id=580 data-nosnippet>580</a>        
+<a href=#581 id=581 data-nosnippet>581</a>        cell.clip_with_scratch(<span class="kw-2">&amp;</span>[<span class="number">0.5</span>, <span class="number">0.5</span>, <span class="number">0.5</span>], <span class="kw-2">&amp;</span>[<span class="number">1.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>], <span class="number">10</span>, <span class="kw-2">&amp;mut </span>scratch, <span class="prelude-val">None</span>);
+<a href=#582 id=582 data-nosnippet>582</a>        <span class="macro">assert!</span>((cell.volume() - <span class="number">0.5</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#583 id=583 data-nosnippet>583</a>    }
+<a href=#584 id=584 data-nosnippet>584</a>}</code></pre></div></section></main></body></html>
