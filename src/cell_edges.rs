@@ -61,50 +61,30 @@ impl CellEdges {
         // Neighbors are ordered such that faces are traversed correctly.
         // neighbor_buffer[k] is the face ID between edge k and edge k+1 (cyclic).
         
-        let mut edge_buffer = Vec::with_capacity(24);
-        let mut neighbor_buffer = Vec::with_capacity(24);
-        let mut vertex_offsets = Vec::with_capacity(8);
-        let vertex_counts = vec![3u8; 8];
+        let edge_buffer: Vec<u16> = vec![
+            1, 4, 3, // Vertex 0
+            2, 5, 0, // Vertex 1
+            3, 6, 1, // Vertex 2
+            0, 7, 2, // Vertex 3
+            5, 7, 0, // Vertex 4
+            1, 6, 4, // Vertex 5
+            2, 7, 5, // Vertex 6
+            3, 4, 6, // Vertex 7
+        ];
 
-        // Vertex 0
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[1, 4, 3]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_FRONT, BOX_ID_LEFT, BOX_ID_BOTTOM]);
+        let neighbor_buffer: Vec<i32> = vec![
+            BOX_ID_FRONT, BOX_ID_LEFT, BOX_ID_BOTTOM, // Vertex 0
+            BOX_ID_RIGHT, BOX_ID_FRONT, BOX_ID_BOTTOM, // Vertex 1
+            BOX_ID_BACK, BOX_ID_RIGHT, BOX_ID_BOTTOM, // Vertex 2
+            BOX_ID_LEFT, BOX_ID_BACK, BOX_ID_BOTTOM, // Vertex 3
+            BOX_ID_TOP, BOX_ID_LEFT, BOX_ID_FRONT, // Vertex 4
+            BOX_ID_RIGHT, BOX_ID_TOP, BOX_ID_FRONT, // Vertex 5
+            BOX_ID_BACK, BOX_ID_TOP, BOX_ID_RIGHT, // Vertex 6
+            BOX_ID_LEFT, BOX_ID_TOP, BOX_ID_BACK, // Vertex 7
+        ];
 
-        // Vertex 1
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[2, 5, 0]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_RIGHT, BOX_ID_FRONT, BOX_ID_BOTTOM]);
-
-        // Vertex 2
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[3, 6, 1]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_BACK, BOX_ID_RIGHT, BOX_ID_BOTTOM]);
-
-        // Vertex 3
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[0, 7, 2]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_LEFT, BOX_ID_BACK, BOX_ID_BOTTOM]);
-
-        // Vertex 4
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[5, 0, 7]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_FRONT, BOX_ID_LEFT, BOX_ID_TOP]);
-
-        // Vertex 5
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[1, 6, 4]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_RIGHT, BOX_ID_TOP, BOX_ID_FRONT]);
-
-        // Vertex 6
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[2, 7, 5]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_BACK, BOX_ID_TOP, BOX_ID_RIGHT]);
-
-        // Vertex 7
-        vertex_offsets.push(edge_buffer.len() as u16);
-        edge_buffer.extend_from_slice(&[3, 4, 6]);
-        neighbor_buffer.extend_from_slice(&[BOX_ID_LEFT, BOX_ID_TOP, BOX_ID_BACK]);
+        let vertex_offsets: Vec<u16> = vec![0, 3, 6, 9, 12, 15, 18, 21];
+        let vertex_counts: Vec<u8> = vec![3; 8];
 
         CellEdges {
             id,
@@ -477,6 +457,7 @@ impl CellEdges {
         // 2. Build edges for kept vertices
         for i in 0..num_verts {
             if let Some(new_idx) = scratch.old_to_new[i] {
+                scratch.vertex_offsets[new_idx as usize] = scratch.edge_buffer.len() as u16;
                 let start = self.vertex_offsets[i] as usize;
                 let count = self.vertex_counts[i] as usize;
                 let mut new_count = 0;
@@ -642,5 +623,30 @@ impl Cell for CellEdges {
 
     fn is_empty(&self) -> bool {
         self.vertices.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cell_edges_box() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let cell = CellEdges::new(0, bounds);
+        
+        assert!((cell.volume() - 1.0).abs() < 1e-6);
+        let c = cell.centroid();
+        assert!((c[0] - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_cell_edges_clip() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let mut cell = CellEdges::new(0, bounds);
+        let mut scratch = CellEdgesScratch::default();
+        
+        cell.clip_with_scratch(&[0.5, 0.5, 0.5], &[1.0, 0.0, 0.0], 10, &mut scratch, None);
+        assert!((cell.volume() - 0.5).abs() < 1e-6);
     }
 }

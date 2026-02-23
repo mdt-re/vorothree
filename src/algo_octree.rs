@@ -300,3 +300,24 @@ fn dist_sq_to_bounds(x: f64, y: f64, z: f64, b: &BoundingBox) -> f64 {
     let dz = (b.min_z - z).max(0.0).max(z - b.max_z);
     dx * dx + dy * dy + dz * dz
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_octree_insert_and_find() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let mut octree = AlgorithmOctree::new(bounds, 1);
+
+        octree.insert(0, 1.0, 1.0, 1.0);
+        octree.insert(1, 9.0, 9.0, 9.0);
+        octree.insert(2, 2.0, 2.0, 2.0);
+
+        let mut iter = octree.nearest_iter(1.1, 1.1, 1.1);
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), None);
+    }
+}

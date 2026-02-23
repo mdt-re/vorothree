@@ -557,3 +557,28 @@ impl Cell for CellFaces {
         self.vertices.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cell_faces_box() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let cell = CellFaces::new(0, bounds);
+        
+        assert!((cell.volume() - 1.0).abs() < 1e-6);
+        let c = cell.centroid();
+        assert!((c[0] - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_cell_faces_clip() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let mut cell = CellFaces::new(0, bounds);
+        let mut scratch = CellFacesScratch::default();
+        
+        cell.clip_with_scratch(&[0.5, 0.5, 0.5], &[1.0, 0.0, 0.0], 10, &mut scratch, None);
+        assert!((cell.volume() - 0.5).abs() < 1e-6);
+    }
+}

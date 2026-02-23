@@ -29,7 +29,6 @@ mod tessellation_wasm;
 mod tessellation;
 mod wall;
 
-
 pub use algo_grid::AlgorithmGrid;
 pub use algo_octree::AlgorithmOctree;
 pub use bounds::BoundingBox;

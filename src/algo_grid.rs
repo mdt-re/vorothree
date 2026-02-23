@@ -200,3 +200,38 @@ fn get_min_dist_sq(dx: isize, dy: isize, dz: isize, cx: f64, cy: f64, cz: f64) -
     let mz = if dz > 0 { (dz - 1) as f64 * cz } else if dz < 0 { (-dz - 1) as f64 * cz } else { 0.0 };
     mx * mx + my * my + mz * mz
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_grid_indexing() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let grid = AlgorithmGrid::new(10, 10, 10, &bounds); // 1x1x1 cells
+
+        let idx = grid.get_bin_index(0.5, 0.5, 0.5, &bounds);
+        assert_eq!(idx, 0);
+
+        let idx = grid.get_bin_index(1.5, 0.5, 0.5, &bounds);
+        assert_eq!(idx, 1);
+    }
+
+    #[test]
+    fn test_grid_neighbors() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 3.0, 3.0, 3.0);
+        let mut grid = AlgorithmGrid::new(3, 3, 3, &bounds);
+        let generators = vec![0.5, 0.5, 0.5, 1.5, 0.5, 0.5];
+        
+        grid.set_generators(&generators, &bounds);
+        
+        let mut neighbors = Vec::new();
+        let mut max_dist_sq = 2.0;
+        
+        grid.visit_neighbors(&generators, 0, [0.5, 0.5, 0.5], &mut max_dist_sq, |idx, _, d| {
+            neighbors.push(idx);
+            d
+        });
+        assert!(neighbors.contains(&1));
+    }
+}

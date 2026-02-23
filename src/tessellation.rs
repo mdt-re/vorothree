@@ -365,3 +365,41 @@ fn get_seed() -> u64 {
         rand::thread_rng().next_u64()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::algo_grid::AlgorithmGrid;
+    use crate::cell_faces::CellFaces;
+
+    #[test]
+    fn test_tessellation_basic() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let algo = AlgorithmGrid::new(2, 2, 2, &bounds);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds, algo);
+
+        // 2 points
+        tess.set_generators(&[0.25, 0.5, 0.5, 0.75, 0.5, 0.5]);
+        tess.calculate();
+
+        assert_eq!(tess.count_cells(), 2);
+        let c1 = tess.get_cell(0).unwrap();
+        let c2 = tess.get_cell(1).unwrap();
+
+        // Total volume should be 1.0
+        let vol = c1.volume() + c2.volume();
+        assert!((vol - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_relax() {
+        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let algo = AlgorithmGrid::new(2, 2, 2, &bounds);
+        let mut tess = Tessellation::<CellFaces, _>::new(bounds, algo);
+
+        tess.set_generators(&[0.1, 0.1, 0.1, 0.9, 0.9, 0.9]);
+        tess.calculate();
+        tess.relax();
+        assert_eq!(tess.count_generators(), 2);
+    }
+}
