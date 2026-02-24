@@ -1,0 +1,101 @@
+// Voronoi face count comparison test
+//
+// This file generates a random set of particles, writes them to faces.in,
+// computes the Voronoi tessellation, and writes the number of faces for
+// each cell to faces.out.
+
+#include "voro++.hh"
+#include <cstdio>
+#include <cstdlib>
+
+using namespace voro;
+
+// Set up constants for the container geometry
+const double x_min=-10,x_max=10;
+const double y_min=-10,y_max=10;
+const double z_min=-10,z_max=10;
+
+// Set up the number of blocks that the container is divided into
+const int n_x=6,n_y=6,n_z=6;
+
+// Set the number of particles that are going to be randomly introduced
+const int particles=100;
+
+// This function returns a random double between 0 and 1
+double rnd() {return double(rand())/RAND_MAX;}
+
+int main() {
+	int i;
+	double x,y,z;
+
+	// Create a container with the geometry given above, and make it
+	// non-periodic in each of the three coordinates. Allocate space for
+	// eight particles within each computational block
+	container con(x_min,x_max,y_min,y_max,z_min,z_max,n_x,n_y,n_z,
+			false,false,false,8);
+
+	// Create a particle ordering class to keep track of the order that
+	// particles are added
+	particle_order po;
+
+	// Open the input file for writing
+	FILE *fp_in = fopen("faces.in","w");
+	if(fp_in==NULL) {
+		fprintf(stderr,"Unable to open file faces.in for writing\n");
+		return 1;
+	}
+
+	// Randomly add particles into the container and write to file
+	for(i=0;i<particles;i++) {
+		x=x_min+rnd()*(x_max-x_min);
+		y=y_min+rnd()*(y_max-y_min);
+		z=z_min+rnd()*(z_max-z_min);
+		
+		// Write to input file
+		fprintf(fp_in,"%d %g %g %g\n",i,x,y,z);
+		
+		// Add to container, tracking the order
+		con.put(po,i,x,y,z);
+	}
+	fclose(fp_in);
+
+	// Open the output file for writing
+	FILE *fp_out = fopen("faces.out","w");
+	if(fp_out==NULL) {
+		fprintf(stderr,"Unable to open file faces.out for writing\n");
+		return 1;
+	}
+
+	// Loop over all particles in the container in the order they were added
+	c_loop_order vl(con,po);
+	voronoicell c;
+	if(vl.start()) do {
+		// Compute the Voronoi cell for this particle
+		if(con.compute_cell(c,vl)) {
+			// Output the particle ID and the number of faces
+			fprintf(fp_out,"%d %d\n",vl.pid(),c.number_of_faces());
+		} else {
+			// This case should not happen for standard particles within the container
+			fprintf(fp_out,"%d 0\n",vl.pid());
+		}
+	} while(vl.inc());
+	
+	fclose(fp_out);
+}
+
+
+# Makefile
+# Load the common configuration file
+include ../../config.mk
+
+# List of executables
+EXECUTABLES=faces
+
+# Makefile rules
+all: $(EXECUTABLES)
+
+faces: faces.cc
+	$(CC) $(CFLAGS) -I../../src -L../../src -o faces faces.cc -lvoro++ -lstdc++ -lm
+
+clean:
+	rm -f $(EXECUTABLES)

@@ -1,0 +1,110 @@
+// Voro++ example code: vertices.cc
+//
+// This script calculates the vertices for each Voronoi cell
+// and outputs their x, y, z coordinates to a text file.
+
+#include "voro++.hh"
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+
+using namespace voro;
+
+// Set up constants for the container geometry
+const double x_min=-10,x_max=10;
+const double y_min=-10,y_max=10;
+const double z_min=-10,z_max=10;
+
+// Set up the number of blocks that the container is divided into
+const int n_x=6,n_y=6,n_z=6;
+
+// Set the number of particles that are going to be randomly introduced
+const int particles=100;
+
+// This function returns a random double between 0 and 1
+double rnd() {return double(rand())/RAND_MAX;}
+
+int main() {
+	int i=0;
+	double x,y,z;
+
+	// Create a container with the geometry given above, and make it
+	// non-periodic in each of the three coordinates. Allocate space for
+	// eight particles within each computational block
+	container con(x_min,x_max,y_min,y_max,z_min,z_max,n_x,n_y,n_z,
+			false,false,false,8);
+
+	// Add a spherical wall to the container
+	wall_sphere sph(0,0,0,8);
+	con.add_wall(sph);
+
+	// Open file to save input particles
+	FILE *fp_in = fopen("input_particles.txt","w");
+
+	// Randomly add particles into the container ensuring they are inside the wall
+	while(i<particles) {
+		x=x_min+rnd()*(x_max-x_min);
+		y=y_min+rnd()*(y_max-y_min);
+		z=z_min+rnd()*(z_max-z_min);
+		if(x*x+y*y+z*z < 64) {
+			con.put(i,x,y,z);
+			if(fp_in!=NULL) fprintf(fp_in,"%d %g %g %g\n",i,x,y,z);
+			i++;
+		}
+	}
+	if(fp_in!=NULL) fclose(fp_in);
+
+	// Open the output file
+	FILE *fp = fopen("vertices.txt","w");
+	if(fp == NULL) {
+		perror("Error opening output file");
+		return 1;
+	}
+
+	// Loop over all particles in the container and compute their cells
+	c_loop_all cl(con);
+	voronoicell c;
+	std::vector<double> v;
+	if(cl.start()) do if(con.compute_cell(c,cl)) {
+		cl.pos(x,y,z);
+		int id = cl.pid();
+
+		// Get the vertices of the Voronoi cell in global coordinates
+		c.vertices(x,y,z,v);
+
+		fprintf(fp, "Cell %d:\n", id);
+		
+		// Output the vertices
+		// v contains (x0, y0, z0, x1, y1, z1, ...)
+		for(size_t j=0;j<v.size();j+=3) {
+			fprintf(fp, "%g %g %g\n", v[j], v[j+1], v[j+2]);
+		}
+		fprintf(fp, "\n");
+
+	} while (cl.inc());
+
+	fclose(fp);
+	puts("Vertices output to vertices.txt");
+
+	return 0;
+}
+
+
+# Makefile
+# Load the common configuration file
+include ../../config.mk
+
+# List of executables
+EXECUTABLES=faces vertices
+
+# Makefile rules
+all: $(EXECUTABLES)
+
+faces: faces.cc
+	$(CC) $(CFLAGS) -I../../src -L../../src -o faces faces.cc -lvoro++ -lstdc++ -lm
+
+vertices: vertices.cc
+	$(CC) $(CFLAGS) -I../../src -L../../src -o vertices vertices.cc -lvoro++ -lstdc++ -lm
+
+clean:
+	rm -f $(EXECUTABLES)
