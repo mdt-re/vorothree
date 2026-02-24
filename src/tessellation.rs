@@ -3,7 +3,8 @@ use crate::wall::Wall;
 use rayon::prelude::*;
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use crate::algo_grid::AlgorithmGrid;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 /// A geometry-based Voronoi tessellation that unifies the [`Cell`], [`SpatialAlgorithm`], and [`Wall`] traits.
 pub struct Tessellation<C: Cell, A: SpatialAlgorithm> {
@@ -25,8 +26,9 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         }
     }
 
-    /// Update all generators at once.
-    ///
+    /// Update all generators at once. Only accepts generators that are inside the
+    /// bounding box and contained by the walls.
+    /// 
     /// # Arguments
     /// * `generators` - A flat array of coordinates `[x, y, z, x, y, z, ...]`.
     pub fn set_generators(&mut self, generators: &[f64]) {
@@ -57,7 +59,8 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         self.algorithm.set_generators(&self.generators, &self.bounds);
     }
 
-    /// Update the position of a single generator by index.
+    /// Update the position of a single generator by index. Only sets the generator
+    /// if it is inside the bounding box and contained by the walls.
     pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
         let offset = index * 3;
         if offset + 2 >= self.generators.len() {
@@ -85,7 +88,8 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         self.generators[offset + 2] = z;
     }
 
-    /// Generates random points within the bounds and sets them as generators.
+    /// Generates random points within the boundaries of the bounding box
+    /// and walls and sets them as generators.
     pub fn random_generators(&mut self, count: usize) {
         let mut rng = StdRng::seed_from_u64(get_seed());
         let mut points = Vec::with_capacity(count * 3);
@@ -113,6 +117,36 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         
         self.generators = points;
         self.algorithm.set_generators(&self.generators, &self.bounds);
+    }
+
+    /// Imports generators from a text file.
+    /// Each line should contain an id followed by N coordinate entries.
+    /// For now only the first 3 coordinates are used (x, y, z) and the id is ignored.
+    pub fn import_generators<P: AsRef<std::path::Path>>(&mut self, path: P) -> std::io::Result<()> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let mut raw_points = Vec::new();
+
+        for line in reader.lines() {
+            let line = line?;
+            if line.trim().is_empty() { continue; }
+
+            let mut parts = line.split_whitespace();
+            
+            // Skip ID
+            if parts.next().is_none() { continue; }
+
+            let x = parts.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let y = parts.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let z = parts.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+
+            raw_points.push(x);
+            raw_points.push(y);
+            raw_points.push(z);
+        }
+
+        self.set_generators(&raw_points);
+        Ok(())
     }
 
     /// Removes generators that are not inside the defined walls.
@@ -233,6 +267,26 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         );
 
         cell
+    }   
+    
+    /// Performs one step of Lloyd's relaxation.
+    ///
+    /// This moves each generator to the centroid of its calculated Voronoi cell,
+    /// which tends to make the cells more uniform in size and shape. A calculation
+    /// step must be invoked separately to get the new Voronoi cells.
+    pub fn relax(&mut self) {
+        let new_generators: Vec<f64> = self.cells.par_iter()
+            .zip(self.generators.par_chunks(3))
+            .flat_map(|(cell, original_pos)| {
+                if cell.is_empty() {
+                    original_pos.to_vec()
+                } else {
+                    cell.centroid()
+                }
+            })
+            .collect();
+
+        self.set_generators(&new_generators);
     }
 
     /// Returns the number of generators in the tessellation.
@@ -266,39 +320,11 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
     }
 
     /// Returns a copy of all computed cells.
-    pub fn get_cells(&self) -> Vec<C> {
+    pub fn cells(&self) -> Vec<C> {
         self.cells.clone()
     }
-
-    /// Performs one step of Lloyd's relaxation.
-    ///
-    /// This moves each generator to the centroid of its calculated Voronoi cell,
-    /// which tends to make the cells more uniform in size and shape. A calculation
-    /// step must be invoked separately to get the new Voronoi cells.
-    pub fn relax(&mut self) {
-        let new_generators: Vec<f64> = self.cells.par_iter()
-            .zip(self.generators.par_chunks(3))
-            .flat_map(|(cell, original_pos)| {
-                if cell.is_empty() {
-                    original_pos.to_vec()
-                } else {
-                    cell.centroid()
-                }
-            })
-            .collect();
-
-        self.set_generators(&new_generators);
-    }
 }
 
-impl<C: Cell> Tessellation<C, AlgorithmGrid> {
-    /// Resizes the internal spatial partitioning grid.
-    pub fn set_grid_shape(&mut self, nx: usize, ny: usize, nz: usize) {
-        self.algorithm = AlgorithmGrid::new(nx, ny, nz, &self.bounds);
-        let current_gens = self.generators.clone();
-        self.set_generators(&current_gens);
-    }
-}
 
 /// Trait defining the behavior of a Voronoi cell.
 /// This allows swapping between simple Polygon cells (`Cell`) and Graph-based cells (`CellEdges`).

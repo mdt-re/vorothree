@@ -54,9 +54,9 @@ Rust library for 3D Voronoi tessellations, designed to be used in Rust as well a
   </tr>
 </table>
 
-## WASM and Web Usage
+## WebAssembly and TypeScript API
 
-This library is designed to directly compile to WASM. To build the project for web usage:
+This library is designed to directly compile to WASM, using wasm-pack, and is compatible with TypeScript. To build the project for web usage:
 ```bash
 wasm-pack build --target web
 ```

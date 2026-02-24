@@ -29,27 +29,29 @@ impl TessellationWASM {
         }
     }
 
+    pub fn set_generators(&mut self, generators: &[f64]) {
+        self.inner.set_generators(generators);
+    }
+
+    pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
+        self.inner.set_generator(index, x, y, z);
+    }
+
+    pub fn random_generators(&mut self, count: usize) {
+        self.inner.random_generators(count);
+    }
+
+    pub fn import_generators(&mut self, path: &str) -> Result<(), JsValue> {
+        self.inner.import_generators(path)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     pub fn add_wall(&mut self, wall: Wall) {
         self.inner.add_wall(wall);
     }
 
     pub fn clear_walls(&mut self) {
         self.inner.clear_walls();
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn count_cells(&self) -> usize {
-        self.inner.cells.len()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn generators(&self) -> Vec<f64> {
-        self.inner.generators.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn count_generators(&self) -> usize {
-        self.inner.generators.len() / 3
     }
 
     pub fn calculate(&mut self) {
@@ -60,25 +62,31 @@ impl TessellationWASM {
         self.inner.relax();
     }
 
-    pub fn set_generators(&mut self, generators: &[f64]) {
-        self.inner.set_generators(generators);
+    #[wasm_bindgen(getter)]
+    pub fn count_generators(&self) -> usize {
+        self.inner.count_generators()
     }
 
-    pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
-        self.inner.set_generator(index, x, y, z);
+    #[wasm_bindgen(getter)]
+    pub fn count_cells(&self) -> usize {
+        self.inner.count_cells()
     }
 
-    pub fn set_grid_shape(&mut self, nx: usize, ny: usize, nz: usize) {
-        self.inner.algorithm = AlgorithmGrid::new(nx, ny, nz, &self.inner.bounds);
-        let current_gens = self.inner.generators.clone();
-        self.inner.set_generators(&current_gens);
+    pub fn get_generator(&self, index: usize) -> Vec<f64> {
+        self.inner.get_generator(index).to_vec()
     }
 
-    pub fn get(&self, index: usize) -> Option<CellFaces> {
-        self.inner.cells.get(index).cloned()
+    pub fn get_cell(&self, index: usize) -> Option<CellFaces> {
+        self.inner.get_cell(index)
     }
 
-    pub fn random_generators(&mut self, count: usize) {
-        self.inner.random_generators(count);
+    #[wasm_bindgen(getter)]
+    pub fn generators(&self) -> Vec<f64> {
+        self.inner.generators()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn cells(&self) -> Vec<CellFaces> {
+        self.inner.cells()
     }
 }
