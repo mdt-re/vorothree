@@ -46,7 +46,7 @@ async function run() {
 
     // 6. Access results
     console.log(`Calculated ${tess.count_cells} cells`);
-    const cell = tess.get(0);
+    const cell = tess.get_cell(0);
     console.log(cell);
 }
 

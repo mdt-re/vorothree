@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import Stats from 'three/examples/jsm/libs/stats.module';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { Tessellation, BoundingBox, Wall } from 'vorothree';
 import RAPIER from '@dimforge/rapier3d-compat';
 
@@ -217,7 +217,8 @@ export async function run(app: HTMLElement) {
 
         for(let i = 0; i < params.count; i++) {
             // Spread initial positions
-            bodies.push(spawnParticle(Math.random()));
+            const b = spawnParticle(Math.random());
+            if (b) bodies.push(b);
         }
     }
 
@@ -372,7 +373,7 @@ export async function run(app: HTMLElement) {
         const volumes: number[] = [];
 
         for (let i = 0; i < cellCount; i++) {
-            const cell = tess.get(i);
+            const cell = tess.get_cell(i);
             if (!cell) continue;
 
             const vertices = cell.vertices;

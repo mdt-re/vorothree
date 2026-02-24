@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import Stats from 'three/examples/jsm/libs/stats.module';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { Tessellation, BoundingBox } from 'vorothree';
 
 export async function run(app: HTMLElement) {
@@ -113,7 +113,7 @@ export async function run(app: HTMLElement) {
 
         const count = tess.count_cells;
         for (let i = 0; i < count; i++) {
-            const cell = tess.get(i);
+            const cell = tess.get_cell(i);
             if (!cell) continue;
 
             volumes.push(cell.volume());
@@ -177,7 +177,7 @@ export async function run(app: HTMLElement) {
 
         const count = tess.count_cells;
         for(let i=0; i<count; i++) {
-            const cell = tess.get(i);
+            const cell = tess.get_cell(i);
             if(!cell) continue;
 
             const verts = cell.vertices;

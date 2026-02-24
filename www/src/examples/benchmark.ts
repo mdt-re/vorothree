@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Tessellation/*, TessellationMoctree*/, BoundingBox } from 'vorothree';
 
 export async function run(app: HTMLElement) {
@@ -146,7 +146,7 @@ export async function run(app: HTMLElement) {
                 const cellCount = tess.count_cells;
                 let totalVertices = 0;
                 for(let i = 0; i < cellCount; i++) {
-                    const cell = tess.get(i);
+                    const cell = tess.get_cell(i);
                     if (cell) {
                         totalVertices += cell.vertices.length;
                     }
@@ -176,7 +176,7 @@ export async function run(app: HTMLElement) {
                 const t3m = performance.now();
                 const cellCountMoc = tessMoc.count_cells;
                 for(let i = 0; i < cellCountMoc; i++) {
-                    const cell = tessMoc.get(i);
+                    const cell = tessMoc.get_cell(i);
                     if (cell) {
                         const _ = cell.vertices.length;
                     }
@@ -197,7 +197,7 @@ export async function run(app: HTMLElement) {
                         // Render wireframe cells
                         const vertices: number[] = [];
                         for(let i = 0; i < cellCount; i++) {
-                            const cell = tess.get(i);
+                            const cell = tess.get_cell(i);
                             if (!cell) continue;
                             
                             const cVerts = cell.vertices;
