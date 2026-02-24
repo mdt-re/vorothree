@@ -57,10 +57,18 @@ impl AlgorithmGrid {
         let rx = nx as isize;
         let ry = ny as isize;
         let rz = nz as isize;
+
+        let get_min_dist_sq = |dx: isize, dy: isize, dz: isize| {
+            let mx = if dx > 0 { (dx - 1) as f64 * cell_size_x } else if dx < 0 { (-dx - 1) as f64 * cell_size_x } else { 0.0 };
+            let my = if dy > 0 { (dy - 1) as f64 * cell_size_y } else if dy < 0 { (-dy - 1) as f64 * cell_size_y } else { 0.0 };
+            let mz = if dz > 0 { (dz - 1) as f64 * cell_size_z } else if dz < 0 { (-dz - 1) as f64 * cell_size_z } else { 0.0 };
+            mx * mx + my * my + mz * mz
+        };
+
         for z in -rz..=rz {
             for y in -ry..=ry {
                 for x in -rx..=rx {
-                    let dist_sq = get_min_dist_sq(x, y, z, cell_size_x, cell_size_y, cell_size_z);
+                    let dist_sq = get_min_dist_sq(x, y, z);
                     bin_search_order.push((x, y, z, dist_sq));
                 }
             }
@@ -192,13 +200,6 @@ impl SpatialAlgorithm for AlgorithmGrid {
             }
         }
     }
-}
-
-fn get_min_dist_sq(dx: isize, dy: isize, dz: isize, cx: f64, cy: f64, cz: f64) -> f64 {
-    let mx = if dx > 0 { (dx - 1) as f64 * cx } else if dx < 0 { (-dx - 1) as f64 * cx } else { 0.0 };
-    let my = if dy > 0 { (dy - 1) as f64 * cy } else if dy < 0 { (-dy - 1) as f64 * cy } else { 0.0 };
-    let mz = if dz > 0 { (dz - 1) as f64 * cz } else if dz < 0 { (-dz - 1) as f64 * cz } else { 0.0 };
-    mx * mx + my * my + mz * mz
 }
 
 #[cfg(test)]

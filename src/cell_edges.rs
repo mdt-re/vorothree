@@ -445,10 +445,16 @@ impl CellEdges {
                         // `neighbor_buffer[start + (k + count - 1) % count]` is face RIGHT of `i->neighbor`.
                         let face_right = self.neighbor_buffer[start + (k + count - 1) % count];
                         
-                        scratch.face_cut_map.push((face_left, p_idx, true)); // Left of edge -> p is start of cut on face
-                        scratch.face_cut_map.push((face_right, p_idx, false)); // Right of edge -> p is end of cut on face
-                        
-                        scratch.cut_infos.push((p_idx, new_idx, face_left, face_right));
+                        // Check if faces already have 2 cuts to prevent malformed topology
+                        let count_left = scratch.face_cut_map.iter().filter(|(f, _, _)| *f == face_left).count();
+                        let count_right = scratch.face_cut_map.iter().filter(|(f, _, _)| *f == face_right).count();
+
+                        if count_left < 2 && count_right < 2 {
+                            scratch.face_cut_map.push((face_left, p_idx, true)); // Left of edge -> p is start of cut on face
+                            scratch.face_cut_map.push((face_right, p_idx, false)); // Right of edge -> p is end of cut on face
+                            
+                            scratch.cut_infos.push((p_idx, new_idx, face_left, face_right));
+                        }
                     }
                 }
             }
@@ -495,10 +501,12 @@ impl CellEdges {
         for &(p_idx, u_idx, f_left, f_right) in &scratch.cut_infos {
             scratch.vertex_offsets[p_idx as usize] = scratch.edge_buffer.len() as u16;
             
+            let mut count = 0;
             // 1. Connection back to u
             // Face to the left of p->u is f_right.
             scratch.edge_buffer.push(u_idx);
             scratch.neighbor_buffer.push(f_right);
+            count += 1;
             
             // 2. Connection to p_prev (on f_right)
             // Find other cut on f_right.
@@ -520,9 +528,11 @@ impl CellEdges {
                     break;
                 }
             }
-            if p_prev == u16::MAX { p_prev = p_idx; }
-            scratch.edge_buffer.push(p_prev);
-            scratch.neighbor_buffer.push(neighbor_id);
+            if p_prev != u16::MAX {
+                scratch.edge_buffer.push(p_prev);
+                scratch.neighbor_buffer.push(neighbor_id);
+                count += 1;
+            }
 
             // 3. Connection to p_next (on f_left)
             let mut p_next = u16::MAX;
@@ -532,11 +542,13 @@ impl CellEdges {
                     break;
                 }
             }
-            if p_next == u16::MAX { p_next = p_idx; }
-            scratch.edge_buffer.push(p_next);
-            scratch.neighbor_buffer.push(f_left);
+            if p_next != u16::MAX {
+                scratch.edge_buffer.push(p_next);
+                scratch.neighbor_buffer.push(f_left);
+                count += 1;
+            }
             
-            scratch.vertex_counts[p_idx as usize] = 3;
+            scratch.vertex_counts[p_idx as usize] = count as u8;
         }
 
         std::mem::swap(&mut self.vertices, &mut scratch.vertices);
