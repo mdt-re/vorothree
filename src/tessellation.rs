@@ -55,6 +55,7 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
             }
         }
 
+        valid_generators.shrink_to_fit();
         self.generators = valid_generators;
         self.algorithm.set_generators(&self.generators, &self.bounds);
     }
@@ -168,6 +169,7 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
         }
         
         if new_generators.len() != self.generators.len() {
+            new_generators.shrink_to_fit();
             self.generators = new_generators;
             self.algorithm.set_generators(&self.generators, &self.bounds);
         }
@@ -204,6 +206,33 @@ impl<C: Cell, A: SpatialAlgorithm> Tessellation<C, A> {
                 |scratch, i| Self::compute_cell(i, generators, bounds, walls, algorithm, scratch),
             )
             .collect();
+    }
+
+    /// Computes cells and applies a mapping function `f` to each cell, returning the collected results.
+    ///
+    /// This method is memory-efficient as it does not store the intermediate `Cell` objects.
+    /// It runs in parallel if the `rayon` feature is enabled (which is default).
+    pub fn map<F, T>(&self, f: F) -> Vec<T>
+    where
+        F: Fn(C) -> T + Sync + Send,
+        T: Send,
+    {
+        let count = self.generators.len() / 3;
+        let generators = &self.generators;
+        let bounds = &self.bounds;
+        let walls = &self.walls;
+        let algorithm = &self.algorithm;
+
+        (0..count)
+            .into_par_iter()
+            .map_init(
+                || C::Scratch::default(),
+                |scratch, i| {
+                    let cell = Self::compute_cell(i, generators, bounds, walls, algorithm, scratch);
+                    f(cell)
+                },
+            )
+            .collect()
     }
 
     fn compute_cell(

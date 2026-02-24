@@ -58,6 +58,12 @@ impl TessellationWASM {
         self.inner.calculate();
     }
 
+//  TODO: needs a serial version of the map function to Tessellation.
+//  The existing map function requires Send bounds for parallel execution (via Rayon), which JsValue and js_sys::Function do not satisfy.
+//  pub fn map(&self, callback: js_sys::Function) -> js_sys::Array {
+//
+//  }
+
     pub fn relax(&mut self) {
         self.inner.relax();
     }
