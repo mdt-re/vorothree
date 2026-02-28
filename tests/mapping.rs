@@ -2,10 +2,10 @@ use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, CellFaces};
 
 #[test]
 fn test_mapping_face_counts() {
-    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+    let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
     // Use a grid algorithm for spatial indexing
     let algo = AlgorithmGrid::new(4, 4, 4, &bounds);
-    let mut tess = Tessellation::<CellFaces, _>::new(bounds, algo);
+    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, algo);
 
     // Create a 2x2x2 grid of points (8 generators)
     // These points are perfectly symmetric in the 1x1x1 box.

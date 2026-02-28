@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     chart.configure_axes().draw()?;
 
     // Setup the tessellation
-    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
-    let mut tess = Tessellation::<CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
+    let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
+    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
 
     // Generate random points
     let mut rng = rand::thread_rng();

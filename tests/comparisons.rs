@@ -15,12 +15,12 @@ fn test_comparisons_face_counts() {
     let output_path = data_dir.join("output.txt");
 
     // Define bounds that cover the input data (approx -10 to 10 based on the file content)
-    let bounds = BoundingBox::new(-10.0, -10.0, -10.0, 10.0, 10.0, 10.0);
+    let bounds = BoundingBox::new([-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]);
 
     // Create tessellation with grid algorithm
     // 10x10x10 grid is a reasonable default for this volume
     let algo = AlgorithmGrid::new(6, 6, 6, &bounds);
-    let mut tess = Tessellation::<CellFaces, _>::new(bounds, algo);
+    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, algo);
 
     // Add a spherical wall with radius 8
     tess.add_wall(Wall::new(
@@ -116,12 +116,12 @@ fn test_comparisons_vertex_positions() {
     let output_path = data_dir.join("output.txt");
 
     // Define bounds that cover the input data (approx -10 to 10 based on the file content)
-    let bounds = BoundingBox::new(-10.0, -10.0, -10.0, 10.0, 10.0, 10.0);
+    let bounds = BoundingBox::new([-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]);
 
     // Create tessellation with grid algorithm
     // 10x10x10 grid is a reasonable default for this volume
     let algo = AlgorithmGrid::new(6, 6, 6, &bounds);
-    let mut tess = Tessellation::<CellFaces, _>::new(bounds, algo);
+    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, algo);
 
     // Add a spherical wall with radius 8
     tess.add_wall(Wall::new(

@@ -31,7 +31,7 @@ const CAPACITIES: [f64; 10] = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 20
 
 
 fn benchmark_capacity(c: &mut Criterion) {
-    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
+    let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
 
     let mut group = c.benchmark_group(format!("capacity_{}k", N_POINTS / 1000));
     group.sample_size(20);
@@ -48,7 +48,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         println!("Cap: {:.1}, Grid Res: {}, Moctree Cap: {}", cap, grid_res, moctree_cap);
 
         group.bench_with_input(BenchmarkId::new("grid", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
+            let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
@@ -56,7 +56,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("edges", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
+            let mut tess = Tessellation::<3, CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
@@ -64,7 +64,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("moctree", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, moctree_cap));
+            let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, moctree_cap));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();

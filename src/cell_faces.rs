@@ -1,10 +1,8 @@
 use crate::bounds::BoundingBox;
 use crate::bounds::{BOX_ID_BOTTOM, BOX_ID_TOP, BOX_ID_FRONT, BOX_ID_BACK, BOX_ID_LEFT, BOX_ID_RIGHT};
 use crate::tessellation::Cell;
-use wasm_bindgen::prelude::*;
 
 /// Scratch buffer to reuse allocations during clipping.
-#[wasm_bindgen]
 #[derive(Default, Clone)]
 pub struct CellFacesScratch {
     vertices: Vec<f64>,
@@ -22,7 +20,6 @@ pub struct CellFacesScratch {
 }
 
 /// A Voronoi cell containing vertices and face information.
-#[wasm_bindgen]
 #[derive(Clone)]
 pub struct CellFaces {
     pub(crate) id: usize,
@@ -36,19 +33,17 @@ pub struct CellFaces {
     pub(crate) face_neighbors: Vec<i32>,
 }
 
-#[wasm_bindgen]
 impl CellFaces {
-    #[wasm_bindgen(constructor)]
-    pub fn new(id: usize, bounds: BoundingBox) -> CellFaces {
+    pub fn new(id: usize, bounds: BoundingBox<3>) -> CellFaces {
         let vertices: Vec<f64> = vec![
-            bounds.min_x, bounds.min_y, bounds.min_z, // 0
-            bounds.max_x, bounds.min_y, bounds.min_z, // 1
-            bounds.max_x, bounds.max_y, bounds.min_z, // 2
-            bounds.min_x, bounds.max_y, bounds.min_z, // 3
-            bounds.min_x, bounds.min_y, bounds.max_z, // 4
-            bounds.max_x, bounds.min_y, bounds.max_z, // 5
-            bounds.max_x, bounds.max_y, bounds.max_z, // 6
-            bounds.min_x, bounds.max_y, bounds.max_z, // 7
+            bounds.min[0], bounds.min[1], bounds.min[2], // 0
+            bounds.max[0], bounds.min[1], bounds.min[2], // 1
+            bounds.max[0], bounds.max[1], bounds.min[2], // 2
+            bounds.min[0], bounds.max[1], bounds.min[2], // 3
+            bounds.min[0], bounds.min[1], bounds.max[2], // 4
+            bounds.max[0], bounds.min[1], bounds.max[2], // 5
+            bounds.max[0], bounds.max[1], bounds.max[2], // 6
+            bounds.min[0], bounds.max[1], bounds.max[2], // 7
         ];
 
         let face_counts: Vec<u8> = vec![4, 4, 4, 4, 4, 4];
@@ -79,36 +74,31 @@ impl CellFaces {
     }
 
     /// The ID of the generator associated with this cell.
-    #[wasm_bindgen(getter)]
     pub fn id(&self) -> usize {
         self.id
     }
 
     /// Flat array of vertices [x, y, z, x, y, z, ...].
-    #[wasm_bindgen(getter)]
     pub fn vertices(&self) -> Vec<f64> {
         self.vertices.clone()
     }
 
     /// Number of vertices for each face.
-    #[wasm_bindgen(getter)]
     pub fn face_counts(&self) -> Vec<u32> {
         self.face_counts.iter().map(|&c| c as u32).collect()
     }
 
     /// Flattened indices for all faces.
-    #[wasm_bindgen(getter)]
     pub fn face_indices(&self) -> Vec<u32> {
         self.face_indices.iter().map(|&i| i as u32).collect()
     }
 
     /// Neighbor ID for each face. Negative values indicate walls/boundaries.
-    #[wasm_bindgen(getter)]
     pub fn face_neighbors(&self) -> Vec<i32> {
         self.face_neighbors.clone()
     }
 
-    pub fn clip(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32) {
+    pub fn clip(&mut self, point: &[f64; 3], normal: &[f64; 3], neighbor_id: i32) {
         let mut scratch = CellFacesScratch::default();
         self.clip_with_scratch(point, normal, neighbor_id, &mut scratch, None);
     }
@@ -152,7 +142,7 @@ impl CellFaces {
         (volume / 6.0).abs()
     }
 
-    pub fn centroid(&self) -> Vec<f64> {
+    pub fn centroid(&self) -> [f64; 3] {
         let mut centroid_x: f64 = 0.0;
         let mut centroid_y: f64 = 0.0;
         let mut centroid_z: f64 = 0.0;
@@ -203,11 +193,11 @@ impl CellFaces {
         }
 
         if total_volume.abs() < 1e-9 {
-            return vec![0.0, 0.0, 0.0];
+            return [0.0, 0.0, 0.0];
         }
 
         let factor: f64 = 1.0 / (4.0 * total_volume);
-        vec![
+        [
             centroid_x * factor,
             centroid_y * factor,
             centroid_z * factor,
@@ -262,22 +252,6 @@ impl CellFaces {
         }
         area
     }
-
-    #[wasm_bindgen(js_name = faces)]
-    // Workaround for the fact that wasm-bindgen does not support nested vectors directly
-    pub fn wasm_faces(&self) -> js_sys::Array {
-        let result = js_sys::Array::new_with_length(self.face_counts.len() as u32);
-        let mut offset = 0;
-        for (i, &count) in self.face_counts.iter().enumerate() {
-            let count = count as usize;
-            let end = offset + count;
-            let face_slice = &self.face_indices[offset..end];
-            let js_face = js_sys::Uint16Array::from(face_slice);
-            result.set(i as u32, js_face.into());
-            offset = end;
-        }
-        result
-    }
 }
 
 impl CellFaces {
@@ -296,7 +270,7 @@ impl CellFaces {
         faces
     }
 
-    pub fn max_radius_sq(&self, center: &[f64]) -> f64 {   
+    pub fn max_radius_sq(&self, center: &[f64; 3]) -> f64 {   
         let gx = center[0];
         let gy = center[1];
         let gz = center[2];
@@ -313,7 +287,7 @@ impl CellFaces {
         max_d2
     }
 
-    pub fn clip_with_scratch(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32, scratch: &mut CellFacesScratch, generator: Option<&[f64]>) -> (bool, f64) {
+    pub fn clip_with_scratch(&mut self, point: &[f64; 3], normal: &[f64; 3], neighbor_id: i32, scratch: &mut CellFacesScratch, generator: Option<&[f64; 3]>) -> (bool, f64) {
         let px = point[0];
         let py = point[1];
         let pz = point[2];
@@ -531,25 +505,25 @@ impl CellFaces {
     }
 }
 
-impl Cell for CellFaces {
+impl Cell<3> for CellFaces {
     type Scratch = CellFacesScratch;
 
     #[inline]
-    fn new(id: usize, bounds: BoundingBox) -> Self {
+    fn new(id: usize, bounds: BoundingBox<3>) -> Self {
         CellFaces::new(id, bounds)
     }
 
     #[inline]
-    fn clip(&mut self, point: &[f64], normal: &[f64], neighbor_id: i32, scratch: &mut Self::Scratch, generator: Option<&[f64]>) -> (bool, f64) {
+    fn clip(&mut self, point: &[f64; 3], normal: &[f64; 3], neighbor_id: i32, scratch: &mut Self::Scratch, generator: Option<&[f64; 3]>) -> (bool, f64) {
         self.clip_with_scratch(point, normal, neighbor_id, scratch, generator)
     }
 
     #[inline]
-    fn max_radius_sq(&self, center: &[f64]) -> f64 {
+    fn max_radius_sq(&self, center: &[f64; 3]) -> f64 {
         self.max_radius_sq(center)
     }
 
-    fn centroid(&self) -> Vec<f64> {
+    fn centroid(&self) -> [f64; 3] {
         self.centroid()
     }
 
@@ -564,7 +538,7 @@ mod tests {
 
     #[test]
     fn test_cell_faces_box() {
-        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
         let cell = CellFaces::new(0, bounds);
         
         assert!((cell.volume() - 1.0).abs() < 1e-6);
@@ -574,7 +548,7 @@ mod tests {
 
     #[test]
     fn test_cell_faces_clip() {
-        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
         let mut cell = CellFaces::new(0, bounds);
         let mut scratch = CellFacesScratch::default();
         

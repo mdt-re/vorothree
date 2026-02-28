@@ -17,7 +17,7 @@ struct Point {
 /// It is particularly efficient for non-uniform distributions of points,
 /// as it adapts the depth of the tree to the local density of points.
 pub struct AlgorithmOctree {
-    bounds: BoundingBox,
+    bounds: BoundingBox<3>,
     capacity: usize,
     points: Vec<Point>,
     children: Option<Box<[AlgorithmOctree; 8]>>,
@@ -30,7 +30,7 @@ impl AlgorithmOctree {
     ///
     /// * `bounds` - The spatial boundaries of the octree.
     /// * `capacity` - The maximum number of points a leaf node can hold before subdividing.
-    pub fn new(bounds: BoundingBox, capacity: usize) -> AlgorithmOctree {
+    pub fn new(bounds: BoundingBox<3>, capacity: usize) -> AlgorithmOctree {
         AlgorithmOctree {
             bounds,
             capacity,
@@ -109,32 +109,32 @@ impl AlgorithmOctree {
     }
 
     fn contains(&self, x: f64, y: f64, z: f64) -> bool {
-        x >= self.bounds.min_x && x <= self.bounds.max_x &&
-        y >= self.bounds.min_y && y <= self.bounds.max_y &&
-        z >= self.bounds.min_z && z <= self.bounds.max_z
+        x >= self.bounds.min[0] && x <= self.bounds.max[0] &&
+        y >= self.bounds.min[1] && y <= self.bounds.max[1] &&
+        z >= self.bounds.min[2] && z <= self.bounds.max[2]
     }
 
     fn subdivide(&mut self) {
-        let min_x = self.bounds.min_x;
-        let min_y = self.bounds.min_y;
-        let min_z = self.bounds.min_z;
-        let max_x = self.bounds.max_x;
-        let max_y = self.bounds.max_y;
-        let max_z = self.bounds.max_z;
+        let min_x = self.bounds.min[0];
+        let min_y = self.bounds.min[1];
+        let min_z = self.bounds.min[2];
+        let max_x = self.bounds.max[0];
+        let max_y = self.bounds.max[1];
+        let max_z = self.bounds.max[2];
 
         let mid_x = (min_x + max_x) / 2.0;
         let mid_y = (min_y + max_y) / 2.0;
         let mid_z = (min_z + max_z) / 2.0;
 
         let mut children = Box::new([
-            AlgorithmOctree::new(BoundingBox::new(min_x, min_y, min_z, mid_x, mid_y, mid_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(mid_x, min_y, min_z, max_x, mid_y, mid_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(min_x, mid_y, min_z, mid_x, max_y, mid_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(mid_x, mid_y, min_z, max_x, max_y, mid_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(min_x, min_y, mid_z, mid_x, mid_y, max_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(mid_x, min_y, mid_z, max_x, mid_y, max_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(min_x, mid_y, mid_z, mid_x, max_y, max_z), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new(mid_x, mid_y, mid_z, max_x, max_y, max_z), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([min_x, min_y, min_z], [mid_x, mid_y, mid_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([mid_x, min_y, min_z], [max_x, mid_y, mid_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([min_x, mid_y, min_z], [mid_x, max_y, mid_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([mid_x, mid_y, min_z], [max_x, max_y, mid_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([min_x, min_y, mid_z], [mid_x, mid_y, max_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([mid_x, min_y, mid_z], [max_x, mid_y, max_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([min_x, mid_y, mid_z], [mid_x, max_y, max_z]), self.capacity),
+            AlgorithmOctree::new(BoundingBox::new([mid_x, mid_y, mid_z], [max_x, max_y, max_z]), self.capacity),
         ]);
 
         let points = std::mem::take(&mut self.points);
@@ -150,8 +150,8 @@ impl AlgorithmOctree {
     }
 }
 
-impl SpatialAlgorithm for AlgorithmOctree {
-    fn set_generators(&mut self, generators: &[f64], _bounds: &BoundingBox) {
+impl SpatialAlgorithm<3> for AlgorithmOctree {
+    fn set_generators(&mut self, generators: &[f64], _bounds: &BoundingBox<3>) {
         self.clear();
         let count = generators.len() / 3;
         for i in 0..count {
@@ -159,7 +159,7 @@ impl SpatialAlgorithm for AlgorithmOctree {
         }
     }
 
-    fn update_generator(&mut self, index: usize, _old_pos: &[f64], new_pos: &[f64], _bounds: &BoundingBox) {
+    fn update_generator(&mut self, index: usize, _old_pos: &[f64; 3], new_pos: &[f64; 3], _bounds: &BoundingBox<3>) {
         let mut all_points = Vec::new();
         self.collect_all_points(&mut all_points);
         
@@ -294,10 +294,10 @@ impl<'a> Iterator for NearestIterator<'a> {
     }
 }
 
-fn dist_sq_to_bounds(x: f64, y: f64, z: f64, b: &BoundingBox) -> f64 {
-    let dx = (b.min_x - x).max(0.0).max(x - b.max_x);
-    let dy = (b.min_y - y).max(0.0).max(y - b.max_y);
-    let dz = (b.min_z - z).max(0.0).max(z - b.max_z);
+fn dist_sq_to_bounds(x: f64, y: f64, z: f64, b: &BoundingBox<3>) -> f64 {
+    let dx = (b.min[0] - x).max(0.0).max(x - b.max[0]);
+    let dy = (b.min[1] - y).max(0.0).max(y - b.max[1]);
+    let dz = (b.min[2] - z).max(0.0).max(z - b.max[2]);
     dx * dx + dy * dy + dz * dz
 }
 
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_octree_insert_and_find() {
-        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [10.0, 10.0, 10.0]);
         let mut octree = AlgorithmOctree::new(bounds, 1);
 
         octree.insert(0, 1.0, 1.0, 1.0);

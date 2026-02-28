@@ -27,7 +27,7 @@ impl PlaneGeometry {
     }
 }
 
-impl WallGeometry for PlaneGeometry {
+impl WallGeometry<3> for PlaneGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let dx = point[0] - self.point[0];
         let dy = point[1] - self.point[1];
@@ -65,7 +65,7 @@ impl SphereGeometry {
     }
 }
 
-impl WallGeometry for SphereGeometry {
+impl WallGeometry<3> for SphereGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let dx = point[0] - self.center[0];
         let dy = point[1] - self.center[1];
@@ -124,7 +124,7 @@ impl CylinderGeometry {
     }
 }
 
-impl WallGeometry for CylinderGeometry {
+impl WallGeometry<3> for CylinderGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let dx = point[0] - self.center[0];
         let dy = point[1] - self.center[1];
@@ -194,7 +194,7 @@ impl ConeGeometry {
     }
 }
 
-impl WallGeometry for ConeGeometry {
+impl WallGeometry<3> for ConeGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let dx = point[0] - self.tip[0];
         let dy = point[1] - self.tip[1];
@@ -285,7 +285,7 @@ impl TorusGeometry {
     }
 }
 
-impl WallGeometry for TorusGeometry {
+impl WallGeometry<3> for TorusGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let dx = point[0] - self.center[0];
         let dy = point[1] - self.center[1];
@@ -434,7 +434,7 @@ impl TrefoilKnotGeometry {
     }
 }
 
-impl WallGeometry for TrefoilKnotGeometry {
+impl WallGeometry<3> for TrefoilKnotGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let closest = self.get_closest_point(point);
         let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2) + (point[2] - closest[2]).powi(2);
@@ -683,7 +683,7 @@ impl ConvexPolyhedronGeometry {
     }
 }
 
-impl WallGeometry for ConvexPolyhedronGeometry {
+impl WallGeometry<3> for ConvexPolyhedronGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         for (p, n) in &self.planes {
             let dx = point[0] - p[0];
@@ -789,7 +789,7 @@ impl CubicBezierGeometry {
     }
 }
 
-impl WallGeometry for CubicBezierGeometry {
+impl WallGeometry<3> for CubicBezierGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let closest = self.get_closest_point(point);
         let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2) + (point[2] - closest[2]).powi(2);
@@ -935,7 +935,7 @@ impl CatmullRomGeometry {
     }
 }
 
-impl WallGeometry for CatmullRomGeometry {
+impl WallGeometry<3> for CatmullRomGeometry {
     fn contains(&self, point: &[f64; 3]) -> bool {
         let closest = self.get_closest_point(point);
         let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2) + (point[2] - closest[2]).powi(2);

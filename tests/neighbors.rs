@@ -2,7 +2,7 @@ use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, CellF
 use vorothree::geometries::{SphereGeometry, PlaneGeometry, ConvexPolyhedronGeometry};
 use rand::Rng;
 
-trait NeighborCell: Cell {
+trait NeighborCell: Cell<3> {
     fn face_neighbors(&self) -> Vec<i32>;
     fn vertices(&self) -> Vec<f64>;
     fn volume(&self) -> f64;
@@ -23,7 +23,7 @@ impl NeighborCell for CellEdges {
     fn face_area(&self, face_index: usize) -> f64 { self.face_area(face_index) }
 }
 
-fn check_reciprocity<C: NeighborCell, A: vorothree::SpatialAlgorithm>(tess: &Tessellation<C, A>) {
+fn check_reciprocity<C: NeighborCell, A: vorothree::SpatialAlgorithm<3>>(tess: &Tessellation<3, C, A>) {
     let count = tess.count_cells();
     for i in 0..count {
         let cell = tess.get_cell(i).unwrap();
@@ -88,9 +88,9 @@ macro_rules! test_neighbors {
         #[test]
         fn $test_name() {
             let size = $bounds_size;
-            let bounds = BoundingBox::new(0.0, 0.0, 0.0, size, size, size);
+            let bounds = BoundingBox::new([0.0, 0.0, 0.0], [size, size, size]);
             let algo = $algo_ctor(&bounds);
-            let mut tess = Tessellation::<$cell_type, _>::new(bounds, algo);
+            let mut tess = Tessellation::<3, $cell_type, _>::new(bounds, algo);
 
             $setup(&mut tess, size);
             tess.calculate();
@@ -104,11 +104,11 @@ macro_rules! test_neighbors {
 macro_rules! run_two_cells {
     ($test_name:ident, $cell:ty, $algo:expr) => {
         test_neighbors!($test_name, $cell, $algo, 10.0, 
-            |tess: &mut Tessellation<$cell, _>, _| {
+            |tess: &mut Tessellation<3, $cell, _>, _| {
                 let generators = vec![2.5, 5.0, 5.0, 7.5, 5.0, 5.0];
                 tess.set_generators(&generators);
             },
-            |tess: &Tessellation<$cell, _>| {
+            |tess: &Tessellation<3, $cell, _>| {
                 let c0 = tess.get_cell(0).unwrap();
                 let c1 = tess.get_cell(1).unwrap();
                 assert!(c0.face_neighbors().contains(&1));
@@ -120,14 +120,14 @@ macro_rules! run_two_cells {
 
 run_two_cells!(test_two_cells_neighbors_grid_faces, CellFaces, |b| AlgorithmGrid::new(1, 1, 1, b));
 run_two_cells!(test_two_cells_neighbors_grid_edges, CellEdges, |b| AlgorithmGrid::new(1, 1, 1, b));
-run_two_cells!(test_two_cells_neighbors_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
-run_two_cells!(test_two_cells_neighbors_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
+run_two_cells!(test_two_cells_neighbors_octree_faces, CellFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_two_cells!(test_two_cells_neighbors_octree_edges, CellEdges, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
 
 // Test 2: Random Reciprocity
 macro_rules! run_random {
     ($test_name:ident, $cell:ty, $algo:expr) => {
         test_neighbors!($test_name, $cell, $algo, 30.0,
-            |tess: &mut Tessellation<$cell, _>, size: f64| {
+            |tess: &mut Tessellation<3, $cell, _>, size: f64| {
                 let mut rng = rand::thread_rng();
                 let mut generators = Vec::new();
                 for _ in 0..27 {
@@ -144,14 +144,14 @@ macro_rules! run_random {
 
 run_random!(test_neighbor_reciprocity_random_grid_faces, CellFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
 run_random!(test_neighbor_reciprocity_random_grid_edges, CellEdges, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_random!(test_neighbor_reciprocity_random_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
-run_random!(test_neighbor_reciprocity_random_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
+run_random!(test_neighbor_reciprocity_random_octree_faces, CellFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_random!(test_neighbor_reciprocity_random_octree_edges, CellEdges, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
 
 // Test 3: Half Sphere
 macro_rules! run_half_sphere {
     ($test_name:ident, $cell:ty, $algo:expr) => {
         test_neighbors!($test_name, $cell, $algo, 30.0,
-            |tess: &mut Tessellation<$cell, _>, size: f64| {
+            |tess: &mut Tessellation<3, $cell, _>, size: f64| {
                 let mut rng = rand::thread_rng();
                 let mut generators = Vec::new();
                 for _ in 0..50 {
@@ -160,8 +160,8 @@ macro_rules! run_half_sphere {
                     generators.push(rng.gen_range(0.0..size));
                 }
                 tess.set_generators(&generators);
-                tess.add_wall(Wall::new(-10, Box::new(SphereGeometry::new([15.0, 15.0, 15.0], 12.0))));
-                tess.add_wall(Wall::new(-11, Box::new(PlaneGeometry::new([15.0, 15.0, 15.0], [1.0, 0.0, 0.0]))));
+                tess.add_wall(Wall::new(WALL_ID_START, Box::new(SphereGeometry::new([15.0, 15.0, 15.0], 12.0))));
+                tess.add_wall(Wall::new(WALL_ID_START - 1, Box::new(PlaneGeometry::new([15.0, 15.0, 15.0], [1.0, 0.0, 0.0]))));
             },
             check_reciprocity
         );
@@ -170,15 +170,15 @@ macro_rules! run_half_sphere {
 
 run_half_sphere!(test_neighbor_reciprocity_half_sphere_grid_faces, CellFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
 run_half_sphere!(test_neighbor_reciprocity_half_sphere_grid_edges, CellEdges, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_half_sphere!(test_neighbor_reciprocity_half_sphere_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
-run_half_sphere!(test_neighbor_reciprocity_half_sphere_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
+run_half_sphere!(test_neighbor_reciprocity_half_sphere_octree_faces, CellFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_half_sphere!(test_neighbor_reciprocity_half_sphere_octree_edges, CellEdges, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
 
 // Test 4: Sphere Small
 macro_rules! run_sphere_small {
     ($test_name:ident, $cell:ty, $algo:expr) => {
         test_neighbors!($test_name, $cell, $algo, 20.0,
-            |tess: &mut Tessellation<$cell, _>, _| {
-                tess.add_wall(Wall::new(-10, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
+            |tess: &mut Tessellation<3, $cell, _>, _| {
+                tess.add_wall(Wall::new(WALL_ID_START, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
                 tess.random_generators(40);
             },
             check_reciprocity
@@ -188,14 +188,14 @@ macro_rules! run_sphere_small {
 
 run_sphere_small!(test_neighbor_reciprocity_sphere_small_grid_faces, CellFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
 run_sphere_small!(test_neighbor_reciprocity_sphere_small_grid_edges, CellEdges, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_sphere_small!(test_neighbor_reciprocity_sphere_small_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
-run_sphere_small!(test_neighbor_reciprocity_sphere_small_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
+run_sphere_small!(test_neighbor_reciprocity_sphere_small_octree_faces, CellFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_sphere_small!(test_neighbor_reciprocity_sphere_small_octree_edges, CellEdges, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
 
 // Test 5: Dodecahedron
 macro_rules! run_dodecahedron {
     ($test_name:ident, $cell:ty, $algo:expr) => {
         test_neighbors!($test_name, $cell, $algo, 30.0,
-            |tess: &mut Tessellation<$cell, _>, size: f64| {
+            |tess: &mut Tessellation<3, $cell, _>, size: f64| {
                 let mut rng = rand::thread_rng();
                 let mut generators = Vec::new();
                 for _ in 0..100 {
@@ -204,7 +204,7 @@ macro_rules! run_dodecahedron {
                     generators.push(rng.gen_range(0.0..size));
                 }
                 tess.set_generators(&generators);
-                tess.add_wall(Wall::new(-15, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([15.0, 15.0, 15.0], 10.0))));
+                tess.add_wall(Wall::new(WALL_ID_START, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([15.0, 15.0, 15.0], 10.0))));
             },
             check_reciprocity
         );
@@ -213,5 +213,5 @@ macro_rules! run_dodecahedron {
 
 run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_grid_faces, CellFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
 run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_grid_edges, CellEdges, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
-run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16));
+run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_octree_faces, CellFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_octree_edges, CellEdges, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));

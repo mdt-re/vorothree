@@ -21,12 +21,13 @@
 
 mod algo_grid;
 mod algo_octree;
+mod cell_2d;
 mod bounds;
 mod cell_edges;
 mod cell_faces;
 pub mod geometries;
-mod tessellation_wasm;
 mod tessellation;
+pub mod wasm;
 mod wall;
 
 pub use algo_grid::AlgorithmGrid;
@@ -38,6 +39,7 @@ pub use bounds::BOX_ID_FRONT;
 pub use bounds::BOX_ID_BACK;
 pub use bounds::BOX_ID_LEFT;
 pub use bounds::BOX_ID_RIGHT;
+pub use cell_2d::Cell2D;
 pub use cell_faces::CellFaces;
 pub use cell_edges::CellEdges;
 pub use tessellation::Tessellation;

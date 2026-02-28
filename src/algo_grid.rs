@@ -44,10 +44,10 @@ impl AlgorithmGrid {
     /// Creates a new `AlgorithmGrid` with the specified dimensions and bounds.
     ///
     /// The grid resolution (`nx`, `ny`, `nz`) determines the granularity of the spatial partitioning.
-    pub fn new(nx: usize, ny: usize, nz: usize, bounds: &BoundingBox) -> Self {
-        let sx = (nx as f64) / (bounds.max_x - bounds.min_x);
-        let sy = (ny as f64) / (bounds.max_y - bounds.min_y);
-        let sz = (nz as f64) / (bounds.max_z - bounds.min_z);
+    pub fn new(nx: usize, ny: usize, nz: usize, bounds: &BoundingBox<3>) -> Self {
+        let sx = (nx as f64) / (bounds.max[0] - bounds.min[0]);
+        let sy = (ny as f64) / (bounds.max[1] - bounds.min[1]);
+        let sz = (nz as f64) / (bounds.max[2] - bounds.min[2]);
 
         let cell_size_x = 1.0 / sx;
         let cell_size_y = 1.0 / sy;
@@ -85,9 +85,9 @@ impl AlgorithmGrid {
             grid_limit_x: (nx as f64) - 1e-5,
             grid_limit_y: (ny as f64) - 1e-5,
             grid_limit_z: (nz as f64) - 1e-5,
-            min_x: bounds.min_x,
-            min_y: bounds.min_y,
-            min_z: bounds.min_z,
+            min_x: bounds.min[0],
+            min_y: bounds.min[1],
+            min_z: bounds.min[2],
             grid_bins: vec![Vec::new(); nx * ny * nz],
             generator_bin_ids: Vec::new(),
             bin_search_order,
@@ -95,20 +95,20 @@ impl AlgorithmGrid {
     }
 
     /// Calculates the linear index of the bin corresponding to the given coordinates.
-    pub fn get_bin_index(&self, x: f64, y: f64, z: f64, bounds: &BoundingBox) -> usize {
+    pub fn get_bin_index(&self, x: f64, y: f64, z: f64, bounds: &BoundingBox<3>) -> usize {
         let nx = self.grid_res_x;
         let ny = self.grid_res_y;
 
-        let ix = ((x - bounds.min_x) * self.grid_scale_x).clamp(0.0, self.grid_limit_x) as usize;
-        let iy = ((y - bounds.min_y) * self.grid_scale_y).clamp(0.0, self.grid_limit_y) as usize;
-        let iz = ((z - bounds.min_z) * self.grid_scale_z).clamp(0.0, self.grid_limit_z) as usize;
+        let ix = ((x - bounds.min[0]) * self.grid_scale_x).clamp(0.0, self.grid_limit_x) as usize;
+        let iy = ((y - bounds.min[1]) * self.grid_scale_y).clamp(0.0, self.grid_limit_y) as usize;
+        let iz = ((z - bounds.min[2]) * self.grid_scale_z).clamp(0.0, self.grid_limit_z) as usize;
 
         ix + iy * nx + iz * nx * ny
     }
 }
 
-impl SpatialAlgorithm for AlgorithmGrid {
-    fn set_generators(&mut self, generators: &[f64], bounds: &BoundingBox) {
+impl SpatialAlgorithm<3> for AlgorithmGrid {
+    fn set_generators(&mut self, generators: &[f64], bounds: &BoundingBox<3>) {
         let total_bins = self.grid_res_x * self.grid_res_y * self.grid_res_z;
         self.grid_bins.iter_mut().for_each(|bin| bin.clear());
         if self.grid_bins.len() != total_bins {
@@ -129,7 +129,7 @@ impl SpatialAlgorithm for AlgorithmGrid {
         }
     }
 
-    fn update_generator(&mut self, index: usize, _old_pos: &[f64], new_pos: &[f64], bounds: &BoundingBox) {
+    fn update_generator(&mut self, index: usize, _old_pos: &[f64; 3], new_pos: &[f64; 3], bounds: &BoundingBox<3>) {
         let new_bin_idx = self.get_bin_index(new_pos[0], new_pos[1], new_pos[2], bounds);
         let old_bin_idx = self.generator_bin_ids[index];
 
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_grid_indexing() {
-        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [10.0, 10.0, 10.0]);
         let grid = AlgorithmGrid::new(10, 10, 10, &bounds); // 1x1x1 cells
 
         let idx = grid.get_bin_index(0.5, 0.5, 0.5, &bounds);
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_grid_neighbors() {
-        let bounds = BoundingBox::new(0.0, 0.0, 0.0, 3.0, 3.0, 3.0);
+        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [3.0, 3.0, 3.0]);
         let mut grid = AlgorithmGrid::new(3, 3, 3, &bounds);
         let generators = vec![0.5, 0.5, 0.5, 1.5, 0.5, 0.5];
         

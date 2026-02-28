@@ -28,7 +28,7 @@ struct ConfidenceInterval {
 const N_POINTS: usize = 1_000_000;
 
 fn benchmark_parallelism(c: &mut Criterion) {
-    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
+    let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
     
     let mut group = c.benchmark_group(format!("parallelism_{}k", N_POINTS / 1000));
     group.sample_size(10);
@@ -56,7 +56,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
             .unwrap();
 
         group.bench_with_input(BenchmarkId::new("grid", num_threads), &num_threads, |b, &_s| {
-            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
+            let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {
@@ -66,7 +66,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("edges", num_threads), &num_threads, |b, &_s| {
-            let mut tess = Tessellation::<CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
+            let mut tess = Tessellation::<3, CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {
@@ -76,7 +76,7 @@ fn benchmark_parallelism(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("moctree", num_threads), &num_threads, |b, &_s| {
-            let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
+            let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 pool.install(|| {

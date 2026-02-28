@@ -6,11 +6,11 @@ fn main() {
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
 
     // Define bounds for the simulation
-    let bounds = BoundingBox::new(0.0, 0.0, 0.0, 100.0, 100.0, 100.0);
+    let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
 
     // Create the tessellation instance with a spatial grid (20x20x20)
     // Adjusting grid size affects the binning performance
-    let mut tess = Tessellation::<CellFaces, _>::new(bounds, AlgorithmGrid::new(20, 20, 20, &bounds));
+    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmGrid::new(20, 20, 20, &bounds));
 
     // Generate a large number of random points to stress the algorithm
     // 10,000 points is usually enough to get a good profile
