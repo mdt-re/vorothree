@@ -10,6 +10,7 @@ const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promis
     'granular_flow': () => import('./examples/granular_flow'),
     'pathfinding': () => import('./examples/pathfinding'),
     'distributions': () => import('./examples/distributions'),
+    'walls svg': () => import('./examples/walls svg'),
 };
 
 const exampleDetails: Record<string, { desc: string, file: string }> = {
@@ -21,6 +22,7 @@ const exampleDetails: Record<string, { desc: string, file: string }> = {
     'granular_flow': { desc: 'Granular flow physics simulation', file: 'granular_flow.ts' },
     'pathfinding': { desc: 'A* pathfinding on Voronoi graph', file: 'pathfinding.ts' },
     'distributions': { desc: 'Different point distributions', file: 'distributions.ts' },
+    'walls_svg ': { desc: 'Various boundary wall shapes', file: 'walls svg.ts' },
 };
 
 const thumbnails = import.meta.glob('./assets/*.png', { eager: true });
