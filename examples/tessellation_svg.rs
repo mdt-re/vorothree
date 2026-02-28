@@ -59,6 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     chart.draw_series(points.iter().map(|&p| Circle::new(p, 3, RED.filled())))?;
 
     root.present()?;
-    println!("Example output saved to {}", filename);
+    let path = std::env::current_dir()?.join(filename);
+    println!("Example output saved to {}", path.display());
     Ok(())
 }

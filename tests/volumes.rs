@@ -64,14 +64,14 @@ test_volume!(test_sphere_volume_grid_edges, CellEdges, |b| AlgorithmGrid::new(5,
     },
     4.0 / 3.0 * std::f64::consts::PI * 4.0f64.powi(3)
 );
-test_volume!(test_sphere_volume_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 64), 
+test_volume!(test_sphere_volume_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16), 
     |tess: &mut Tessellation<CellFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_START, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));
     },
     4.0 / 3.0 * std::f64::consts::PI * 4.0f64.powi(3)
 );
-test_volume!(test_sphere_volume_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 64), 
+test_volume!(test_sphere_volume_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16), 
     |tess: &mut Tessellation<CellEdges, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_START, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));
@@ -94,14 +94,14 @@ test_volume!(test_cylinder_volume_grid_edges, CellEdges, |b| AlgorithmGrid::new(
     },
     std::f64::consts::PI * 4.0f64.powi(2) * 10.0
 );
-test_volume!(test_cylinder_volume_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 64), 
+test_volume!(test_cylinder_volume_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16), 
     |tess: &mut Tessellation<CellFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_START, Box::new(CylinderGeometry::new([size/2.0, size/2.0, size/2.0], [0.0, 0.0, 1.0], r))));
     },
     std::f64::consts::PI * 4.0f64.powi(2) * 10.0
 );
-test_volume!(test_cylinder_volume_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 64), 
+test_volume!(test_cylinder_volume_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16), 
     |tess: &mut Tessellation<CellEdges, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_START, Box::new(CylinderGeometry::new([size/2.0, size/2.0, size/2.0], [0.0, 0.0, 1.0], r))));
@@ -131,14 +131,14 @@ test_volume!(test_dodecahedron_volume_grid_edges, CellEdges, |b| AlgorithmGrid::
     },
     dodecahedron_volume(4.0)
 );
-test_volume!(test_dodecahedron_volume_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 64), 
+test_volume!(test_dodecahedron_volume_octree_faces, CellFaces, |b: &BoundingBox| AlgorithmOctree::new(*b, 16), 
     |tess: &mut Tessellation<CellFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_START, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([size/2.0, size/2.0, size/2.0], r))));
     },
     dodecahedron_volume(4.0)
 );
-test_volume!(test_dodecahedron_volume_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 64), 
+test_volume!(test_dodecahedron_volume_octree_edges, CellEdges, |b: &BoundingBox| AlgorithmOctree::new(*b, 16), 
     |tess: &mut Tessellation<CellEdges, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_START, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([size/2.0, size/2.0, size/2.0], r))));

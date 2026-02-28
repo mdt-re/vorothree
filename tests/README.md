@@ -9,7 +9,7 @@ To run the tests:
 cargo test --test <file>
 ```
 with the following tests available:
-* `comparisons`: Compares the output with the results from existing libraries.
+* `comparisons`: Compares the output with the results from existing libraries ([Voro++](https://github.com/chr1shr/voro)).
 * `integration`: Tests covering the public API and workflow of the library.
 * `mappings`: Tests the map functionality for on-the-fly calculations.
 * `neighbors`: Does test on the neighbor structure of the cells.
