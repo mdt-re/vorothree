@@ -19,32 +19,32 @@
 //!
 //! The primary entry point is the [`Tessellation`] struct, which manages the grid and generators.
 
-mod algo_grid;
-mod algo_octree;
-mod cell_2d;
+mod algorithm;
+mod cell;
 mod bounds;
-mod cell_edges;
-mod cell_faces;
-pub mod geometries;
 mod tessellation;
-pub mod wasm;
 mod wall;
 
-pub use algo_grid::AlgorithmGrid;
-pub use algo_octree::AlgorithmOctree;
+pub use algorithm::SpatialAlgorithm;
+pub use algorithm::d2_grid::AlgorithmGrid2D;
+pub use algorithm::d3_grid::AlgorithmGrid;
+pub use algorithm::d3_octree::AlgorithmOctree;
+
 pub use bounds::BoundingBox;
-pub use bounds::BOX_ID_BOTTOM;
-pub use bounds::BOX_ID_TOP;
-pub use bounds::BOX_ID_FRONT;
-pub use bounds::BOX_ID_BACK;
-pub use bounds::BOX_ID_LEFT;
-pub use bounds::BOX_ID_RIGHT;
-pub use cell_2d::Cell2D;
-pub use cell_faces::CellFaces;
-pub use cell_edges::CellEdges;
-pub use tessellation::Tessellation;
-pub use tessellation::Cell;
-pub use tessellation::SpatialAlgorithm;
+pub use bounds::box_side;
+
+pub use cell::Cell;
+pub use cell::d2::Cell2D;
+pub use cell::d3_edges::CellEdges;
+pub use cell::d3_faces::CellFaces;
+
 pub use wall::Wall;
 pub use wall::WallGeometry;
 pub use wall::WALL_ID_START;
+pub use wall::geometries;
+
+pub use tessellation::Tessellation;
+
+
+// The WebAssembly implementation is sourced out in these files.
+pub mod wasm;

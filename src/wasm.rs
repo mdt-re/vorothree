@@ -1,9 +1,9 @@
-use crate::algo_grid::AlgorithmGrid;
+use crate::algorithm::d3_grid::AlgorithmGrid;
 use crate::bounds::BoundingBox;
-use crate::cell_faces::CellFaces;
+use crate::cell::d3_faces::CellFaces;
 use crate::tessellation::Tessellation;
 use crate::wall::{Wall, WallGeometry};
-use crate::geometries::*;
+use crate::wall::geometries::*;
 use wasm_bindgen::prelude::*;
 use js_sys::{Reflect, Function, Array};
 
@@ -20,12 +20,12 @@ pub fn init_threads(n: usize) -> js_sys::Promise {
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_CONSTANTS_BOUNDS: &'static str = r#"
-export const BOX_ID_BOTTOM = -1;
-export const BOX_ID_TOP = -2;
+export const BOX_ID_LEFT = -1;
+export const BOX_ID_RIGHT = -2;
 export const BOX_ID_FRONT = -3;
 export const BOX_ID_BACK = -4;
-export const BOX_ID_LEFT = -5;
-export const BOX_ID_RIGHT = -6;
+export const BOX_ID_BOTTOM = -5;
+export const BOX_ID_TOP = -6;
 "#;
 
 /// Represents an axis-aligned bounding box in 3D space.

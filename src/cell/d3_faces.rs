@@ -1,6 +1,6 @@
 use crate::bounds::BoundingBox;
-use crate::bounds::{BOX_ID_BOTTOM, BOX_ID_TOP, BOX_ID_FRONT, BOX_ID_BACK, BOX_ID_LEFT, BOX_ID_RIGHT};
-use crate::tessellation::Cell;
+use crate::bounds::box_side;
+use crate::cell::Cell;
 
 /// Scratch buffer to reuse allocations during clipping.
 #[derive(Default, Clone)]
@@ -63,12 +63,12 @@ impl CellFaces {
             face_counts,
             face_indices,
             face_neighbors: vec![
-                BOX_ID_BOTTOM, // z-
-                BOX_ID_TOP,    // z+
-                BOX_ID_FRONT,  // y-
-                BOX_ID_BACK,   // y+
-                BOX_ID_LEFT,   // x-
-                BOX_ID_RIGHT,  // x+
+                box_side(2, false), // z- (Bottom)
+                box_side(2, true),  // z+ (Top)
+                box_side(1, false), // y- (Front)
+                box_side(1, true),  // y+ (Back)
+                box_side(0, false), // x- (Left)
+                box_side(0, true),  // x+ (Right)
             ],
         }
     }

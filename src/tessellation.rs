@@ -1,4 +1,6 @@
 use crate::bounds::BoundingBox;
+use crate::algorithm::SpatialAlgorithm;
+use crate::cell::Cell;
 use crate::wall::Wall;
 use rayon::prelude::*;
 use rand::prelude::*;
@@ -337,62 +339,6 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
     }
 }
 
-
-/// Trait defining the behavior of a Voronoi cell.
-/// This allows swapping between simple Polygon cells (`Cell`) and Graph-based cells (`CellEdges`).
-pub trait Cell<const D: usize>: Send + Sync + Sized + Clone {
-    /// Scratch buffer used to avoid allocations during clipping.
-    type Scratch: Default + Clone + Send;
-
-    /// Initialize a new cell for the given generator index and bounds.
-    fn new(id: usize, bounds: BoundingBox<D>) -> Self;
-
-    /// Clip the cell by a plane defined by `point` and `normal`.
-    /// Returns `(true, new_max_radius_sq)` if the cell was modified, or `(false, 0.0)` if not.
-    fn clip(
-        &mut self,
-        point: &[f64; D],
-        normal: &[f64; D],
-        neighbor_id: i32,
-        scratch: &mut Self::Scratch,
-        generator: Option<&[f64; D]>,
-    ) -> (bool, f64);
-
-    /// Calculate the squared distance from the center to the furthest vertex.
-    fn max_radius_sq(&self, center: &[f64; D]) -> f64;
-
-    /// Calculate the centroid of the cell.
-    fn centroid(&self) -> [f64; D];
-
-    /// Check if the cell is empty (collapsed).
-    fn is_empty(&self) -> bool;
-}
-
-
-/// Trait defining a spatial acceleration structure.
-/// This allows swapping between Grid, Octree, or Linear Octree algorithms.
-pub trait SpatialAlgorithm<const D: usize>: Send + Sync {
-    /// Rebuild the index with new generators.
-    fn set_generators(&mut self, generators: &[f64], bounds: &BoundingBox<D>);
-
-    /// Update the position of a single generator.
-    fn update_generator(&mut self, index: usize, old_pos: &[f64; D], new_pos: &[f64; D], bounds: &BoundingBox<D>);
-
-    /// Visit potential neighbors for a given generator.
-    ///
-    /// # Arguments
-    /// * `generators` - The full list of generators (needed to retrieve neighbor positions).
-    /// * `index` - The index of the generator we are processing.
-    /// * `pos` - The position of the generator (array of size D).
-    /// * `max_dist_sq` - A mutable reference to the current maximum search radius squared.
-    ///                   The visitor can update this if the cell shrinks.
-    /// * `visitor` - A closure called for each candidate neighbor. It receives the neighbor's index
-    ///               and its position.
-    fn visit_neighbors<F>(&self, generators: &[f64], index: usize, pos: [f64; D], max_dist_sq: &mut f64, visitor: F)
-    where
-        F: FnMut(usize, [f64; D], f64) -> f64;
-}
-
 fn get_seed() -> u64 {
     #[cfg(target_arch = "wasm32")]
     {
@@ -401,43 +347,5 @@ fn get_seed() -> u64 {
     #[cfg(not(target_arch = "wasm32"))]
     {
         rand::thread_rng().next_u64()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::algo_grid::AlgorithmGrid;
-    use crate::cell_faces::CellFaces;
-
-    #[test]
-    fn test_tessellation_basic() {
-        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
-        let algo = AlgorithmGrid::new(2, 2, 2, &bounds);
-        let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, algo);
-
-        // 2 points
-        tess.set_generators(&[0.25, 0.5, 0.5, 0.75, 0.5, 0.5]);
-        tess.calculate();
-
-        assert_eq!(tess.count_cells(), 2);
-        let c1 = tess.get_cell(0).unwrap();
-        let c2 = tess.get_cell(1).unwrap();
-
-        // Total volume should be 1.0
-        let vol = c1.volume() + c2.volume();
-        assert!((vol - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_relax() {
-        let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
-        let algo = AlgorithmGrid::new(2, 2, 2, &bounds);
-        let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, algo);
-
-        tess.set_generators(&[0.1, 0.1, 0.1, 0.9, 0.9, 0.9]);
-        tess.calculate();
-        tess.relax();
-        assert_eq!(tess.count_generators(), 2);
     }
 }

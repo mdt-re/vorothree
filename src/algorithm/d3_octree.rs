@@ -1,7 +1,7 @@
 use crate::bounds::BoundingBox;
 use std::collections::BinaryHeap;
 use std::cmp::Ordering;
-use crate::tessellation::SpatialAlgorithm;
+use crate::algorithm::SpatialAlgorithm;
 
 #[derive(Clone)]
 struct Point {

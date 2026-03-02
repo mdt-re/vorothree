@@ -1,6 +1,6 @@
 use crate::bounds::BoundingBox;
-use crate::bounds::{BOX_ID_BOTTOM, BOX_ID_TOP, BOX_ID_FRONT, BOX_ID_BACK, BOX_ID_LEFT, BOX_ID_RIGHT};
-use crate::tessellation::Cell;
+use crate::bounds::box_side;
+use crate::cell::Cell;
 use std::collections::HashSet;
 
 /// Scratch buffer to reuse allocations during clipping for CellEdges.
@@ -68,14 +68,14 @@ impl CellEdges {
         ];
 
         let neighbor_buffer: Vec<i32> = vec![
-            BOX_ID_FRONT, BOX_ID_LEFT, BOX_ID_BOTTOM, // Vertex 0
-            BOX_ID_RIGHT, BOX_ID_FRONT, BOX_ID_BOTTOM, // Vertex 1
-            BOX_ID_BACK, BOX_ID_RIGHT, BOX_ID_BOTTOM, // Vertex 2
-            BOX_ID_LEFT, BOX_ID_BACK, BOX_ID_BOTTOM, // Vertex 3
-            BOX_ID_TOP, BOX_ID_LEFT, BOX_ID_FRONT, // Vertex 4
-            BOX_ID_RIGHT, BOX_ID_TOP, BOX_ID_FRONT, // Vertex 5
-            BOX_ID_BACK, BOX_ID_TOP, BOX_ID_RIGHT, // Vertex 6
-            BOX_ID_LEFT, BOX_ID_TOP, BOX_ID_BACK, // Vertex 7
+            box_side(1, false), box_side(0, false), box_side(2, false), // Vertex 0 (Front, Left, Bottom)
+            box_side(0, true),  box_side(1, false), box_side(2, false), // Vertex 1 (Right, Front, Bottom)
+            box_side(1, true),  box_side(0, true),  box_side(2, false), // Vertex 2 (Back, Right, Bottom)
+            box_side(0, false), box_side(1, true),  box_side(2, false), // Vertex 3 (Left, Back, Bottom)
+            box_side(2, true),  box_side(0, false), box_side(1, false), // Vertex 4 (Top, Left, Front)
+            box_side(0, true),  box_side(2, true),  box_side(1, false), // Vertex 5 (Right, Top, Front)
+            box_side(1, true),  box_side(2, true),  box_side(0, true),  // Vertex 6 (Back, Top, Right)
+            box_side(0, false), box_side(2, true),  box_side(1, true),  // Vertex 7 (Left, Top, Back)
         ];
 
         let vertex_offsets: Vec<u16> = vec![0, 3, 6, 9, 12, 15, 18, 21];

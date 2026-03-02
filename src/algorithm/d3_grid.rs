@@ -1,5 +1,5 @@
 use crate::bounds::BoundingBox;
-use crate::tessellation::SpatialAlgorithm;
+use crate::algorithm::SpatialAlgorithm;
 
 /// A spatial index based on a uniform grid.
 ///
