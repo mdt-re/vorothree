@@ -11,6 +11,7 @@ const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promis
     'pathfinding': () => import('./examples/pathfinding'),
     'distributions': () => import('./examples/distributions'),
     'walls svg': () => import('./examples/walls svg'),
+    'dimension_two': () => import('./examples/dimension_two'),
 };
 
 const exampleDetails: Record<string, { desc: string, file: string }> = {
@@ -23,6 +24,7 @@ const exampleDetails: Record<string, { desc: string, file: string }> = {
     'pathfinding': { desc: 'A* pathfinding on Voronoi graph', file: 'pathfinding.ts' },
     'distributions': { desc: 'Different point distributions', file: 'distributions.ts' },
     'walls_svg ': { desc: 'Various boundary wall shapes', file: 'walls svg.ts' },
+    'dimension_two': { desc: '2D Voronoi with selectable walls', file: 'dimension_two.ts' },
 };
 
 const thumbnails = import.meta.glob('./assets/*.png', { eager: true });

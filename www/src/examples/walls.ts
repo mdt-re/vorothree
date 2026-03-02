@@ -49,6 +49,9 @@ export async function run(app: HTMLElement) {
         angle: 0.5,
         count: 2000,
         opacity: 0.3,
+        surfaceView: false,
+        distributeOnSurface: false,
+        checkNeighbors: false,
     };
 
     // --- Three.js Setup ---
@@ -92,6 +95,38 @@ export async function run(app: HTMLElement) {
         const bounds = new BoundingBox3D(-50, -50, -50, 50, 50, 50);
         tess = new Tessellation3D(bounds, 10, 10, 10);
         
+        // Optional: Distribute generators on the surface for a cleaner surface tessellation
+        let customPoints: Float64Array | null = null;
+        if (params.distributeOnSurface) {
+            if (params.wallType === 'sphere') {
+                const pCount = params.count;
+                customPoints = new Float64Array(pCount * 3);
+                const r = params.radius; // Place slightly inside to ensure robust intersection or exact
+                for(let i=0; i<pCount; i++) {
+                    // Uniform sphere distribution
+                    const u = Math.random();
+                    const v = Math.random();
+                    const theta = 2 * Math.PI * u;
+                    const phi = Math.acos(2 * v - 1);
+                    customPoints[i*3] = r * Math.sin(phi) * Math.cos(theta);
+                    customPoints[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+                    customPoints[i*3+2] = r * Math.cos(phi);
+                }
+            } else if (params.wallType === 'cylinder') {
+                const pCount = params.count;
+                customPoints = new Float64Array(pCount * 3);
+                const r = params.radius;
+                const h = 100; // Box size approx
+                for(let i=0; i<pCount; i++) {
+                    const theta = Math.random() * Math.PI * 2;
+                    const y = (Math.random() - 0.5) * h;
+                    customPoints[i*3] = r * Math.cos(theta);
+                    customPoints[i*3+1] = y;
+                    customPoints[i*3+2] = r * Math.sin(theta);
+                }
+            }
+        }
+
         switch (params.wallType) {
             case 'sphere':
                 tess.add_wall(Wall3D.new_sphere(0.0, 0.0, 0.0, params.radius, -1000));
@@ -224,6 +259,11 @@ export async function run(app: HTMLElement) {
         }
 
         tess.random_generators(params.count);
+        if (customPoints) {
+            tess.set_generators(customPoints);
+        } else {
+            tess.random_generators(params.count);
+        }
         tess.calculate();
         updateVisualization();
     }
@@ -340,6 +380,16 @@ export async function run(app: HTMLElement) {
         depthWrite: false // Helps with transparency
     });
 
+    const redMaterial = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        roughness: 0.5,
+        metalness: 0.1,
+        transparent: true,
+        opacity: params.opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+
     const geometryGroup = new THREE.Group();
     scene.add(geometryGroup);
 
@@ -362,12 +412,39 @@ export async function run(app: HTMLElement) {
 
             const vertices = cell.vertices;
             const faces = cell.faces();
+            // @ts-ignore
+            const neighbors = cell.face_neighbors;
+
+            let isFailing = false;
+            if (params.checkNeighbors && neighbors) {
+                for (const nId of neighbors) {
+                    if (nId >= 0) {
+                        const nCell = tess.get_cell(nId);
+                        if (nCell) {
+                            // @ts-ignore
+                            const nNeighbors = nCell.face_neighbors;
+                            if (nNeighbors && !nNeighbors.includes(i)) {
+                                isFailing = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
             const positions: number[] = [];
             
             // Triangulate faces (Fan triangulation for convex polygons)
-            for (const face of faces) {
+            for (let j = 0; j < faces.length; j++) {
+                const face = faces[j];
                 if (face.length < 3) continue;
+
+                // If Surface View is enabled, only show faces touching the wall (ID -1000)
+                if (params.surfaceView) {
+                    // @ts-ignore
+                    const neighborId = neighbors ? neighbors[j] : -1;
+                    if (neighborId !== -1000) continue;
+                }
 
                 const v0Idx = face[0];
                 const v0x = vertices[v0Idx * 3];
@@ -388,7 +465,7 @@ export async function run(app: HTMLElement) {
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
             geometry.computeVertexNormals();
 
-            const mesh = new THREE.Mesh(geometry, material);
+            const mesh = new THREE.Mesh(geometry, isFailing ? redMaterial : material);
             geometryGroup.add(mesh);
         }
 
@@ -404,7 +481,13 @@ export async function run(app: HTMLElement) {
     initTessellation();
 
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
-    gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
+    gui.add(params, 'opacity', 0, 1).onChange((v: number) => {
+        material.opacity = v;
+        redMaterial.opacity = v;
+    });
+    gui.add(params, 'surfaceView').name('Surface View').onChange(updateVisualization);
+    gui.add(params, 'distributeOnSurface').name('Points on Surface').onChange(initTessellation);
+    gui.add(params, 'checkNeighbors').name('Check Neighbors').onChange(updateVisualization);
 
     const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'cone', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier', 'catmull']).name('wall');
 
