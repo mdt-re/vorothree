@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["WALL_ID_START"],"mod":["geometries"],"struct":["Wall"],"trait":["WallGeometry"]};
+window.SIDEBAR_ITEMS = {"constant":["WALL_ID_MAX"],"mod":["geometries"],"struct":["Wall"],"trait":["WallGeometry"]};
