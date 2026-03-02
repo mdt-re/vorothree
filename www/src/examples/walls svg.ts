@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation, BoundingBox, Wall } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
 import { SVGRenderer } from 'three/examples/jsm/renderers/SVGRenderer.js';
 
 export async function run(app: HTMLElement) {
@@ -81,50 +81,50 @@ export async function run(app: HTMLElement) {
     controls.enableDamping = true;
  
     // --- Vorothree Setup ---
-    let tess: Tessellation;
+    let tess: Tessellation3D;
 
     function initTessellation() {
-        const bounds = new BoundingBox(-50, -50, -50, 50, 50, 50);
-        tess = new Tessellation(bounds, 10, 10, 10);
+        const bounds = new BoundingBox3D(-50, -50, -50, 50, 50, 50);
+        tess = new Tessellation3D(bounds, 10, 10, 10);
         
         switch (params.wallType) {
             case 'sphere':
-                tess.add_wall(Wall.new_sphere(0.0, 0.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_sphere(0.0, 0.0, 0.0, params.radius, -1000));
                 break;
             case 'cylinder':
                 // @ts-ignore
-                tess.add_wall(Wall.new_cylinder(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_cylinder(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, params.radius, -1000));
                 break;
             case 'cone':
                 // @ts-ignore
-                tess.add_wall(Wall.new_cone(0.0, 0.0, -50.0, 0.0, 0.0, 1.0, params.angle, -15));
+                tess.add_wall(Wall3D.new_cone(0.0, 0.0, -50.0, 0.0, 0.0, 1.0, params.angle, -1000));
                 break;
             case 'torus':
                 // @ts-ignore
-                tess.add_wall(Wall.new_torus(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, params.radius, params.tube, -15));
+                tess.add_wall(Wall3D.new_torus(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, params.radius, params.tube, -1000));
                 break;
             case 'trefoil':
-                tess.add_wall(Wall.new_trefoil(0.0, 0.0, 0.0, params.scale, params.tube, 200, -15));
+                tess.add_wall(Wall3D.new_trefoil(0.0, 0.0, 0.0, params.scale, params.tube, 200, -1000));
                 break;
             case 'tetrahedron':
                 // @ts-ignore
-                tess.add_wall(Wall.new_tetrahedron(0.0, 0.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_tetrahedron(0.0, 0.0, 0.0, params.radius, -1000));
                 break;
             case 'hexahedron':
                 // @ts-ignore
-                tess.add_wall(Wall.new_hexahedron(0.0, 0.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_hexahedron(0.0, 0.0, 0.0, params.radius, -1000));
                 break;
             case 'octahedron':
                 // @ts-ignore
-                tess.add_wall(Wall.new_octahedron(0.0, 0.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_octahedron(0.0, 0.0, 0.0, params.radius, -1000));
                 break;
             case 'dodecahedron':
                 // @ts-ignore
-                tess.add_wall(Wall.new_dodecahedron(0.0, 0.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_dodecahedron(0.0, 0.0, 0.0, params.radius, -1000));
                 break;
             case 'icosahedron':
                 // @ts-ignore
-                tess.add_wall(Wall.new_icosahedron(0.0, 0.0, 0.0, params.radius, -15));
+                tess.add_wall(Wall3D.new_icosahedron(0.0, 0.0, 0.0, params.radius, -1000));
                 break;
             case 'ellipsoid':
                 // Custom JS implementation of an Ellipsoid
@@ -167,7 +167,7 @@ export async function run(app: HTMLElement) {
                     }
                 };
                 // @ts-ignore
-                tess.add_wall(Wall.newCustom(jsWall, -15));
+                tess.add_wall(Wall3D.newCustom(jsWall, -1000));
                 break;
             case 'bezier':
                 // Define 4 control points for a cubic bezier curve
@@ -177,7 +177,7 @@ export async function run(app: HTMLElement) {
                     params.radius/2, -params.radius, 0,             // P2
                     params.radius, params.radius, params.radius     // P3
                 ]);
-                tess.add_wall(Wall.new_bezier(points, params.tube, 100, false, -15));
+                tess.add_wall(Wall3D.new_bezier(points, params.tube, 100, false, -1000));
                 break;
             case 'catmull':
                 const boxSize = 100;
@@ -214,7 +214,7 @@ export async function run(app: HTMLElement) {
                     wallPoints[i * 3 + 2] = spiralPoints[i].z;
                 }
                 // @ts-ignore
-                tess.add_wall(Wall.new_catmull_rom(wallPoints, params.tube, 200, false, -15));
+                tess.add_wall(Wall3D.new_catmull_rom(wallPoints, params.tube, 200, false, -1000));
                 break;
         }
 

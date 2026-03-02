@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation, BoundingBox } from 'vorothree';
+import { Tessellation3D, BoundingBox3D } from 'vorothree';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = '';
@@ -81,8 +81,8 @@ export async function run(app: HTMLElement) {
 
     // --- Vorothree ---
     const size = 100;
-    const bounds = new BoundingBox(-size/2, -size/2, -size/2, size/2, size/2, size/2);
-    const tess = new Tessellation(bounds, 8, 8, 8);
+    const bounds = new BoundingBox3D(-size/2, -size/2, -size/2, size/2, size/2, size/2);
+    const tess = new Tessellation3D(bounds, 8, 8, 8);
 
     // Visuals
     const group = new THREE.Group();

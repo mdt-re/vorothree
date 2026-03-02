@@ -4,29 +4,11 @@ use crate::cell::d3_faces::CellFaces;
 use crate::tessellation::Tessellation;
 use crate::wall::{Wall, WallGeometry};
 use crate::wall::geometries::*;
+use crate::wasm::utils::parse_js_point;
 use wasm_bindgen::prelude::*;
-use js_sys::{Reflect, Function, Array};
-
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_rayon::init_thread_pool;
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn init_threads(n: usize) -> js_sys::Promise {
-    init_thread_pool(n)
-}
+use js_sys::{Reflect, Function, Array, Uint16Array};
 
 // --- Bounding Box ---
-
-#[wasm_bindgen(typescript_custom_section)]
-const TS_CONSTANTS_BOUNDS: &'static str = r#"
-export const BOX_ID_LEFT = -1;
-export const BOX_ID_RIGHT = -2;
-export const BOX_ID_FRONT = -3;
-export const BOX_ID_BACK = -4;
-export const BOX_ID_BOTTOM = -5;
-export const BOX_ID_TOP = -6;
-"#;
 
 /// Represents an axis-aligned bounding box in 3D space.
 #[wasm_bindgen]
@@ -73,11 +55,6 @@ impl From<BoundingBox3D> for BoundingBox<3> {
 
 // --- Wall ---
 
-#[wasm_bindgen(typescript_custom_section)]
-const TS_CONSTANTS_WALL: &'static str = r#"
-export const WALL_ID_START = -10;
-"#;
-
 /// WASM wrapper for 3D Walls.
 #[wasm_bindgen]
 pub struct Wall3D {
@@ -89,7 +66,7 @@ impl Wall3D {
     #[wasm_bindgen(js_name = newCustom)]
     pub fn new_custom(val: JsValue, id: i32) -> Wall3D {
         Wall3D {
-            inner: Some(Wall::new(id, Box::new(JsWallGeometry { val }))),
+            inner: Some(Wall::new(id, Box::new(JsWallGeometry3D { val }))),
         }
     }
 
@@ -179,20 +156,20 @@ impl Wall3D {
     }
 }
 
-struct JsWallGeometry {
+struct JsWallGeometry3D {
     val: JsValue,
 }
 
-unsafe impl Send for JsWallGeometry {}
-unsafe impl Sync for JsWallGeometry {}
+unsafe impl Send for JsWallGeometry3D {}
+unsafe impl Sync for JsWallGeometry3D {}
 
-impl std::fmt::Debug for JsWallGeometry {
+impl std::fmt::Debug for JsWallGeometry3D {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "JsWallGeometry")
+        write!(f, "JsWallGeometry3D")
     }
 }
 
-impl WallGeometry<3> for JsWallGeometry {
+impl WallGeometry<3> for JsWallGeometry3D {
     fn contains(&self, point: &[f64; 3]) -> bool {
         if let Ok(func) = Reflect::get(&self.val, &"contains".into()).and_then(|f| f.dyn_into::<Function>()) {
             let args = Array::of3(&point[0].into(), &point[1].into(), &point[2].into());
@@ -209,16 +186,21 @@ impl WallGeometry<3> for JsWallGeometry {
             if let Ok(res) = func.apply(&self.val, &args) {
                 if res.is_null() || res.is_undefined() { return; }
                 
+                let process_item = |item: &JsValue| -> Option<([f64; 3], [f64; 3])> {
+                    let p = Reflect::get(item, &"point".into()).ok()?;
+                    let n = Reflect::get(item, &"normal".into()).ok()?;
+                    Some((parse_js_point(&p)?, parse_js_point(&n)?))
+                };
+
                 if Array::is_array(&res) {
                     let arr: Array = res.dyn_into().unwrap();
                     for i in 0..arr.length() {
-                        let item = arr.get(i);
-                        if let Some((p, n)) = parse_js_cut_result(&item) {
+                        if let Some((p, n)) = process_item(&arr.get(i)) {
                             callback(p, n);
                         }
                     }
                 } else {
-                    if let Some((p, n)) = parse_js_cut_result(&res) {
+                    if let Some((p, n)) = process_item(&res) {
                         callback(p, n);
                     }
                 }
@@ -227,138 +209,76 @@ impl WallGeometry<3> for JsWallGeometry {
     }
 }
 
-fn parse_js_cut_result(val: &JsValue) -> Option<([f64; 3], [f64; 3])> {
-    let p = Reflect::get(val, &"point".into()).ok().and_then(|v| v.dyn_into::<Array>().ok())?;
-    let n = Reflect::get(val, &"normal".into()).ok().and_then(|v| v.dyn_into::<Array>().ok())?;
-    Some(([p.get(0).as_f64()?, p.get(1).as_f64()?, p.get(2).as_f64()?], [n.get(0).as_f64()?, n.get(1).as_f64()?, n.get(2).as_f64()?]))
-}
-
 // --- CellFaces Wrapper ---
 
-#[wasm_bindgen(js_name = CellFaces)]
-pub struct CellFacesWASM {
+#[wasm_bindgen(js_name = Cell3D)]
+pub struct Cell3D {
     inner: CellFaces,
 }
 
-#[wasm_bindgen(js_class = CellFaces)]
-impl CellFacesWASM {
+#[wasm_bindgen(js_class = Cell3D)]
+impl Cell3D {
     #[wasm_bindgen(getter)]
-    pub fn id(&self) -> usize {
-        self.inner.id()
-    }
-
+    pub fn id(&self) -> usize { self.inner.id() }
     #[wasm_bindgen(getter)]
-    pub fn vertices(&self) -> Vec<f64> {
-        self.inner.vertices()
-    }
-
+    pub fn vertices(&self) -> Vec<f64> { self.inner.vertices() }
     #[wasm_bindgen(getter)]
-    pub fn face_counts(&self) -> Vec<u32> {
-        self.inner.face_counts()
-    }
-
+    pub fn face_counts(&self) -> Vec<u32> { self.inner.face_counts() }
     #[wasm_bindgen(getter)]
-    pub fn face_indices(&self) -> Vec<u32> {
-        self.inner.face_indices()
-    }
-
+    pub fn face_indices(&self) -> Vec<u32> { self.inner.face_indices() }
     #[wasm_bindgen(getter)]
-    pub fn face_neighbors(&self) -> Vec<i32> {
-        self.inner.face_neighbors()
-    }
-
-    pub fn volume(&self) -> f64 {
-        self.inner.volume()
-    }
-
-    pub fn centroid(&self) -> Vec<f64> {
-        let c = self.inner.centroid();
-        vec![c[0], c[1], c[2]]
-    }
-
-    pub fn face_area(&self, face_index: usize) -> f64 {
-        self.inner.face_area(face_index)
+    pub fn face_neighbors(&self) -> Vec<i32> { self.inner.face_neighbors() }
+    pub fn volume(&self) -> f64 { self.inner.volume() }
+    pub fn centroid(&self) -> Vec<f64> { self.inner.centroid().to_vec() }
+    pub fn face_area(&self, face_index: usize) -> f64 { self.inner.face_area(face_index) }
+    // Workaround for the fact that wasm-bindgen does not support nested vectors directly
+    #[wasm_bindgen(js_name = faces)]
+    pub fn wasm_faces(&self) -> Array {
+        let counts = &self.inner.face_counts;
+        let indices = &self.inner.face_indices;
+        let result = Array::new_with_length(counts.len() as u32);
+        let mut offset = 0;
+        for (i, &count) in counts.iter().enumerate() {
+            let count = count as usize;
+            let end = offset + count;
+            let face_slice = &indices[offset..end];
+            let js_face = Uint16Array::from(face_slice);
+            result.set(i as u32, js_face.into());
+            offset = end;
+        }
+        result
     }
 }
 
 // --- Tessellation ---
 
-#[wasm_bindgen(js_name = Tessellation)]
-pub struct TessellationWASM {
+#[wasm_bindgen(js_name = Tessellation3D)]
+pub struct Tessellation3D {
     inner: Tessellation<3, CellFaces, AlgorithmGrid>,
 }
 
-#[wasm_bindgen(js_class = Tessellation)]
-impl TessellationWASM {
+#[wasm_bindgen(js_class = Tessellation3D)]
+impl Tessellation3D {
     #[wasm_bindgen(constructor)]
-    pub fn new(bounds: BoundingBox3D, nx: usize, ny: usize, nz: usize) -> TessellationWASM {
+    pub fn new(bounds: BoundingBox3D, nx: usize, ny: usize, nz: usize) -> Tessellation3D {
         let b: BoundingBox<3> = bounds.into();
-        let algorithm = AlgorithmGrid::new(nx, ny, nz, &b);
-        TessellationWASM {
-            inner: Tessellation::new(b, algorithm),
-        }
+        Tessellation3D { inner: Tessellation::new(b, AlgorithmGrid::new(nx, ny, nz, &b)) }
     }
-
-    pub fn set_generators(&mut self, generators: &[f64]) {
-        self.inner.set_generators(generators);
-    }
-
-    pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) {
-        self.inner.set_generator(index, &[x, y, z]);
-    }
-
-    pub fn random_generators(&mut self, count: usize) {
-        self.inner.random_generators(count);
-    }
-
-    pub fn import_generators(&mut self, path: &str) -> Result<(), JsValue> {
-        self.inner.import_generators(path)
-            .map_err(|e| JsValue::from_str(&e.to_string()))
-    }
-
-    pub fn add_wall(&mut self, mut wall: Wall3D) {
-        if let Some(w) = wall.take_inner() {
-            self.inner.add_wall(w);
-        }
-    }
-
-    pub fn clear_walls(&mut self) {
-        self.inner.clear_walls();
-    }
-
-    pub fn calculate(&mut self) {
-        self.inner.calculate();
-    }
-
-    pub fn relax(&mut self) {
-        self.inner.relax();
-    }
-
+    pub fn set_generators(&mut self, generators: &[f64]) { self.inner.set_generators(generators); }
+    pub fn set_generator(&mut self, index: usize, x: f64, y: f64, z: f64) { self.inner.set_generator(index, &[x, y, z]); }
+    pub fn random_generators(&mut self, count: usize) { self.inner.random_generators(count); }
+    pub fn add_wall(&mut self, mut wall: Wall3D) { if let Some(w) = wall.take_inner() { self.inner.add_wall(w); } }
+    pub fn clear_walls(&mut self) { self.inner.clear_walls(); }
+    pub fn calculate(&mut self) { self.inner.calculate(); }
+    pub fn relax(&mut self) { self.inner.relax(); }
     #[wasm_bindgen(getter)]
-    pub fn count_generators(&self) -> usize {
-        self.inner.count_generators()
-    }
-
+    pub fn count_generators(&self) -> usize { self.inner.count_generators() }
     #[wasm_bindgen(getter)]
-    pub fn count_cells(&self) -> usize {
-        self.inner.count_cells()
-    }
-
-    pub fn get_generator(&self, index: usize) -> Vec<f64> {
-        self.inner.get_generator(index).to_vec()
-    }
-
-    pub fn get_cell(&self, index: usize) -> Option<CellFacesWASM> {
-        self.inner.get_cell(index).map(|inner| CellFacesWASM { inner })
-    }
-
+    pub fn count_cells(&self) -> usize { self.inner.count_cells() }
+    pub fn get_generator(&self, index: usize) -> Vec<f64> { self.inner.get_generator(index).to_vec() }
+    pub fn get_cell(&self, index: usize) -> Option<Cell3D> { self.inner.get_cell(index).map(|inner| Cell3D { inner }) }
     #[wasm_bindgen(getter)]
-    pub fn generators(&self) -> Vec<f64> {
-        self.inner.generators()
-    }
-
+    pub fn generators(&self) -> Vec<f64> { self.inner.generators() }
     #[wasm_bindgen(getter)]
-    pub fn cells(&self) -> Vec<CellFacesWASM> {
-        self.inner.cells().into_iter().map(|inner| CellFacesWASM { inner }).collect()
-    }
+    pub fn cells(&self) -> Vec<Cell3D> { self.inner.cells().into_iter().map(|inner| Cell3D { inner }).collect() }
 }

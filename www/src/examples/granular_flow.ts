@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation, BoundingBox, Wall } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D, WALL_ID_START } from 'vorothree';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export async function run(app: HTMLElement) {
@@ -123,8 +123,8 @@ export async function run(app: HTMLElement) {
     let wallBody: RAPIER.RigidBody;
 
     // --- Vorothree Setup ---
-    const bounds = new BoundingBox(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
-    let tess = new Tessellation(bounds, 15, 15, 15);
+    const bounds = new BoundingBox3D(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
+    let tess = new Tessellation3D(bounds, 15, 15, 15);
 
     // --- Particles ---
     const bodies: RAPIER.RigidBody[] = [];
@@ -146,8 +146,6 @@ export async function run(app: HTMLElement) {
         particleMesh.visible = params.showParticles;
         scene.add(particleMesh);
     }
-    
-    const WALL_ID = -10;
 
     function spawnParticle(t: number, checkOverlap = false) {
         let pos = new THREE.Vector3();
@@ -261,7 +259,7 @@ export async function run(app: HTMLElement) {
                 wallPoints[i * 3 + 2] = points[i].z;
             }
             // @ts-ignore
-            tess.add_wall(Wall.new_catmull_rom(wallPoints, params.radius, 200, false, WALL_ID));
+            tess.add_wall(Wall3D.new_catmull_rom(wallPoints, params.radius, 200, false, -1000));
 
             // Visuals
             const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
@@ -311,7 +309,7 @@ export async function run(app: HTMLElement) {
                 }
             };
             // @ts-ignore
-            tess.add_wall(Wall.newCustom(coneWall, WALL_ID));
+            tess.add_wall(Wall3D.newCustom(coneWall, -1000));
 
             const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
             wireframeMesh = new THREE.Mesh(coneGeo, wireframeMat);
@@ -331,7 +329,7 @@ export async function run(app: HTMLElement) {
             world.createCollider(wallColliderDesc, wallBody);
 
             // @ts-ignore
-            tess.add_wall(Wall.new_torus(0, 0, 0, 0, 0, 1, 60, 15, WALL_ID));
+            tess.add_wall(Wall3D.new_torus(0, 0, 0, 0, 0, 1, 60, 15, -1000));
 
             const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.1 });
             wireframeMesh = new THREE.Mesh(torusGeo, wireframeMat);

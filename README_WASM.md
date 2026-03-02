@@ -31,7 +31,7 @@ async function run() {
     const tess = new Tessellation(bounds, 10, 10, 10);
 
     // 3. Add a wall (optional)
-    tess.add_wall(Wall.new_sphere(50, 50, 50, 40, -1));
+    tess.add_wall(Wall.new_sphere(50, 50, 50, 40, -1000));
 
     // 4. Set generators
     const points = new Float64Array([

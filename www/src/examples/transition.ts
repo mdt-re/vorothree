@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation, BoundingBox, Wall } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = '';
@@ -77,8 +77,8 @@ export async function run(app: HTMLElement) {
 
     // --- Vorothree Setup ---
     const boxSize = 120;
-    const bounds = new BoundingBox(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
-    const tess = new Tessellation(bounds, 15, 15, 15);
+    const bounds = new BoundingBox3D(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
+    const tess = new Tessellation3D(bounds, 15, 15, 15);
 
     // Store generators in JS to maintain them while wall changes
     let generators = new Float64Array(0);
@@ -265,7 +265,7 @@ export async function run(app: HTMLElement) {
                 ptr += 3;
             }
             // @ts-ignore
-            tess.add_wall(Wall.new_convex_polyhedron(points, normals, -15));
+            tess.add_wall(Wall3D.new_convex_polyhedron(points, normals, -1000));
 
         } else if (params.transition === 'Cube <-> Octa') {
             const large = R * 2.0;
@@ -290,7 +290,7 @@ export async function run(app: HTMLElement) {
                 ptr += 3;
             }
             // @ts-ignore
-            tess.add_wall(Wall.new_convex_polyhedron(points, normals, -15));
+            tess.add_wall(Wall3D.new_convex_polyhedron(points, normals, -1000));
 
         } else if (params.transition === 'Sphere <-> Cube') {
             // Superquadric: |x|^p + |y|^p + |z|^p <= R^p
@@ -322,7 +322,7 @@ export async function run(app: HTMLElement) {
                 }
             };
             // @ts-ignore
-            tess.add_wall(Wall.newCustom(superquadric, -15));
+            tess.add_wall(Wall3D.newCustom(superquadric, -1000));
 
         } else if (params.transition === 'Cylinder <-> Cone') {
             // Morph radius profile along Y
@@ -360,7 +360,7 @@ export async function run(app: HTMLElement) {
                 }
             };
             // @ts-ignore
-            tess.add_wall(Wall.newCustom(coneCyl, -15));
+            tess.add_wall(Wall3D.newCustom(coneCyl, -1000));
         }
 
         tess.calculate();

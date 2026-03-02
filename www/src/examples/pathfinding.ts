@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation, BoundingBox, Wall } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
 // @ts-ignore
 import createGraph from 'ngraph.graph';
 // @ts-ignore
@@ -82,8 +82,8 @@ export async function run(app: HTMLElement) {
 
     // --- Vorothree Setup ---
     const boxSize = 150;
-    const bounds = new BoundingBox(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
-    const tess = new Tessellation(bounds, 15, 15, 15);
+    const bounds = new BoundingBox3D(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
+    const tess = new Tessellation3D(bounds, 15, 15, 15);
 
     let generators = new Float64Array(0);
     const cellPathMap = new Map<number, number>(); // cellId -> pathIndex
@@ -105,7 +105,7 @@ export async function run(app: HTMLElement) {
     function init() {
         tess.clear_walls();
         // @ts-ignore
-        tess.add_wall(Wall.new_torus(0, 0, 0, 0, 0, 1, params.torusRadius, params.torusTube, -10));
+        tess.add_wall(Wall3D.new_torus(0, 0, 0, 0, 0, 1, params.torusRadius, params.torusTube, -1000));
 
         // 1. Calculate tessellation for random points inside the wall.
         tess.random_generators(params.count);

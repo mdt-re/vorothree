@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation, BoundingBox, Wall } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = ''; // Clear existing content
@@ -82,7 +82,7 @@ export async function run(app: HTMLElement) {
     scene.add(boxLines);
 
     // --- Vorothree Setup ---
-    let tess: Tessellation;
+    let tess: Tessellation3D;
 
     function generateAxesPoints(count: number, size: number): Float64Array {
         const points = new Float64Array(count * 3);
@@ -138,14 +138,14 @@ export async function run(app: HTMLElement) {
 
     function initTessellation() {
         const half = params.boxSize / 2;
-        const bounds = new BoundingBox(-half, -half, -half, half, half, half);
+        const bounds = new BoundingBox3D(-half, -half, -half, half, half, half);
         const gridRes = Math.max(1, Math.ceil(Math.pow(params.count, 1/3)));
-        tess = new Tessellation(bounds, gridRes, gridRes, gridRes);
+        tess = new Tessellation3D(bounds, gridRes, gridRes, gridRes);
         
         if (params.distribution === 'trefoil') {
              const scale = params.boxSize / 7.0;
              const tubeRadius = params.trefoilTube;
-             tess.add_wall(Wall.new_trefoil(0, 0, 0, scale, tubeRadius, 100, -10));
+             tess.add_wall(Wall3D.new_trefoil(0, 0, 0, scale, tubeRadius, 100, -1000));
              tess.random_generators(params.count);
         } else if (params.distribution === 'axes') {
             const points = generateAxesPoints(params.count, params.boxSize);
