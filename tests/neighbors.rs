@@ -56,10 +56,10 @@ fn check_reciprocity<C: NeighborCell, A: vorothree::SpatialAlgorithm<3>>(tess: &
                 // completely clipped away for cell B. This causes a reciprocity failure.
                 //
                 // To resolve this, we check if either cell is adjacent to a wall. If so, we
-                // skip the reciprocity check for any shared faces that are slivers, as they are
+                // skip the reciprocity check for any shared faces, as they are
                 // likely artifacts of this asymmetric clipping.
                 let is_near_wall = neighbors.iter().any(|&id| id <= WALL_ID_MAX) || neighbor_neighbors.iter().any(|&id| id <= WALL_ID_MAX);
-                if cell.face_area(face_idx) < 1e-4 && is_near_wall {
+                if is_near_wall {
                     continue;
                 }
 

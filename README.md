@@ -71,7 +71,7 @@ cargo test
 cargo bench
 cargo example --example <example>
 ```
-Contributing is highly appreciated via [Issues](https://github.com/mdt-re/vorothree/issues) and [Pull Requests](https://github.com/mdt-re/vorothree/pulls).
+Contributing is highly appreciated via [issues](https://github.com/mdt-re/vorothree/issues) and [pull requests](https://github.com/mdt-re/vorothree/pulls).
 
 ## License
 
