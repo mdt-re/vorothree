@@ -1,2 +1,2 @@
-createSrcSidebar('[["vorothree",["",[["algorithm",[],["d2_grid.rs","d3_grid.rs","d3_octree.rs","mod.rs"]],["bounds",[],["mod.rs"]],["cell",[],["d2.rs","d3_edges.rs","d3_faces.rs","mod.rs"]],["wall",[],["geometries.rs","mod.rs"]]],["lib.rs","tessellation.rs","wasm.rs"]]]]');
-//{"start":19,"fragment_lengths":[251]}
+createSrcSidebar('[["vorothree",["",[["algorithm",[],["d2_grid.rs","d3_grid.rs","d3_octree.rs","mod.rs"]],["bounds",[],["mod.rs"]],["cell",[],["d2.rs","d3_edges.rs","d3_faces.rs","mod.rs"]],["wall",[],["geometries.rs","mod.rs"]],["wasm",[],["d2.rs","d3.rs","mod.rs","utils.rs"]]],["lib.rs","tessellation.rs"]]]]');
+//{"start":19,"fragment_lengths":[291]}

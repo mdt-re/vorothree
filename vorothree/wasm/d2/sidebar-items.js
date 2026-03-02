@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["BoundingBox2D","Cell2DWASM","JsWallGeometry2D","Tessellation2D","Wall2D"]};
