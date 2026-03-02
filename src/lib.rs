@@ -40,7 +40,7 @@ pub use cell::d3_faces::CellFaces;
 
 pub use wall::Wall;
 pub use wall::WallGeometry;
-pub use wall::WALL_ID_START;
+pub use wall::WALL_ID_MAX;
 pub use wall::geometries;
 
 pub use tessellation::Tessellation;

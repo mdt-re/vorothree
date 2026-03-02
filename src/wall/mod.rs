@@ -1,10 +1,10 @@
 pub mod geometries;
 
-/// The starting ID for walls. Wall IDs must be less than or equal to this value
+/// The maximum ID for walls. Wall IDs must be less than or equal to this value
 /// to avoid conflicts with non-negative generator IDs and the bounding box IDs.
 /// The number of D-1 dimensional faces of a hypercube is 2*D so with walls
 /// starting at -1000 we allow for D < 500, which should be plenty.
-pub const WALL_ID_START: i32 = -1000;
+pub const WALL_ID_MAX: i32 = -1000;
 
 /// A clipping boundary for the Voronoi tessellation.
 ///
@@ -21,8 +21,8 @@ pub struct Wall<const D: usize> {
 impl<const D: usize> Wall<D> {
     /// Creates a new `Wall` from a Rust struct that implements the `WallGeometry` trait.
     pub fn new(id: i32, geometry: Box<dyn WallGeometry<D>>) -> Self {
-        if id > WALL_ID_START {
-            panic!("Wall ID must be <= {}", WALL_ID_START);
+        if id > WALL_ID_MAX {
+            panic!("Wall ID must be <= {}", WALL_ID_MAX);
         }
         Self {
             id,

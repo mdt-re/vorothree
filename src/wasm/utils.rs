@@ -22,7 +22,7 @@ export const BOX_ID_TOP = -6;
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_CONSTANTS_WALL: &'static str = r#"
-export const WALL_ID_START = -1000;
+export const WALL_ID_MAX = -1000;
 "#;
 
 pub fn parse_js_point<const D: usize>(val: &JsValue) -> Option<[f64; D]> {

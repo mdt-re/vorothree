@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use vorothree::geometries::SphereGeometry;
-use vorothree::{AlgorithmGrid, BoundingBox, CellFaces, Tessellation, Wall, WALL_ID_START};
+use vorothree::{AlgorithmGrid, BoundingBox, CellFaces, Tessellation, Wall, WALL_ID_MAX};
 
 #[test]
 fn test_comparisons_face_counts() {
@@ -24,7 +24,7 @@ fn test_comparisons_face_counts() {
 
     // Add a spherical wall with radius 8
     tess.add_wall(Wall::new(
-        WALL_ID_START,
+        WALL_ID_MAX,
         Box::new(SphereGeometry::new([0.0, 0.0, 0.0], 8.0)),
     ));
 
@@ -125,7 +125,7 @@ fn test_comparisons_vertex_positions() {
 
     // Add a spherical wall with radius 8
     tess.add_wall(Wall::new(
-        WALL_ID_START,
+        WALL_ID_MAX,
         Box::new(SphereGeometry::new([0.0, 0.0, 0.0], 8.0)),
     ));
 

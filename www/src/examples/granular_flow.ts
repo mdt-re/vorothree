@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation3D, BoundingBox3D, Wall3D, WALL_ID_START } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export async function run(app: HTMLElement) {

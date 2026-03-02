@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, CellFaces, CellEdges, Wall, Cell, WALL_ID_START};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, CellFaces, CellEdges, Wall, Cell, WALL_ID_MAX};
 use vorothree::geometries::{SphereGeometry, PlaneGeometry, ConvexPolyhedronGeometry};
 use rand::Rng;
 
@@ -58,7 +58,7 @@ fn check_reciprocity<C: NeighborCell, A: vorothree::SpatialAlgorithm<3>>(tess: &
                 // To resolve this, we check if either cell is adjacent to a wall. If so, we
                 // skip the reciprocity check for any shared faces that are slivers, as they are
                 // likely artifacts of this asymmetric clipping.
-                let is_near_wall = neighbors.iter().any(|&id| id <= WALL_ID_START) || neighbor_neighbors.iter().any(|&id| id <= WALL_ID_START);
+                let is_near_wall = neighbors.iter().any(|&id| id <= WALL_ID_MAX) || neighbor_neighbors.iter().any(|&id| id <= WALL_ID_MAX);
                 if cell.face_area(face_idx) < 1e-4 && is_near_wall {
                     continue;
                 }
@@ -160,8 +160,8 @@ macro_rules! run_half_sphere {
                     generators.push(rng.gen_range(0.0..size));
                 }
                 tess.set_generators(&generators);
-                tess.add_wall(Wall::new(WALL_ID_START, Box::new(SphereGeometry::new([15.0, 15.0, 15.0], 12.0))));
-                tess.add_wall(Wall::new(WALL_ID_START - 1, Box::new(PlaneGeometry::new([15.0, 15.0, 15.0], [1.0, 0.0, 0.0]))));
+                tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(SphereGeometry::new([15.0, 15.0, 15.0], 12.0))));
+                tess.add_wall(Wall::new(WALL_ID_MAX - 1, Box::new(PlaneGeometry::new([15.0, 15.0, 15.0], [1.0, 0.0, 0.0]))));
             },
             check_reciprocity
         );
@@ -178,7 +178,7 @@ macro_rules! run_sphere_small {
     ($test_name:ident, $cell:ty, $algo:expr) => {
         test_neighbors!($test_name, $cell, $algo, 20.0,
             |tess: &mut Tessellation<3, $cell, _>, _| {
-                tess.add_wall(Wall::new(WALL_ID_START, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
+                tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(SphereGeometry::new([10.0, 10.0, 10.0], 8.0))));
                 tess.random_generators(40);
             },
             check_reciprocity
@@ -204,7 +204,7 @@ macro_rules! run_dodecahedron {
                     generators.push(rng.gen_range(0.0..size));
                 }
                 tess.set_generators(&generators);
-                tess.add_wall(Wall::new(WALL_ID_START, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([15.0, 15.0, 15.0], 10.0))));
+                tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([15.0, 15.0, 15.0], 10.0))));
             },
             check_reciprocity
         );
