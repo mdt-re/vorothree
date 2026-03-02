@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["dist_sq","init_nonuniform_catmull_rom"],"struct":["AnnulusGeometry","CatmullRomGeometry","CircleGeometry","ConeGeometry","ConvexPolygonGeometry2D","ConvexPolyhedronGeometry","CubicBezierGeometry","CubicBezierGeometry2D","CubicPoly","CylinderGeometry","LineGeometry","PlaneGeometry","SphereGeometry","TorusGeometry","TrefoilKnotGeometry"]};

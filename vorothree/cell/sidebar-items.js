@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["d2","d3_edges","d3_faces"],"trait":["Cell"]};

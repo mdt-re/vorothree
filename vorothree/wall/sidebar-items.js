@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["WALL_ID_START"],"fn":["parse_js_cut_result"],"struct":["JsWallGeometry","Wall"],"trait":["WallGeometry"]};
+window.SIDEBAR_ITEMS = {"constant":["WALL_ID_START"],"mod":["geometries"],"struct":["Wall"],"trait":["WallGeometry"]};
