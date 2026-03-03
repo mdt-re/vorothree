@@ -174,10 +174,11 @@ export async function run(app: HTMLElement) {
 
                 const t3m = performance.now();
                 const cellCountMoc = tessMoc.count_cells;
+                totalVertices = 0;
                 for(let i = 0; i < cellCountMoc; i++) {
                     const cell = tessMoc.get_cell(i);
                     if (cell) {
-                        const _ = cell.vertices.length;
+                        totalVertices += cell.vertices.length;
                     }
                 }
                 const tExtractMoc = performance.now() - t3m;

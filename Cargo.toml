@@ -9,10 +9,11 @@ edition = "2024"
 readme = "README.md"
 homepage = "https://mdt-re.github.io/vorothree/"
 categories = ["graphics", "visualization", "mathematics", "science", "wasm"]
-keywords = ["voronoi", "tessellation"]
+keywords = ["voronoi", "tessellation", "geometry", "visualization", "typescript"]
 exclude = [
     "www/*",
     "reference/*",
+    "tsconfig.json"
 ]
 
 [lib]

@@ -85,7 +85,6 @@ export async function run(app: HTMLElement) {
     const bounds = new BoundingBox3D(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
     const tess = new Tessellation3D(bounds, 15, 15, 15);
 
-    let generators = new Float64Array(0);
     const cellPathMap = new Map<number, number>(); // cellId -> pathIndex
     let graph: any;
 

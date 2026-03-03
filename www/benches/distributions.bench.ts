@@ -12,7 +12,7 @@ if (typeof self === 'undefined') {
     self.removeEventListener = () => {};
 }
 
-const { default: init, Tessellation3D, TessellationMoctree3D, BoundingBox3D, Wall3D } = await import('vorothree');
+const { default: init, Tessellation3D, BoundingBox3D, Wall3D } = await import('vorothree');
 
 // Initialize WASM module globally for the benchmarks
 const wasmPath = path.resolve(process.cwd(), '../pkg/vorothree_bg.wasm');
@@ -46,27 +46,12 @@ describe('Distributions', () => {
             tessUniformGrid.calculate();
         });
 
-        // Uniform / Moctree
-        const tessUniformMoctree = new TessellationMoctree3D(new BoundingBox3D(0, 0, 0, 100, 100, 100), 8);
-        bench(`uniform/moctree (${size})`, () => {
-            tessUniformMoctree.set_generators(uniformPoints);
-            tessUniformMoctree.calculate();
-        });
-
         // Trefoil / Grid
         const tessTrefoilGrid = new Tessellation3D(new BoundingBox3D(0, 0, 0, 100, 100, 100), gridRes, gridRes, gridRes);
         tessTrefoilGrid.add_wall(Wall3D.new_trefoil(cx, cy, cz, scale, tube_radius, 100, -1000));
         bench(`trefoil/grid (${size})`, () => {
             tessTrefoilGrid.random_generators(size);
             tessTrefoilGrid.calculate();
-        });
-
-        // Trefoil / Moctree
-        const tessTrefoilMoctree = new TessellationMoctree3D(new BoundingBox3D(0, 0, 0, 100, 100, 100), 8);
-        tessTrefoilMoctree.add_wall(Wall3D.new_trefoil(cx, cy, cz, scale, tube_radius, 100, -1000));
-        bench(`trefoil/moctree (${size})`, () => {
-            tessTrefoilMoctree.random_generators(size);
-            tessTrefoilMoctree.calculate();
         });
     }
 });

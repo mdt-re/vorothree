@@ -6,7 +6,6 @@ describe('Vorothree WASM', () => {
     let init: any;
     let Tessellation: any;
     let BoundingBox: any;
-    let Cell: any;
 
     beforeAll(async () => {
         // Polyfill self for wasm-bindgen-rayon
@@ -16,9 +15,8 @@ describe('Vorothree WASM', () => {
         }
         const module = await import('vorothree');
         init = module.default;
-        Tessellation = module.Tessellation;
-        BoundingBox = module.BoundingBox;
-        Cell = module.Cell;
+        Tessellation = module.Tessellation3D;
+        BoundingBox = module.BoundingBox3D;
 
         // In a test environment, we initialize the module.
         // We load the WASM file manually because 'fetch' is not available/working 
@@ -72,6 +70,7 @@ describe('Vorothree WASM', () => {
             50, 50, 50
         ]);
         tess.set_generators(points);
+        tess.calculate();
 
         let totalVolume = 0;
         for (let i = 0; i < tess.count_cells; i++) {
