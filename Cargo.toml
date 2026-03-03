@@ -7,12 +7,13 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/mdt-re/vorothree"
 edition = "2024"
 readme = "README.md"
+homepage = "https://mdt-re.github.io/vorothree/"
 categories = ["graphics", "visualization", "mathematics", "science", "wasm"]
 keywords = ["voronoi", "tessellation"]
 exclude = [
     "www/*",
+    "reference/*",
 ]
-
 
 [lib]
 crate-type = ["cdylib", "rlib"]

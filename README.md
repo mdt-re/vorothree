@@ -11,44 +11,44 @@ Rust library for 3D Voronoi tessellations, designed to be used in Rust as well a
   <tr>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=moving_cell">
-        <img src="www/src/assets/moving_cell.png" width="180px" alt="moving cell" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/moving_cell.png" width="180px" alt="moving cell" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=walls">
-        <img src="www/src/assets/walls.png" width="180px" alt="walls" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/walls.png" width="180px" alt="walls" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=benchmark">
-        <img src="www/src/assets/benchmark.png" width="180px" alt="benchmark" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/benchmark.png" width="180px" alt="benchmark" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=relaxation">
-        <img src="www/src/assets/relaxation.png" width="180px" alt="relaxation" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/relaxation.png" width="180px" alt="relaxation" /><br />
       </a>
     </td>
   </tr>
   <tr>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=transition">
-        <img src="www/src/assets/transition.png" width="180px" alt="transition" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/transition.png" width="180px" alt="transition" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=granular_flow">
-        <img src="www/src/assets/granular_flow.png" width="180px" alt="granular flow" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/granular_flow.png" width="180px" alt="granular flow" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=pathfinding">
-        <img src="www/src/assets/pathfinding.png" width="180px" alt="pathfinding" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/pathfinding.png" width="180px" alt="pathfinding" /><br />
       </a>
     </td>
     <td align="center">
       <a href="https://mdt-re.github.io/vorothree/?example=distributions">
-        <img src="www/src/assets/distributions.png" width="180px" alt="distributions" /><br />
+        <img src="https://raw.githubusercontent.com/mdt-re/vorothree/refs/heads/main/www/src/assets/distributions.png" width="180px" alt="distributions" /><br />
       </a>
     </td>
   </tr>
