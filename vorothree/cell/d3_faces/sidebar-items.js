@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["CellFaces","CellFacesScratch"]};
+window.SIDEBAR_ITEMS = {"struct":["Cell3DFaces","Cell3DFacesScratch"]};
