@@ -1,6 +1,6 @@
 # vorothree
 
-[![crates.io](https://img.shields.io/badge/crates.io-v0.1.0-orange)](https://crates.io/crates/vorothree)
+[![crates.io](https://img.shields.io/badge/crates.io-v0.0.1-orange)](https://crates.io/crates/vorothree)
 [![tests](https://github.com/mdt-re/vorothree/actions/workflows/test.yml/badge.svg)](https://github.com/mdt-re/vorothree/actions/workflows/test.yml)
 [![examples](https://github.com/mdt-re/vorothree/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/mdt-re/vorothree/actions/workflows/deploy.yml)
 [![docs](https://github.com/mdt-re/vorothree/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/mdt-re/vorothree/actions/workflows/docs.yml)
@@ -60,12 +60,12 @@ This library is designed to directly compile to WASM, using wasm-pack, and is co
 ```bash
 wasm-pack build --target web
 ```
-Consult the [www](www/) folder for examples and more details on how to use with TypeScript and in a web environment.
+Consult the [www](https://github.com/mdt-re/vorothree/tree/main/www) folder for examples and more details on how to use with TypeScript and in a web environment.
 
 
 ## Development
 
-More information on the [tests](tests/), [benchmarks](benches/) and [examples](examples/) is in their respective directories. They can be run by:
+More information on the [tests](https://github.com/mdt-re/vorothree/tree/main/tests), [benchmarks](https://github.com/mdt-re/vorothree/tree/main/benches) and [examples](https://github.com/mdt-re/vorothree/tree/main/examples) is in their respective directories. They can be run by:
 ```bash
 cargo test
 cargo bench

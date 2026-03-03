@@ -7,8 +7,12 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/mdt-re/vorothree"
 edition = "2024"
 readme = "README.md"
-categories = ["graphics", "mathematics"]
-keywords = ["voronoi", "tessellation", "science", "wasm"]
+categories = ["graphics", "visualization", "mathematics", "science", "wasm"]
+keywords = ["voronoi", "tessellation"]
+exclude = [
+    "www/*",
+]
+
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -38,14 +42,14 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 [[bench]]
+name = "capacity"
+harness = false
+path = "benches/capacity.rs"
+
+[[bench]]
 name = "cell"
 harness = false
 path = "benches/cell.rs"
-
-[[bench]]
-name = "compare"
-harness = false
-path = "benches/compare.rs"
 
 [[bench]]
 name = "distributions"
@@ -53,29 +57,14 @@ harness = false
 path = "benches/distributions.rs"
 
 [[bench]]
-name = "scaling"
-harness = false
-path = "benches/scaling.rs"
-
-[[bench]]
-name = "tessellation"
-harness = false
-path = "benches/tessellation.rs"
-
-[[bench]]
-name = "wall"
-harness = false
-path = "benches/wall.rs"
-
-[[bench]]
-name = "capacity"
-harness = false
-path = "benches/capacity.rs"
-
-[[bench]]
 name = "parallelism"
 harness = false
 path = "benches/parallelism.rs"
+
+[[bench]]
+name = "scaling"
+harness = false
+path = "benches/scaling.rs"
 
 [profile.release]
 debug = true
