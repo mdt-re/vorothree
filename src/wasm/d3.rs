@@ -1,6 +1,6 @@
 use crate::algorithm::d3_grid::AlgorithmGrid;
 use crate::bounds::BoundingBox;
-use crate::cell::d3_faces::CellFaces;
+use crate::cell::d3_faces::Cell3DFaces;
 use crate::tessellation::Tessellation;
 use crate::wall::{Wall, WallGeometry};
 use crate::wall::geometries::*;
@@ -209,11 +209,11 @@ impl WallGeometry<3> for JsWallGeometry3D {
     }
 }
 
-// --- CellFaces Wrapper ---
+// --- Cell3DFaces Wrapper ---
 
 #[wasm_bindgen(js_name = Cell3D)]
 pub struct Cell3D {
-    inner: CellFaces,
+    inner: Cell3DFaces,
 }
 
 #[wasm_bindgen(js_class = Cell3D)]
@@ -254,7 +254,7 @@ impl Cell3D {
 
 #[wasm_bindgen(js_name = Tessellation3D)]
 pub struct Tessellation3D {
-    inner: Tessellation<3, CellFaces, AlgorithmGrid>,
+    inner: Tessellation<3, Cell3DFaces, AlgorithmGrid>,
 }
 
 #[wasm_bindgen(js_class = Tessellation3D)]

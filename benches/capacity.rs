@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, CellFaces, CellEdges};
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, Cell3DFaces};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -48,15 +48,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         println!("Cap: {:.1}, Grid Res: {}, Moctree Cap: {}", cap, grid_res, moctree_cap);
 
         group.bench_with_input(BenchmarkId::new("grid", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
-            tess.random_generators(N_POINTS);
-            b.iter(|| {
-                tess.calculate();
-            })
-        });
-
-        group.bench_with_input(BenchmarkId::new("edges", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::<3, CellEdges, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
+            let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
@@ -64,7 +56,7 @@ fn benchmark_capacity(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("moctree", format!("{:.1}", cap)), &cap, |b, &_| {
-            let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmOctree::new(bounds, moctree_cap));
+            let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmOctree::new(bounds, moctree_cap));
             tess.random_generators(N_POINTS);
             b.iter(|| {
                 tess.calculate();
@@ -75,7 +67,7 @@ fn benchmark_capacity(c: &mut Criterion) {
 }
 
 fn plot_capacity_results() -> Result<(), Box<dyn std::error::Error>> {
-    let methods = ["grid", "edges", "moctree"];
+    let methods = ["grid", "moctree"];
     let root_dir = format!("target/criterion/capacity_{}k", N_POINTS / 1000);
     let root = Path::new(&root_dir);
 

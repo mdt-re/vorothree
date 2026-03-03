@@ -1,7 +1,6 @@
 use crate::bounds::BoundingBox;
 
 pub mod d2;
-pub mod d3_edges;
 pub mod d3_faces;
 
 /// Trait defining the behavior of a Voronoi cell.

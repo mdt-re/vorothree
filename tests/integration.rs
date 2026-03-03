@@ -1,10 +1,10 @@
-use vorothree::{BoundingBox, CellFaces, AlgorithmGrid, Tessellation};
+use vorothree::{BoundingBox, Cell3DFaces, AlgorithmGrid, Tessellation};
 
 #[test]
 fn test_cell_metrics() {
     // Create a 10x20x30 box
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [10.0, 20.0, 30.0]);
-    let cell = CellFaces::new(0, bounds);
+    let cell = Cell3DFaces::new(0, bounds);
 
     // Test Volume
     // 10 * 20 * 30 = 6000
@@ -22,7 +22,7 @@ fn test_cell_metrics() {
 #[test]
 fn test_tessellation_workflow() {
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
-    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmGrid::new(10, 10, 10, &bounds));
+    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmGrid::new(10, 10, 10, &bounds));
 
     let points = vec![
         10.0, 10.0, 10.0,
@@ -35,8 +35,8 @@ fn test_tessellation_workflow() {
     assert_eq!(tess.count_generators(), 2);
     assert_eq!(tess.count_cells(), 2);
 
-    let c0: CellFaces = tess.get_cell(0).expect("Should have cell 0");
-    let c1: CellFaces = tess.get_cell(1).expect("Should have cell 1");
+    let c0: Cell3DFaces = tess.get_cell(0).expect("Should have cell 0");
+    let c1: Cell3DFaces = tess.get_cell(1).expect("Should have cell 1");
 
     assert_eq!(c0.id(), 0);
     assert_eq!(c1.id(), 1);
@@ -48,7 +48,7 @@ fn test_tessellation_workflow() {
 #[test]
 fn test_tessellation_cells_octet() {
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
-    let mut tess = Tessellation::<3, CellFaces, _>::new(bounds, AlgorithmGrid::new(10, 10, 10, &bounds));
+    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmGrid::new(10, 10, 10, &bounds));
 
     let points = vec![
         25.0, 25.0, 25.0,

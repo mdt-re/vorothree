@@ -35,8 +35,7 @@ pub use bounds::box_side;
 
 pub use cell::Cell;
 pub use cell::d2::Cell2D;
-pub use cell::d3_edges::CellEdges;
-pub use cell::d3_faces::CellFaces;
+pub use cell::d3_faces::Cell3DFaces;
 
 pub use wall::Wall;
 pub use wall::WallGeometry;

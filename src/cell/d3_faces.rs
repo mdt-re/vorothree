@@ -4,7 +4,7 @@ use crate::cell::Cell;
 
 /// Scratch buffer to reuse allocations during clipping.
 #[derive(Default, Clone)]
-pub struct CellFacesScratch {
+pub struct Cell3DFacesScratch {
     vertices: Vec<f64>,
     face_counts: Vec<u8>,
     face_indices: Vec<u16>,
@@ -21,7 +21,7 @@ pub struct CellFacesScratch {
 
 /// A Voronoi cell containing vertices and face information.
 #[derive(Clone)]
-pub struct CellFaces {
+pub struct Cell3DFaces {
     pub(crate) id: usize,
     // Flat array of vertices [x, y, z, x, y, z, ...]
     pub(crate) vertices: Vec<f64>,
@@ -33,8 +33,8 @@ pub struct CellFaces {
     pub(crate) face_neighbors: Vec<i32>,
 }
 
-impl CellFaces {
-    pub fn new(id: usize, bounds: BoundingBox<3>) -> CellFaces {
+impl Cell3DFaces {
+    pub fn new(id: usize, bounds: BoundingBox<3>) -> Cell3DFaces {
         let vertices: Vec<f64> = vec![
             bounds.min[0], bounds.min[1], bounds.min[2], // 0
             bounds.max[0], bounds.min[1], bounds.min[2], // 1
@@ -57,7 +57,7 @@ impl CellFaces {
             1, 2, 6, 5, // Right (x+)
         ];
 
-        CellFaces {
+        Cell3DFaces {
             id,
             vertices,
             face_counts,
@@ -99,7 +99,7 @@ impl CellFaces {
     }
 
     pub fn clip(&mut self, point: &[f64; 3], normal: &[f64; 3], neighbor_id: i32) {
-        let mut scratch = CellFacesScratch::default();
+        let mut scratch = Cell3DFacesScratch::default();
         self.clip_with_scratch(point, normal, neighbor_id, &mut scratch, None);
     }
 
@@ -254,7 +254,7 @@ impl CellFaces {
     }
 }
 
-impl CellFaces {
+impl Cell3DFaces {
     pub fn faces(&self) -> Vec<Vec<usize>> {
         let mut faces: Vec<Vec<usize>> = Vec::with_capacity(self.face_counts.len());
         let mut offset: usize = 0;
@@ -287,7 +287,7 @@ impl CellFaces {
         max_d2
     }
 
-    pub fn clip_with_scratch(&mut self, point: &[f64; 3], normal: &[f64; 3], neighbor_id: i32, scratch: &mut CellFacesScratch, generator: Option<&[f64; 3]>) -> (bool, f64) {
+    pub fn clip_with_scratch(&mut self, point: &[f64; 3], normal: &[f64; 3], neighbor_id: i32, scratch: &mut Cell3DFacesScratch, generator: Option<&[f64; 3]>) -> (bool, f64) {
         let px = point[0];
         let py = point[1];
         let pz = point[2];
@@ -505,12 +505,12 @@ impl CellFaces {
     }
 }
 
-impl Cell<3> for CellFaces {
-    type Scratch = CellFacesScratch;
+impl Cell<3> for Cell3DFaces {
+    type Scratch = Cell3DFacesScratch;
 
     #[inline]
     fn new(id: usize, bounds: BoundingBox<3>) -> Self {
-        CellFaces::new(id, bounds)
+        Cell3DFaces::new(id, bounds)
     }
 
     #[inline]
@@ -539,7 +539,7 @@ mod tests {
     #[test]
     fn test_cell_faces_box() {
         let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
-        let cell = CellFaces::new(0, bounds);
+        let cell = Cell3DFaces::new(0, bounds);
         
         assert!((cell.volume() - 1.0).abs() < 1e-6);
         let c = cell.centroid();
@@ -549,8 +549,8 @@ mod tests {
     #[test]
     fn test_cell_faces_clip() {
         let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
-        let mut cell = CellFaces::new(0, bounds);
-        let mut scratch = CellFacesScratch::default();
+        let mut cell = Cell3DFaces::new(0, bounds);
+        let mut scratch = Cell3DFacesScratch::default();
         
         cell.clip_with_scratch(&[0.5, 0.5, 0.5], &[1.0, 0.0, 0.0], 10, &mut scratch, None);
         assert!((cell.volume() - 0.5).abs() < 1e-6);
