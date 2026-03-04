@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-use vorothree::geometries::SphereGeometry;
-use vorothree::{AlgorithmGrid, BoundingBox, Cell3DFaces, Tessellation, Wall, WALL_ID_MAX};
+use vorothree::wall_3d::SphereGeometry;
+use vorothree::{Algorithm3DGrid, BoundingBox, Cell3DFaces, Tessellation, Wall, WALL_ID_MAX};
 
 #[test]
 fn test_comparisons_face_counts() {
@@ -19,7 +19,7 @@ fn test_comparisons_face_counts() {
 
     // Create tessellation with grid algorithm
     // 10x10x10 grid is a reasonable default for this volume
-    let algo = AlgorithmGrid::new(6, 6, 6, &bounds);
+    let algo = Algorithm3DGrid::new(6, 6, 6, &bounds);
     let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, algo);
 
     // Add a spherical wall with radius 8
@@ -120,7 +120,7 @@ fn test_comparisons_vertex_positions() {
 
     // Create tessellation with grid algorithm
     // 10x10x10 grid is a reasonable default for this volume
-    let algo = AlgorithmGrid::new(6, 6, 6, &bounds);
+    let algo = Algorithm3DGrid::new(6, 6, 6, &bounds);
     let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, algo);
 
     // Add a spherical wall with radius 8

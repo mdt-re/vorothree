@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, Cell3DFaces, AlgorithmGrid, Tessellation};
+use vorothree::{BoundingBox, Cell3DFaces, Algorithm3DGrid, Tessellation};
 
 #[test]
 fn test_cell_metrics() {
@@ -22,7 +22,7 @@ fn test_cell_metrics() {
 #[test]
 fn test_tessellation_workflow() {
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
-    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmGrid::new(10, 10, 10, &bounds));
+    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, Algorithm3DGrid::new(10, 10, 10, &bounds));
 
     let points = vec![
         10.0, 10.0, 10.0,
@@ -48,7 +48,7 @@ fn test_tessellation_workflow() {
 #[test]
 fn test_tessellation_cells_octet() {
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
-    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmGrid::new(10, 10, 10, &bounds));
+    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, Algorithm3DGrid::new(10, 10, 10, &bounds));
 
     let points = vec![
         25.0, 25.0, 25.0,

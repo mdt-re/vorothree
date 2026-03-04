@@ -1,6 +1,6 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, Cell3DFaces};
+use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Define the output file and dimensions
@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Setup the tessellation
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);
-    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds.clone(), AlgorithmGrid::new(10, 10, 10, &bounds));
+    let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds.clone(), Algorithm3DGrid::new(10, 10, 10, &bounds));
 
     // Generate random points
     let mut rng = rand::thread_rng();

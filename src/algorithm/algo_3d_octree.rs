@@ -16,22 +16,22 @@ struct Point {
 /// This structure recursively subdivides the 3D space into eight octants.
 /// It is particularly efficient for non-uniform distributions of points,
 /// as it adapts the depth of the tree to the local density of points.
-pub struct AlgorithmOctree {
+pub struct Algorithm3DOctree {
     bounds: BoundingBox<3>,
     capacity: usize,
     points: Vec<Point>,
-    children: Option<Box<[AlgorithmOctree; 8]>>,
+    children: Option<Box<[Algorithm3DOctree; 8]>>,
 }
 
-impl AlgorithmOctree {
-    /// Creates a new `AlgorithmOctree` with the specified bounds and capacity.
+impl Algorithm3DOctree {
+    /// Creates a new `Algorithm3DOctree` with the specified bounds and capacity.
     ///
     /// # Arguments
     ///
     /// * `bounds` - The spatial boundaries of the octree.
     /// * `capacity` - The maximum number of points a leaf node can hold before subdividing.
-    pub fn new(bounds: BoundingBox<3>, capacity: usize) -> AlgorithmOctree {
-        AlgorithmOctree {
+    pub fn new(bounds: BoundingBox<3>, capacity: usize) -> Algorithm3DOctree {
+        Algorithm3DOctree {
             bounds,
             capacity,
             points: Vec::new(),
@@ -127,14 +127,14 @@ impl AlgorithmOctree {
         let mid_z = (min_z + max_z) / 2.0;
 
         let mut children = Box::new([
-            AlgorithmOctree::new(BoundingBox::new([min_x, min_y, min_z], [mid_x, mid_y, mid_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([mid_x, min_y, min_z], [max_x, mid_y, mid_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([min_x, mid_y, min_z], [mid_x, max_y, mid_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([mid_x, mid_y, min_z], [max_x, max_y, mid_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([min_x, min_y, mid_z], [mid_x, mid_y, max_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([mid_x, min_y, mid_z], [max_x, mid_y, max_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([min_x, mid_y, mid_z], [mid_x, max_y, max_z]), self.capacity),
-            AlgorithmOctree::new(BoundingBox::new([mid_x, mid_y, mid_z], [max_x, max_y, max_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([min_x, min_y, min_z], [mid_x, mid_y, mid_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([mid_x, min_y, min_z], [max_x, mid_y, mid_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([min_x, mid_y, min_z], [mid_x, max_y, mid_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([mid_x, mid_y, min_z], [max_x, max_y, mid_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([min_x, min_y, mid_z], [mid_x, mid_y, max_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([mid_x, min_y, mid_z], [max_x, mid_y, max_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([min_x, mid_y, mid_z], [mid_x, max_y, max_z]), self.capacity),
+            Algorithm3DOctree::new(BoundingBox::new([mid_x, mid_y, mid_z], [max_x, max_y, max_z]), self.capacity),
         ]);
 
         let points = std::mem::take(&mut self.points);
@@ -150,7 +150,7 @@ impl AlgorithmOctree {
     }
 }
 
-impl SpatialAlgorithm<3> for AlgorithmOctree {
+impl SpatialAlgorithm<3> for Algorithm3DOctree {
     fn set_generators(&mut self, generators: &[f64], _bounds: &BoundingBox<3>) {
         self.clear();
         let count = generators.len() / 3;
@@ -189,7 +189,7 @@ impl SpatialAlgorithm<3> for AlgorithmOctree {
     ) where
         F: FnMut(usize, [f64; 3], f64) -> f64,
     {
-        // AlgorithmOctree nearest_iter yields neighbors. We can iterate until we exceed max_dist_sq?
+        // Algorithm3DOctree nearest_iter yields neighbors. We can iterate until we exceed max_dist_sq?
         // The generic calculate loop checks distance, so we just need to feed candidates.
         // nearest_iter is good because it yields closest first.
         for j in self.nearest_iter(pos[0], pos[1], pos[2]) {
@@ -212,7 +212,7 @@ impl SpatialAlgorithm<3> for AlgorithmOctree {
     }
 }
 
-impl AlgorithmOctree {
+impl Algorithm3DOctree {
     fn set_generators_from_points(&mut self, points: Vec<Point>) {
         self.clear();
         for p in points {
@@ -223,7 +223,7 @@ impl AlgorithmOctree {
 
 struct SearchItem<'a> {
     dist_sq: f64,
-    node: Option<&'a AlgorithmOctree>,
+    node: Option<&'a Algorithm3DOctree>,
     point: Option<&'a Point>,
 }
 
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn test_octree_insert_and_find() {
         let bounds = BoundingBox::new([0.0, 0.0, 0.0], [10.0, 10.0, 10.0]);
-        let mut octree = AlgorithmOctree::new(bounds, 1);
+        let mut octree = Algorithm3DOctree::new(bounds, 1);
 
         octree.insert(0, 1.0, 1.0, 1.0);
         octree.insert(1, 9.0, 9.0, 9.0);

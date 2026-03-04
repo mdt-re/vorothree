@@ -1,10 +1,10 @@
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, Cell3DFaces};
+use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
 
 #[test]
 fn test_mapping_face_counts() {
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
     // Use a grid algorithm for spatial indexing
-    let algo = AlgorithmGrid::new(4, 4, 4, &bounds);
+    let algo = Algorithm3DGrid::new(4, 4, 4, &bounds);
     let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, algo);
 
     // Create a 2x2x2 grid of points (8 generators)

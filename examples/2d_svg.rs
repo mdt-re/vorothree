@@ -1,7 +1,8 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{AlgorithmGrid2D, BoundingBox, Cell2D, Tessellation, Wall};
-use vorothree::geometries::{LineGeometry, CircleGeometry, ConvexPolygonGeometry2D, AnnulusGeometry, CubicBezierGeometry2D};
+use vorothree::{Algorithm2DGrid, BoundingBox, Cell2D, Tessellation, Wall};
+use vorothree::wall_2d::{LineGeometry, CircleGeometry, ConvexPolygonGeometry2D, AnnulusGeometry, CubicBezierGeometry2D};
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     run_example("2d_tessellation_line.svg", |tess| {
@@ -31,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_example<F>(filename: &str, setup_walls: F) -> Result<(), Box<dyn std::error::Error>> 
-where F: Fn(&mut Tessellation<2, Cell2D, AlgorithmGrid2D>) {
+where F: Fn(&mut Tessellation<2, Cell2D, Algorithm2DGrid>) {
     let root = SVGBackend::new(filename, (1024, 1024)).into_drawing_area();
     root.fill(&WHITE)?;
 
@@ -39,7 +40,7 @@ where F: Fn(&mut Tessellation<2, Cell2D, AlgorithmGrid2D>) {
         .build_cartesian_2d(0.0..100.0, 0.0..100.0)?;
 
     let bounds = BoundingBox::new([0.0, 0.0], [100.0, 100.0]);
-    let algo = AlgorithmGrid2D::new(30, 30, &bounds);
+    let algo = Algorithm2DGrid::new(30, 30, &bounds);
     let mut tess = Tessellation::<2, Cell2D, _>::new(bounds, algo);
 
     let mut rng = rand::thread_rng();

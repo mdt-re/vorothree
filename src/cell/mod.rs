@@ -1,7 +1,7 @@
 use crate::bounds::BoundingBox;
 
-pub mod d2;
-pub mod d3_faces;
+pub mod cell_2d;
+pub mod cell_3d_faces;
 
 /// Trait defining the behavior of a Voronoi cell.
 /// This allows swapping between simple Polygon cells (`Cell`) and Graph-based cells (`CellEdges`).

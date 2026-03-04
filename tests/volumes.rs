@@ -1,5 +1,5 @@
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, Cell3DFaces, Wall, WALL_ID_MAX};
-use vorothree::geometries::{SphereGeometry, CylinderGeometry, ConvexPolyhedronGeometry};
+use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces, Wall, WALL_ID_MAX};
+use vorothree::wall_3d::{SphereGeometry, CylinderGeometry, ConvexPolyhedronGeometry};
 
 const GRID_SIZE: usize = 20;
 
@@ -50,14 +50,14 @@ macro_rules! test_volume {
 }
 
 // Sphere Tests
-test_volume!(test_sphere_volume_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b), 
+test_volume!(test_sphere_volume_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b), 
     |tess: &mut Tessellation<3, Cell3DFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));
     },
     4.0 / 3.0 * std::f64::consts::PI * 4.0f64.powi(3)
 );
-test_volume!(test_sphere_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16), 
+test_volume!(test_sphere_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16), 
     |tess: &mut Tessellation<3, Cell3DFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));
@@ -66,14 +66,14 @@ test_volume!(test_sphere_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| 
 );
 
 // Cylinder Tests
-test_volume!(test_cylinder_volume_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b), 
+test_volume!(test_cylinder_volume_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b), 
     |tess: &mut Tessellation<3, Cell3DFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(CylinderGeometry::new([size/2.0, size/2.0, size/2.0], [0.0, 0.0, 1.0], r))));
     },
     std::f64::consts::PI * 4.0f64.powi(2) * 10.0
 );
-test_volume!(test_cylinder_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16), 
+test_volume!(test_cylinder_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16), 
     |tess: &mut Tessellation<3, Cell3DFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(CylinderGeometry::new([size/2.0, size/2.0, size/2.0], [0.0, 0.0, 1.0], r))));
@@ -89,14 +89,14 @@ fn dodecahedron_volume(radius: f64) -> f64 {
     (15.0 + 7.0 * 5.0f64.sqrt()) / 4.0 * a.powi(3)
 }
 
-test_volume!(test_dodecahedron_volume_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b), 
+test_volume!(test_dodecahedron_volume_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b), 
     |tess: &mut Tessellation<3, Cell3DFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([size/2.0, size/2.0, size/2.0], r))));
     },
     dodecahedron_volume(4.0)
 );
-test_volume!(test_dodecahedron_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16), 
+test_volume!(test_dodecahedron_volume_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16), 
     |tess: &mut Tessellation<3, Cell3DFaces, _>, size: f64| {
         let r = 4.0;
         tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(ConvexPolyhedronGeometry::new_dodecahedron([size/2.0, size/2.0, size/2.0], r))));

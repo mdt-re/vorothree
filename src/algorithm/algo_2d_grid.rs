@@ -5,7 +5,7 @@ use crate::algorithm::SpatialAlgorithm;
 ///
 /// This structure divides the 2D space into a fixed number of bins.
 /// It allows for O(1) insertion and update operations.
-pub struct AlgorithmGrid2D {
+pub struct Algorithm2DGrid {
     /// Number of bins along the X axis.
     pub grid_res_x: usize,
     /// Number of bins along the Y axis.
@@ -30,8 +30,8 @@ pub struct AlgorithmGrid2D {
     pub bin_search_order: Vec<(isize, isize, f64)>,
 }
 
-impl AlgorithmGrid2D {
-    /// Creates a new `AlgorithmGrid2D` with the specified dimensions and bounds.
+impl Algorithm2DGrid {
+    /// Creates a new `Algorithm2DGrid` with the specified dimensions and bounds.
     pub fn new(nx: usize, ny: usize, bounds: &BoundingBox<2>) -> Self {
         let sx = (nx as f64) / (bounds.max[0] - bounds.min[0]);
         let sy = (ny as f64) / (bounds.max[1] - bounds.min[1]);
@@ -57,7 +57,7 @@ impl AlgorithmGrid2D {
         }
         bin_search_order.sort_unstable_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal));
 
-        AlgorithmGrid2D {
+        Algorithm2DGrid {
             grid_res_x: nx,
             grid_res_y: ny,
             grid_scale_x: sx,
@@ -83,7 +83,7 @@ impl AlgorithmGrid2D {
     }
 }
 
-impl SpatialAlgorithm<2> for AlgorithmGrid2D {
+impl SpatialAlgorithm<2> for Algorithm2DGrid {
     fn set_generators(&mut self, generators: &[f64], bounds: &BoundingBox<2>) {
         let total_bins = self.grid_res_x * self.grid_res_y;
         self.grid_bins.iter_mut().for_each(|bin| bin.clear());
@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn test_grid_indexing_2d() {
         let bounds = BoundingBox::new([0.0, 0.0], [10.0, 10.0]);
-        let grid = AlgorithmGrid2D::new(10, 10, &bounds); // 1x1 cells
+        let grid = Algorithm2DGrid::new(10, 10, &bounds); // 1x1 cells
 
         let idx = grid.get_bin_index(0.5, 0.5, &bounds);
         assert_eq!(idx, 0);
@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn test_grid_neighbors_2d() {
         let bounds = BoundingBox::new([0.0, 0.0], [3.0, 3.0]);
-        let mut grid = AlgorithmGrid2D::new(3, 3, &bounds);
+        let mut grid = Algorithm2DGrid::new(3, 3, &bounds);
         let generators = vec![0.5, 0.5, 1.5, 0.5];
         
         grid.set_generators(&generators, &bounds);
