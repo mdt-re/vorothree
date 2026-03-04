@@ -197,7 +197,7 @@ export async function run(app: HTMLElement) {
 
     // --- Visualization ---
     const material = new THREE.MeshBasicMaterial({
-        color: 0x00aaff,
+        color: 0xffffff,
         transparent: true,
         opacity: params.opacity,
         side: THREE.DoubleSide,
@@ -230,10 +230,10 @@ export async function run(app: HTMLElement) {
             let cellColor = new THREE.Color(0x00aaff);
             const verts = cell.vertices; 
             if (!verts || verts.length < 6) continue;
+            const numVerts = verts.length / 2;
 
             // Area
-            let area = 0;
-            const numVerts = verts.length / 2;
+            /*let area = 0;
             for (let j = 0; j < numVerts; j++) {
                 const x1 = verts[j * 2];
                 const y1 = verts[j * 2 + 1];
@@ -241,13 +241,17 @@ export async function run(app: HTMLElement) {
                 const y2 = verts[((j + 1) % numVerts) * 2 + 1];
                 area += (x1 * y2 - x2 * y1);
             }
-            totalArea += Math.abs(area) / 2;
+            totalArea += Math.abs(area) / 2;*/
+            totalArea += cell.area();
 
             // Faces
             if (params.showFaces) {
                 if (params.colorByVertexCount) {
                     presentCounts.add(numVerts);
-                    cellColor.setHSL(((numVerts - 3) / 8.0) % 1.0, 1.0, 0.5);
+
+                console.log(numVerts);
+                    const clamped = Math.min(numVerts, 12);
+                    cellColor.setHSL((clamped - 3) / 10.0, 1.0, 0.5);
                 }
                 if (params.checkNeighbors) {
                     for (let j = 0; j < numVerts; j++) {
@@ -364,7 +368,8 @@ export async function run(app: HTMLElement) {
             const sortedCounts = Array.from(presentCounts).sort((a, b) => a - b);
             let html = '<div style="margin-bottom:5px; font-weight:bold; text-transform:lowercase;">vertices</div>';
             for (const count of sortedCounts) {
-                const hue = ((count - 3) / 8.0) % 1.0;
+                const clamped = Math.min(count, 12);
+                const hue = (clamped - 3) / 10.0;
                 const color = new THREE.Color().setHSL(hue, 1.0, 0.5).getStyle();
                 html += `<div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><div style="width:12px; height:12px; background-color:${color};"></div><div>${count}</div></div>`;
             }
@@ -419,4 +424,15 @@ export async function run(app: HTMLElement) {
         renderer.render(scene, camera);
     }
     animate();
+
+    // Handle screenshot
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'p') {
+            renderer.render(scene, camera);
+            const link = document.createElement('a');
+            link.download = 'dimension_two.png';
+            link.href = renderer.domElement.toDataURL('image/png');
+            link.click();
+        }
+    });
 }

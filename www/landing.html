@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vorothree - 3D Voronoi Tessellation</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --text: #333;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 0; }
+        header { background: var(--primary); color: white; padding: 2rem 1rem; text-align: center; }
+        h1 { margin: 0; font-size: 2.5rem; }
+        p.subtitle { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 1rem auto; }
+        .actions { margin-top: 1.5rem; }
+        .btn { display: inline-block; padding: 0.8rem 1.5rem; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 0 0.5rem; transition: background 0.2s; }
+        .btn:hover { background: #2980b9; }
+        .btn.secondary { background: transparent; border: 2px solid white; }
+        .btn.secondary:hover { background: rgba(255,255,255,0.1); }
+        
+        main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+        .card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; text-decoration: none; color: inherit; display: block; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+        .card img { width: 100%; height: 200px; object-fit: cover; background: #eee; }
+        .card-content { padding: 1rem; }
+        .card-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .card-desc { font-size: 0.9rem; color: #666; }
+
+        footer { text-align: center; padding: 2rem; color: #777; font-size: 0.9rem; margin-top: 3rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>vorothree</h1>
+    <p class="subtitle">High-performance Rust library for 3D Voronoi tessellations, compiled to WebAssembly.</p>
+    <div class="actions">
+        <a href="docs/index.html" class="btn">API Documentation</a>
+        <a href="https://github.com/mdt-re/vorothree" class="btn secondary">View on GitHub</a>
+    </div>
+</header>
+
+<main>
+    <h2>Interactive Examples</h2>
+    <div class="gallery">
+        <a href="?example=moving_cell" class="card">
+            <img src="src/assets/moving_cell.png" alt="Moving Cell">
+            <div class="card-content">
+                <div class="card-title">Moving Cell</div>
+                <div class="card-desc">Dynamic updates of a single cell.</div>
+            </div>
+        </a>
+        <a href="?example=walls" class="card">
+            <img src="src/assets/walls.png" alt="Walls">
+            <div class="card-content">
+                <div class="card-title">Walls & Boundaries</div>
+                <div class="card-desc">Constraining tessellations with custom shapes.</div>
+            </div>
+        </a>
+        <a href="?example=benchmark" class="card">
+            <img src="src/assets/benchmark.png" alt="Benchmark">
+            <div class="card-content">
+                <div class="card-title">Benchmark</div>
+                <div class="card-desc">Performance testing with high particle counts.</div>
+            </div>
+        </a>
+        <a href="?example=relaxation" class="card">
+            <img src="src/assets/relaxation.png" alt="Relaxation">
+            <div class="card-content">
+                <div class="card-title">Lloyd's Relaxation</div>
+                <div class="card-desc">Smoothing cell distributions over time.</div>
+            </div>
+        </a>
+        <a href="?example=transition" class="card">
+            <img src="src/assets/transition.png" alt="Transition">
+            <div class="card-content">
+                <div class="card-title">Transition</div>
+                <div class="card-desc">Visualizing state changes.</div>
+            </div>
+        </a>
+        <a href="?example=granular_flow" class="card">
+            <img src="src/assets/granular_flow.png" alt="Granular Flow">
+            <div class="card-content">
+                <div class="card-title">Granular Flow</div>
+                <div class="card-desc">Simulation of particle flow.</div>
+            </div>
+        </a>
+        <a href="?example=pathfinding" class="card">
+            <img src="src/assets/pathfinding.png" alt="Pathfinding">
+            <div class="card-content">
+                <div class="card-title">Pathfinding</div>
+                <div class="card-desc">Navigating through the Voronoi graph.</div>
+            </div>
+        </a>
+    </div>
+</main>
+
+<footer>
+    Licensed under Apache-2.0 or MIT.
+</footer>
+
+</body>
+</html>

@@ -252,9 +252,7 @@ impl Cell3DFaces {
         }
         area
     }
-}
 
-impl Cell3DFaces {
     pub fn faces(&self) -> Vec<Vec<usize>> {
         let mut faces: Vec<Vec<usize>> = Vec::with_capacity(self.face_counts.len());
         let mut offset: usize = 0;

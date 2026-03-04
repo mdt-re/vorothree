@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["../pkg/vorothree.d.ts"],
+  "out": "docs",
+  "name": "vorothree WASM API",
+  "readme": "none"
+}

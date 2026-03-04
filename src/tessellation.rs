@@ -141,6 +141,29 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
         Ok(())
     }
 
+    /// Reads generators from a string.
+    /// Each line should contain an id followed by N coordinate entries.
+    /// The id is ignored.
+    pub fn read_generators(&mut self, input: &str) {
+        let mut raw_points = Vec::new();
+
+        for line in input.lines() {
+            if line.trim().is_empty() { continue; }
+
+            let mut parts = line.split_whitespace();
+
+            // Skip ID
+            if parts.next().is_none() { continue; }
+
+            for _ in 0..D {
+                let val = parts.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+                raw_points.push(val);
+            }
+        }
+
+        self.set_generators(&raw_points);
+    }
+
     /// Removes generators that are not inside the defined walls.
     /// Note: This changes the indices of the remaining generators.
     fn prune_outside_generators(&mut self) {
