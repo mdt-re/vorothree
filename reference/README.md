@@ -8,4 +8,5 @@ Overview of the references this software is based upon.
 
 * Github [page](https://github.com/chr1shr/voro) and documentation [overview](https://math.lbl.gov/voro++/doc/voro++_overview.pdf)
 * Voro++ Multithreading: see [Arxiv: 2209.11606](https://arxiv.org/abs/2209.11606)
+* [Arxiv: 2209.11606](https://arxiv.org/abs/2406.00553)
 * Usage example: [VoroTop](https://www.vorotop.org/index.html)
