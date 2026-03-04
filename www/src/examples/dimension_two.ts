@@ -233,15 +233,6 @@ export async function run(app: HTMLElement) {
             const numVerts = verts.length / 2;
 
             // Area
-            /*let area = 0;
-            for (let j = 0; j < numVerts; j++) {
-                const x1 = verts[j * 2];
-                const y1 = verts[j * 2 + 1];
-                const x2 = verts[((j + 1) % numVerts) * 2];
-                const y2 = verts[((j + 1) % numVerts) * 2 + 1];
-                area += (x1 * y2 - x2 * y1);
-            }
-            totalArea += Math.abs(area) / 2;*/
             totalArea += cell.area();
 
             // Faces

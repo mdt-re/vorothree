@@ -40,7 +40,7 @@ This library is designed to directly compile to WASM, using wasm-pack, and is co
 ```bash
 npm install vorothree
 ```
-Consult the [www](https://github.com/mdt-re/vorothree/tree/main/www) folder for the [interactive examples](https://mdt-re.github.io/vorothree/) and more details on how to use with TypeScript and in a web environment. 
+Consult the [www](https://github.com/mdt-re/vorothree/tree/main/www) folder for [interactive examples](https://mdt-re.github.io/vorothree/) and more details on how to use with TypeScript and in a web environment. 
 
 To build the project for web usage:
 ```bash
@@ -49,6 +49,41 @@ wasm-pack build --target web
 which can then be added as a local dependency. To prepare the generated package for publication we need to copy the `README_WASM.md` to the package folder.
 ```bash
 cp README_WASM.md pkg/README.md
+```
+
+## Usage & Documentation
+
+The library, with [documentation](https://docs.rs/crate/vorothree/latest), can also be direclty used in Rust by installing it with:
+```bash
+cargo add vorothree
+```
+For a small usage example we generate a Voronoi tessellation for a 3D box with randomly positioned generators and calculate the total volume.
+```rust
+use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, Cell3DFaces, Wall, WALL_ID_MAX};
+
+fn main() {
+  let size = 10.0;
+  let nr_bins = 10;
+  // Creates a bounding box of length, widht , height = size.
+  let bounds = BoundingBox::new([0.0, 0.0, 0.0], [size, size, size]);
+  // Initializes a 3D tessellation with a grid algorithm and the bounding box.
+  let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds.clone(), AlgorithmGrid::new(nr_bins, nr_bins, nr_bins, &bounds));
+  // Add a spherical wall that spans the box.
+  let r = size / 2.0;
+  tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));
+  // Fill the tessellation with random generators (automatically confined to the walls).
+  tess.random_generators(1000);
+  // Calculate the tessellation.
+  tess.calculate();
+  // Calculate the total volume of all cells.
+  let total_volume: f64 = (0..tess.count_cells())
+    .map(|i| tess.get_cell(i).unwrap().volume())
+    .sum();
+  // Compare the theoretical value.
+  let mut sphere_volume = 04.0 / 3.0 * std::f64::consts::PI * 4.0f64.powi(3);
+  println!("total cell volume: {}", total_volume);
+  println!("theoretical sphere volume: {}", sphere_volume);
+}
 ```
 
 ## Development
