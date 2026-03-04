@@ -7,7 +7,7 @@ use crate::algorithm::SpatialAlgorithm;
 /// It is generally faster than an octree for uniform distributions and allows
 /// for O(1) insertion and update operations, but may be less memory efficient
 /// for highly clustered data or very large sparse domains.
-pub struct AlgorithmGrid {
+pub struct Algorithm3DGrid {
     /// Number of bins along the X axis.
     pub grid_res_x: usize,
     /// Number of bins along the Y axis.
@@ -40,8 +40,8 @@ pub struct AlgorithmGrid {
     pub bin_search_order: Vec<(isize, isize, isize, f64)>,
 }
 
-impl AlgorithmGrid {
-    /// Creates a new `AlgorithmGrid` with the specified dimensions and bounds.
+impl Algorithm3DGrid {
+    /// Creates a new `Algorithm3DGrid` with the specified dimensions and bounds.
     ///
     /// The grid resolution (`nx`, `ny`, `nz`) determines the granularity of the spatial partitioning.
     pub fn new(nx: usize, ny: usize, nz: usize, bounds: &BoundingBox<3>) -> Self {
@@ -75,7 +75,7 @@ impl AlgorithmGrid {
         }
         bin_search_order.sort_unstable_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
 
-        AlgorithmGrid {
+        Algorithm3DGrid {
             grid_res_x: nx,
             grid_res_y: ny,
             grid_res_z: nz,
@@ -107,7 +107,7 @@ impl AlgorithmGrid {
     }
 }
 
-impl SpatialAlgorithm<3> for AlgorithmGrid {
+impl SpatialAlgorithm<3> for Algorithm3DGrid {
     fn set_generators(&mut self, generators: &[f64], bounds: &BoundingBox<3>) {
         let total_bins = self.grid_res_x * self.grid_res_y * self.grid_res_z;
         self.grid_bins.iter_mut().for_each(|bin| bin.clear());
@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn test_grid_indexing() {
         let bounds = BoundingBox::new([0.0, 0.0, 0.0], [10.0, 10.0, 10.0]);
-        let grid = AlgorithmGrid::new(10, 10, 10, &bounds); // 1x1x1 cells
+        let grid = Algorithm3DGrid::new(10, 10, 10, &bounds); // 1x1x1 cells
 
         let idx = grid.get_bin_index(0.5, 0.5, 0.5, &bounds);
         assert_eq!(idx, 0);
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn test_grid_neighbors() {
         let bounds = BoundingBox::new([0.0, 0.0, 0.0], [3.0, 3.0, 3.0]);
-        let mut grid = AlgorithmGrid::new(3, 3, 3, &bounds);
+        let mut grid = Algorithm3DGrid::new(3, 3, 3, &bounds);
         let generators = vec![0.5, 0.5, 0.5, 1.5, 0.5, 0.5];
         
         grid.set_generators(&generators, &bounds);

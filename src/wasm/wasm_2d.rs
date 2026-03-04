@@ -1,9 +1,9 @@
-use crate::algorithm::d2_grid::AlgorithmGrid2D;
+use crate::algorithm::algo_2d_grid::Algorithm2DGrid;
 use crate::bounds::BoundingBox;
-use crate::cell::d2::Cell2D;
+use crate::cell::cell_2d::Cell2D;
 use crate::tessellation::Tessellation;
 use crate::wall::{Wall, WallGeometry};
-use crate::wall::geometries::*;
+use crate::wall::wall_2d::*;
 use crate::wasm::utils::parse_js_point;
 use wasm_bindgen::prelude::*;
 use js_sys::{Reflect, Function, Array};
@@ -185,7 +185,7 @@ impl Cell2DWASM {
 /// The main 2D Voronoi tessellation class.
 #[wasm_bindgen(js_name = Tessellation2D)]
 pub struct Tessellation2D {
-    inner: Tessellation<2, Cell2D, AlgorithmGrid2D>,
+    inner: Tessellation<2, Cell2D, Algorithm2DGrid>,
 }
 
 #[wasm_bindgen(js_class = Tessellation2D)]
@@ -198,7 +198,7 @@ impl Tessellation2D {
     #[wasm_bindgen(constructor)]
     pub fn new(bounds: BoundingBox2D, nx: usize, ny: usize) -> Tessellation2D {
         let b: BoundingBox<2> = bounds.into();
-        Tessellation2D { inner: Tessellation::new(b, AlgorithmGrid2D::new(nx, ny, &b)) }
+        Tessellation2D { inner: Tessellation::new(b, Algorithm2DGrid::new(nx, ny, &b)) }
     }
     /// Sets the generator points.
     ///

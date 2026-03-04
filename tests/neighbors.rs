@@ -1,5 +1,5 @@
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, Cell3DFaces, Wall, Cell, WALL_ID_MAX};
-use vorothree::geometries::{SphereGeometry, PlaneGeometry, ConvexPolyhedronGeometry};
+use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces, Wall, Cell, WALL_ID_MAX};
+use vorothree::wall_3d::{SphereGeometry, PlaneGeometry, ConvexPolyhedronGeometry};
 use rand::Rng;
 
 trait NeighborCell: Cell<3> {
@@ -111,8 +111,8 @@ macro_rules! run_two_cells {
     }
 }
 
-run_two_cells!(test_two_cells_neighbors_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(1, 1, 1, b));
-run_two_cells!(test_two_cells_neighbors_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_two_cells!(test_two_cells_neighbors_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(1, 1, 1, b));
+run_two_cells!(test_two_cells_neighbors_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16));
 
 // Test 2: Random Reciprocity
 macro_rules! run_random {
@@ -133,8 +133,8 @@ macro_rules! run_random {
     }
 }
 
-run_random!(test_neighbor_reciprocity_random_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_random!(test_neighbor_reciprocity_random_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_random!(test_neighbor_reciprocity_random_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b));
+run_random!(test_neighbor_reciprocity_random_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16));
 
 // Test 3: Half Sphere
 macro_rules! run_half_sphere {
@@ -157,8 +157,8 @@ macro_rules! run_half_sphere {
     }
 }
 
-run_half_sphere!(test_neighbor_reciprocity_half_sphere_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_half_sphere!(test_neighbor_reciprocity_half_sphere_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_half_sphere!(test_neighbor_reciprocity_half_sphere_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b));
+run_half_sphere!(test_neighbor_reciprocity_half_sphere_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16));
 
 // Test 4: Sphere Small
 macro_rules! run_sphere_small {
@@ -173,8 +173,8 @@ macro_rules! run_sphere_small {
     }
 }
 
-run_sphere_small!(test_neighbor_reciprocity_sphere_small_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_sphere_small!(test_neighbor_reciprocity_sphere_small_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_sphere_small!(test_neighbor_reciprocity_sphere_small_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b));
+run_sphere_small!(test_neighbor_reciprocity_sphere_small_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16));
 
 // Test 5: Dodecahedron
 macro_rules! run_dodecahedron {
@@ -196,5 +196,5 @@ macro_rules! run_dodecahedron {
     }
 }
 
-run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_grid_faces, Cell3DFaces, |b| AlgorithmGrid::new(5, 5, 5, b));
-run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| AlgorithmOctree::new(*b, 16));
+run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_grid_faces, Cell3DFaces, |b| Algorithm3DGrid::new(5, 5, 5, b));
+run_dodecahedron!(test_neighbor_reciprocity_dodecahedron_octree_faces, Cell3DFaces, |b: &BoundingBox<3>| Algorithm3DOctree::new(*b, 16));

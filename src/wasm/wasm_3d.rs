@@ -1,9 +1,9 @@
-use crate::algorithm::d3_grid::AlgorithmGrid;
+use crate::algorithm::algo_3d_grid::Algorithm3DGrid;
 use crate::bounds::BoundingBox;
-use crate::cell::d3_faces::Cell3DFaces;
+use crate::cell::cell_3d_faces::Cell3DFaces;
 use crate::tessellation::Tessellation;
 use crate::wall::{Wall, WallGeometry};
-use crate::wall::geometries::*;
+use crate::wall::wall_3d::*;
 use crate::wasm::utils::parse_js_point;
 use wasm_bindgen::prelude::*;
 use js_sys::{Reflect, Function, Array, Uint16Array};
@@ -293,7 +293,7 @@ impl Cell3D {
 /// The main 3D Voronoi tessellation class.
 #[wasm_bindgen(js_name = Tessellation3D)]
 pub struct Tessellation3D {
-    inner: Tessellation<3, Cell3DFaces, AlgorithmGrid>,
+    inner: Tessellation<3, Cell3DFaces, Algorithm3DGrid>,
 }
 
 #[wasm_bindgen(js_class = Tessellation3D)]
@@ -307,7 +307,7 @@ impl Tessellation3D {
     #[wasm_bindgen(constructor)]
     pub fn new(bounds: BoundingBox3D, nx: usize, ny: usize, nz: usize) -> Tessellation3D {
         let b: BoundingBox<3> = bounds.into();
-        Tessellation3D { inner: Tessellation::new(b, AlgorithmGrid::new(nx, ny, nz, &b)) }
+        Tessellation3D { inner: Tessellation::new(b, Algorithm3DGrid::new(nx, ny, nz, &b)) }
     }
     /// Sets the generator points.
     ///

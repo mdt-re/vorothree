@@ -26,21 +26,22 @@ mod tessellation;
 mod wall;
 
 pub use algorithm::SpatialAlgorithm;
-pub use algorithm::d2_grid::AlgorithmGrid2D;
-pub use algorithm::d3_grid::AlgorithmGrid;
-pub use algorithm::d3_octree::AlgorithmOctree;
+pub use algorithm::algo_2d_grid::Algorithm2DGrid;
+pub use algorithm::algo_3d_grid::Algorithm3DGrid;
+pub use algorithm::algo_3d_octree::Algorithm3DOctree;
 
 pub use bounds::BoundingBox;
 pub use bounds::box_side;
 
 pub use cell::Cell;
-pub use cell::d2::Cell2D;
-pub use cell::d3_faces::Cell3DFaces;
+pub use cell::cell_2d::Cell2D;
+pub use cell::cell_3d_faces::Cell3DFaces;
 
 pub use wall::Wall;
 pub use wall::WallGeometry;
 pub use wall::WALL_ID_MAX;
-pub use wall::geometries;
+pub use wall::wall_2d;
+pub use wall::wall_3d;
 
 pub use tessellation::Tessellation;
 

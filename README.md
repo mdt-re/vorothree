@@ -59,7 +59,7 @@ cargo add vorothree
 ```
 For a small usage example we generate a Voronoi tessellation for a 3D box with randomly positioned generators and calculate the total volume.
 ```rust
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, Cell3DFaces, Wall, WALL_ID_MAX};
+use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces, Wall, WALL_ID_MAX};
 
 fn main() {
   let size = 10.0;
@@ -67,7 +67,7 @@ fn main() {
   // Creates a bounding box of length, widht , height = size.
   let bounds = BoundingBox::new([0.0, 0.0, 0.0], [size, size, size]);
   // Initializes a 3D tessellation with a grid algorithm and the bounding box.
-  let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds.clone(), AlgorithmGrid::new(nr_bins, nr_bins, nr_bins, &bounds));
+  let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds.clone(), Algorithm3DGrid::new(nr_bins, nr_bins, nr_bins, &bounds));
   // Add a spherical wall that spans the box.
   let r = size / 2.0;
   tess.add_wall(Wall::new(WALL_ID_MAX, Box::new(SphereGeometry::new([size/2.0, size/2.0, size/2.0], r))));

@@ -1,4 +1,6 @@
-pub mod geometries;
+pub mod wall_2d;
+pub mod wall_3d;
+pub mod wall_4d;
 
 /// The maximum ID for walls. Wall IDs must be less than or equal to this value
 /// to avoid conflicts with non-negative generator IDs and the bounding box IDs.

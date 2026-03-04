@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, AlgorithmGrid, AlgorithmOctree, Cell3DFaces};
+use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -44,7 +44,7 @@ fn benchmark_scaling(c: &mut Criterion) {
         println!("N: {:7}, Grid: {:3}x{:3}x{:3}, Cells: {:9}, Density: {:.3}", size, grid_res, grid_res, grid_res, total_cells, density);
 
         group.bench_with_input(BenchmarkId::new("grid", size), &size, |b, &s| {
-            let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmGrid::new(grid_res, grid_res, grid_res, &bounds));
+            let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, Algorithm3DGrid::new(grid_res, grid_res, grid_res, &bounds));
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();
@@ -52,7 +52,7 @@ fn benchmark_scaling(c: &mut Criterion) {
         });
 
         group.bench_with_input(BenchmarkId::new("moctree", size), &size, |b, &s| {
-            let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, AlgorithmOctree::new(bounds, 8));
+            let mut tess = Tessellation::<3, Cell3DFaces, _>::new(bounds, Algorithm3DOctree::new(bounds, 8));
             tess.random_generators(s);
             b.iter(|| {
                 tess.calculate();
