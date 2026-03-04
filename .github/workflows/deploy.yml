@@ -28,6 +28,9 @@ jobs:
       - name: Build WASM
         run: wasm-pack build --target web
 
+      - name: Prepare package for NPM
+        run: cp README_WASM.md pkg/README.md
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

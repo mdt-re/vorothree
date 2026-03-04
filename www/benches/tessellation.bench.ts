@@ -18,7 +18,7 @@ const { default: init, Tessellation3D, BoundingBox3D } = await import('vorothree
 // We use top-level await here which Vitest supports
 const wasmPath = path.resolve(process.cwd(), '../pkg/vorothree_bg.wasm');
 const buffer = await fs.readFile(wasmPath);
-await init(buffer);
+await init({ module_or_path: buffer });
 
 describe('Tessellation Performance', () => {
     // Setup data outside the benchmark function to isolate the test subject

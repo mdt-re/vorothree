@@ -39,6 +39,20 @@ export async function run(app: HTMLElement) {
     stats.dom.style.pointerEvents = 'auto';
     resultsDiv.appendChild(stats.dom);
 
+    const legendDiv = document.createElement('div');
+    legendDiv.style.position = 'absolute';
+    legendDiv.style.bottom = '10px';
+    legendDiv.style.left = '10px';
+    legendDiv.style.textAlign = 'left';
+    legendDiv.style.color = 'white';
+    legendDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    legendDiv.style.padding = '10px';
+    legendDiv.style.fontFamily = 'monospace';
+    legendDiv.style.pointerEvents = 'none';
+    legendDiv.style.userSelect = 'none';
+    legendDiv.style.display = 'none';
+    app.appendChild(legendDiv);
+
     const params = {
         wallType: 'circle',
         radius: 40.0,
@@ -207,6 +221,7 @@ export async function run(app: HTMLElement) {
         const colors: number[] = [];
 
         let totalArea = 0;
+        const presentCounts = new Set<number>();
 
         for (let i = 0; i < cellCount; i++) {
             const cell = tess.get_cell(i);
@@ -230,22 +245,11 @@ export async function run(app: HTMLElement) {
 
             // Faces
             if (params.showFaces) {
-                const v0x = verts[0];
-                const v0y = verts[1];
-                for (let j = 1; j < numVerts - 1; j++) {
-                    const v1x = verts[j * 2];
-                    const v1y = verts[j * 2 + 1];
-                    const v2x = verts[(j + 1) * 2];
-                    const v2y = verts[(j + 1) * 2 + 1];
-                    positions.push(v0x, v0y, 0, v1x, v1y, 0, v2x, v2y, 0);
-                }
-
                 if (params.colorByVertexCount) {
-                    cellColor.setHSL(((numVerts - 3) * 0.1) % 1.0, 1.0, 0.5);
+                    presentCounts.add(numVerts);
+                    cellColor.setHSL(((numVerts - 3) / 8.0) % 1.0, 1.0, 0.5);
                 }
-
                 if (params.checkNeighbors) {
-                    const numVerts = verts.length / 2;
                     for (let j = 0; j < numVerts; j++) {
                         const neighborId = cell.edge_neighbors[j];
                         if (neighborId >= 0) {
@@ -265,7 +269,16 @@ export async function run(app: HTMLElement) {
                 const g = cellColor.g;
                 const b = cellColor.b;
 
-                positions.forEach(() => colors.push(r, g, b));
+                const v0x = verts[0];
+                const v0y = verts[1];
+                for (let j = 1; j < numVerts - 1; j++) {
+                    const v1x = verts[j * 2];
+                    const v1y = verts[j * 2 + 1];
+                    const v2x = verts[(j + 1) * 2];
+                    const v2y = verts[(j + 1) * 2 + 1];
+                    positions.push(v0x, v0y, 0, v1x, v1y, 0, v2x, v2y, 0);
+                    colors.push(r, g, b, r, g, b, r, g, b);
+                }
 
                 // Labels
                 if (params.showLabels || params.showNeighborLabels) {
@@ -345,6 +358,20 @@ export async function run(app: HTMLElement) {
         }
 
         infoText.innerText = `Cells: ${cellCount}\nTotal Area: ${totalArea.toFixed(2)}`;
+
+        if (params.showFaces && params.colorByVertexCount) {
+            legendDiv.style.display = 'block';
+            const sortedCounts = Array.from(presentCounts).sort((a, b) => a - b);
+            let html = '<div style="margin-bottom:5px; font-weight:bold; text-transform:lowercase;">vertices</div>';
+            for (const count of sortedCounts) {
+                const hue = ((count - 3) / 8.0) % 1.0;
+                const color = new THREE.Color().setHSL(hue, 1.0, 0.5).getStyle();
+                html += `<div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;"><div style="width:12px; height:12px; background-color:${color};"></div><div>${count}</div></div>`;
+            }
+            legendDiv.innerHTML = html;
+        } else {
+            legendDiv.style.display = 'none';
+        }
     }
 
     material.vertexColors = true;

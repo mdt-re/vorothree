@@ -36,11 +36,17 @@ Rust library for 3D Voronoi tessellations, designed to be used in Rust as well a
 
 ## WebAssembly and TypeScript API
 
-This library is designed to directly compile to WASM, using wasm-pack, and is compatible with TypeScript. Consult the [www](https://github.com/mdt-re/vorothree/tree/main/www) folder for examples and more details on how to use with TypeScript and in a web environment. To build the project for web usage:
+This library is designed to directly compile to WASM, using wasm-pack, and is compatible with TypeScript. The package is published on [npm](https://www.npmjs.com/package/vorothree) and can be installed with:
+```bash
+npm install vorothree
+```
+Consult the [www](https://github.com/mdt-re/vorothree/tree/main/www) folder for the [interactive examples](https://mdt-re.github.io/vorothree/) and more details on how to use with TypeScript and in a web environment. 
+
+To build the project for web usage:
 ```bash
 wasm-pack build --target web
 ```
-To prepare the generated package for publication we need to copy the `README_WASM.md` to the package folder.
+which can then be added as a local dependency. To prepare the generated package for publication we need to copy the `README_WASM.md` to the package folder.
 ```bash
 cp README_WASM.md pkg/README.md
 ```

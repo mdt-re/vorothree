@@ -37,36 +37,37 @@ npm install vorothree
 ## Usage
 
 ```typescript
-import init, { initThreadPool, Tessellation, BoundingBox, Wall } from 'vorothree';
+import {init, Tessellation, BoundingBox, Wall } from 'vorothree';
 
 async function run() {
     await init();
-    await initThreadPool(navigator.hardwareConcurrency);
 
-    // 1. Define bounds
+    // Create tessellation from bounding box and bins per axis.
     const bounds = new BoundingBox(0, 0, 0, 100, 100, 100);
-    
-    // 2. Create tessellation with grid size (10x10x10)
-    const tess = new Tessellation(bounds, 10, 10, 10);
+    const bin_cnt = 10;
+    const tess = new Tessellation(bounds, bin_cnt, bin_cnt, bin_cnt);
 
-    // 3. Add a wall (optional)
+    // Optional: add a wall to constrain the tessellation.
     tess.add_wall(Wall.new_sphere(50, 50, 50, 40, -1000));
 
-    // 4. Set generators
-    const points = new Float64Array([
-        10, 10, 10,
-        50, 50, 50,
-        90, 90, 90
-    ]);
-    tess.set_generators(points);
+    // Set the generators randomly, explicit setting via set_generators
+    // or read_generators is also possible.
+    const generator_cnt = 1000;
+    tess.random_generators(generator_cnt);
 
-    // 5. Calculate
+    // Perform the Voronoi tessellation.
     tess.calculate();
 
-    // 6. Access results
-    console.log(`Calculated ${tess.count_cells} cells`);
-    const cell = tess.get_cell(0);
-    console.log(cell);
+    // Evaluate the results: print average number of faces per cell.
+    let total_faces = 0;
+    const cell_count = tess.count_cells;
+    for (let i = 0; i < cell_count; i++) {
+        const cell = tess.get_cell(i);
+        if (cell) {
+            total_faces += cell.faces().length;
+        }
+    }
+    console.log(`Average faces per cell: ${total_faces / cell_count}`);
 }
 
 run();
