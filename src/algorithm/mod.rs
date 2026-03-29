@@ -3,6 +3,7 @@ use crate::bounds::BoundingBox;
 pub mod algo_2d_grid;
 pub mod algo_3d_grid;
 pub mod algo_3d_octree;
+pub mod algo_4d_grid;
 
 
 /// Trait defining a spatial acceleration structure.
