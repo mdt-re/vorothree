@@ -40,6 +40,10 @@ impl WallGeometry<3> for PlaneGeometry {
         // Our normal points IN, but clip expects normal pointing OUT.
         callback(self.point, [-self.normal[0], -self.normal[1], -self.normal[2]]);
     }
+
+    fn is_planar(&self) -> bool {
+        true
+    }
 }
 
 /// A wall defined by a sphere.
@@ -700,6 +704,10 @@ impl WallGeometry<3> for ConvexPolyhedronGeometry {
         for (p, n) in &self.planes {
             callback(*p, *n);
         }
+    }
+
+    fn is_planar(&self) -> bool {
+        true
     }
 }
 

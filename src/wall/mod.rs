@@ -42,6 +42,10 @@ impl<const D: usize> Wall<D> {
     pub fn cut(&self, generator: &[f64; D], callback: &mut dyn FnMut([f64; D], [f64; D])) {
         self.inner.cut(generator, callback)
     }
+
+    pub fn is_planar(&self) -> bool {
+        self.inner.is_planar()
+    }
 }
 
 /// Trait defining the geometry and logic of a wall.
@@ -56,4 +60,12 @@ pub trait WallGeometry<const D: usize>: Send + Sync + std::fmt::Debug {
     // FIXME: The use of `&mut dyn FnMut` here forces dynamic dispatch, which has possibly been observed
     // to cause a 50-130% performance regression in benchmarks (CellEdges) compared to static dispatch.
     fn cut(&self, generator: &[f64; D], callback: &mut dyn FnMut([f64; D], [f64; D]));
+
+    /// Returns `true` if the wall is represented by a finite set of convex planar cuts.
+    /// In this case, `cut` will provide all the necessary planes for clipping.
+    /// If `false`, the wall is a curved surface and will be approximated using ghost
+    /// generators, to prevent clipping issues at the wall boundaries.
+    fn is_planar(&self) -> bool {
+        false
+    }
 }

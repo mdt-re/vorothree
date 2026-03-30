@@ -31,6 +31,10 @@ impl WallGeometry<2> for LineGeometry {
         // Normal points IN, clip expects normal pointing OUT.
         callback(self.point, [-self.normal[0], -self.normal[1]]);
     }
+
+    fn is_planar(&self) -> bool {
+        true
+    }
 }
 
 /// A wall defined by a circle in 2D.
@@ -128,6 +132,10 @@ impl WallGeometry<2> for ConvexPolygonGeometry2D {
         for (p, n) in &self.lines {
             callback(*p, *n);
         }
+    }
+
+    fn is_planar(&self) -> bool {
+        true
     }
 }
 
