@@ -145,49 +145,26 @@ export async function run(app: HTMLElement) {
             case 'rectangle':
                 const w = params.width / 2;
                 const h = params.height / 2;
-                const rectWall = {
-                    contains: (x: number, y: number) => Math.abs(x) <= w && Math.abs(y) <= h,
-                    cut: (x: number, y: number) => {
-                        if (Math.abs(x) <= w && Math.abs(y) <= h) return null;
-                        
-                        let px = Math.max(-w, Math.min(w, x));
-                        let py = Math.max(-h, Math.min(h, y));
-                        
-                        let nx = 0, ny = 0;
-                        if (Math.abs(x) - w > Math.abs(y) - h) {
-                            nx = Math.sign(x);
-                        } else {
-                            ny = Math.sign(y);
-                        }
-                        
-                        return {
-                            point: [px, py],
-                            normal: [nx, ny]
-                        };
-                    }
-                };
                 // @ts-ignore
-                tess.add_wall(Wall2D.newCustom(rectWall, -1000));
+                tess.add_wall(Wall2D.new_line(+w, 0.0, -1.0, 0, -1000));
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(-w, 0.0, +1.0, 0, -1000));
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(0.0, +h, 0.0, -1.0, -1000));
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(0.0, -h, 0.0, +1.0, -1000));
                 break;
             case 'diamond':
-                 const r = params.radius;
-                 const diamondWall = {
-                     contains: (x: number, y: number) => Math.abs(x) + Math.abs(y) <= r,
-                     cut: (x: number, y: number) => {
-                         if (Math.abs(x) + Math.abs(y) <= r) return null;
-                         const sx = Math.sign(x) || 1;
-                         const sy = Math.sign(y) || 1;
-                         const nx = sx / Math.sqrt(2);
-                         const ny = sy / Math.sqrt(2);
-                         return {
-                             point: [sx * r, 0],
-                             normal: [nx, ny]
-                         };
-                     }
-                 };
-                 // @ts-ignore
-                 tess.add_wall(Wall2D.newCustom(diamondWall, -1000));
-                 break;
+                const r = params.radius;
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(-r / 2, -r / 2, +1, +1, -1000));
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(+r / 2, +r / 2, -1, -1, -1000));
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(-r / 2, +r / 2, +1, -1, -1000));
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_line(+r / 2, -r / 2, -1, +1, -1000));
+                break;
         }
 
         tess.random_generators(params.count);
