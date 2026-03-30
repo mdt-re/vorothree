@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["d2","d3_faces"],"trait":["Cell"]};
+window.SIDEBAR_ITEMS = {"mod":["cell_2d","cell_3d_faces"],"trait":["Cell"]};

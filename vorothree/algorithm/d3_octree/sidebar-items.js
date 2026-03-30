@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["dist_sq_to_bounds"],"struct":["AlgorithmOctree","NearestIterator","Point","SearchItem"]};

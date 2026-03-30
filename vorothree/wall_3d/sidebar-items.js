@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["CatmullRomGeometry","ConeGeometry","ConvexPolyhedronGeometry","CubicBezierGeometry","CylinderGeometry","PlaneGeometry","SphereGeometry","TorusGeometry","TrefoilKnotGeometry"]};

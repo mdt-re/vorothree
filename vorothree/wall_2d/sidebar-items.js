@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AnnulusGeometry","CircleGeometry","ConvexPolygonGeometry2D","CubicBezierGeometry2D","LineGeometry"]};

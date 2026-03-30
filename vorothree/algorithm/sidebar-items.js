@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["d2_grid","d3_grid","d3_octree"],"trait":["SpatialAlgorithm"]};
+window.SIDEBAR_ITEMS = {"mod":["algo_2d_grid","algo_3d_grid","algo_3d_octree"],"trait":["SpatialAlgorithm"]};
