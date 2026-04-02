@@ -13,6 +13,7 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '10';
 
     // --- UI for Results ---
     const resultsDiv = document.createElement('div');
@@ -28,6 +29,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.textTransform = 'lowercase';
+    resultsDiv.style.zIndex = '10';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';
@@ -51,6 +53,7 @@ export async function run(app: HTMLElement) {
     legendDiv.style.pointerEvents = 'none';
     legendDiv.style.userSelect = 'none';
     legendDiv.style.display = 'none';
+    legendDiv.style.zIndex = '10';
     app.appendChild(legendDiv);
 
     const params = {
@@ -60,6 +63,7 @@ export async function run(app: HTMLElement) {
         sides: 6,
         width: 60.0,
         height: 60.0,
+        tube: 5.0,
         count: 500,
         opacity: 0.5,
         showEdges: true,
@@ -87,11 +91,15 @@ export async function run(app: HTMLElement) {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     app.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    renderer.domElement.style.left = '0px';
 
     const labelRenderer = new CSS2DRenderer();
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.domElement.style.position = 'absolute';
     labelRenderer.domElement.style.top = '0px';
+    labelRenderer.domElement.style.left = '0px';
     labelRenderer.domElement.style.pointerEvents = 'none';
     app.appendChild(labelRenderer.domElement);
 
@@ -155,7 +163,6 @@ export async function run(app: HTMLElement) {
                 tess.add_wall(Wall2D.new_line(0.0, -h, 0.0, +1.0, -1000));
                 break;
             case 'diamond':
-                const r = params.radius;
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_line(-r / 2, -r / 2, +1, +1, -1000));
                 // @ts-ignore
@@ -164,6 +171,11 @@ export async function run(app: HTMLElement) {
                 tess.add_wall(Wall2D.new_line(-r / 2, +r / 2, +1, -1, -1000));
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_line(+r / 2, -r / 2, -1, +1, -1000));
+                break;
+            case 'bezier':
+                const r = params.radius;
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_bezier(-r, -r, -r / 2, r, r / 2, -r, r, r, params.tube, 100, false, -1000));
                 break;
         }
 
@@ -254,21 +266,21 @@ export async function run(app: HTMLElement) {
 
                 // Labels
                 if (params.showLabels || params.showNeighborLabels) {
-                    let cx = 0, cy = 0;
-                    for(let j=0; j<numVerts; j++) {
-                        cx += verts[j*2];
-                        cy += verts[j*2+1];
-                    }
-                    cx /= numVerts;
-                    cy /= numVerts;
+                    const centroid = cell.centroid();
+                    const cx = centroid[0];
+                    const cy = centroid[1];
 
                     if (params.showLabels) {
                         const div = document.createElement('div');
                         div.textContent = i.toString();
                         div.style.color = 'white';
                         div.style.fontSize = '10px';
+                        div.style.height = '10px';
                         div.style.fontFamily = 'sans-serif';
                         div.style.textShadow = '1px 1px 1px #000';
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.style.justifyContent = 'center';
 
                         const label = new CSS2DObject(div);
                         label.position.set(cx, cy, 0);
@@ -293,7 +305,11 @@ export async function run(app: HTMLElement) {
                             div.textContent = neighborId.toString();
                             div.style.color = '#ffaa00';
                             div.style.fontSize = '8px';
+                            div.style.height = '8px';
                             div.style.fontFamily = 'sans-serif';
+                            div.style.display = 'flex';
+                            div.style.alignItems = 'center';
+                            div.style.justifyContent = 'center';
 
                             const label = new CSS2DObject(div);
                             label.position.set(lx, ly, 0);
@@ -352,21 +368,23 @@ export async function run(app: HTMLElement) {
     initTessellation();
 
     gui.add(params, 'count', 10, 2000, 10).onChange(initTessellation);
-    const wallFolder = gui.addFolder('Wall Settings');
-    const wallTypeCtrl = wallFolder.add(params, 'wallType', ['circle', 'annulus', 'regular_polygon', 'rectangle', 'diamond']);
+    const wallFolder = gui.addFolder('wall settings');
+    const wallTypeCtrl = wallFolder.add(params, 'wallType', ['circle', 'annulus', 'regular_polygon', 'rectangle', 'diamond', 'bezier']).name('wall');
     const radiusCtrl = wallFolder.add(params, 'radius', 10, 50).onChange(initTessellation);
-    const innerRadiusCtrl = wallFolder.add(params, 'innerRadius', 5, 45).onChange(initTessellation);
+    const innerRadiusCtrl = wallFolder.add(params, 'innerRadius', 5, 45).name('inner radius').onChange(initTessellation);
     const sidesCtrl = wallFolder.add(params, 'sides', 3, 12, 1).onChange(initTessellation);
     const widthCtrl = wallFolder.add(params, 'width', 10, 100).onChange(initTessellation);
     const heightCtrl = wallFolder.add(params, 'height', 10, 100).onChange(initTessellation);
+    const tubeCtrl = wallFolder.add(params, 'tube', 1, 20).onChange(initTessellation);
 
     const updateVisibility = () => {
         const type = params.wallType;
-        radiusCtrl.show(['circle', 'annulus', 'regular_polygon', 'diamond'].includes(type));
+        radiusCtrl.show(['circle', 'annulus', 'regular_polygon', 'diamond', 'bezier'].includes(type));
         innerRadiusCtrl.show(type === 'annulus');
         sidesCtrl.show(type === 'regular_polygon');
         widthCtrl.show(type === 'rectangle');
         heightCtrl.show(type === 'rectangle');
+        tubeCtrl.show(type === 'bezier');
     };
 
     wallTypeCtrl.onChange(() => {
@@ -376,12 +394,12 @@ export async function run(app: HTMLElement) {
     updateVisibility();
     
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
-    gui.add(params, 'showEdges').onChange(updateVisualization);
-    gui.add(params, 'checkNeighbors').onChange(updateVisualization);
-    gui.add(params, 'colorByVertexCount').name('Color by Vertices').onChange(updateVisualization);
-    gui.add(params, 'showLabels').onChange(updateVisualization);
-    gui.add(params, 'showNeighborLabels').name('Show Neighbors').onChange(updateVisualization);
-    gui.add(params, 'showFaces').onChange(updateVisualization);
+    gui.add(params, 'showEdges').name('show edges').onChange(updateVisualization);
+    gui.add(params, 'checkNeighbors').name('check neighbors').onChange(updateVisualization);
+    gui.add(params, 'colorByVertexCount').name('color (#vertices)').onChange(updateVisualization);
+    gui.add(params, 'showLabels').name('show ids').onChange(updateVisualization);
+    gui.add(params, 'showNeighborLabels').name('show neighbors').onChange(updateVisualization);
+    gui.add(params, 'showFaces').name('show faces').onChange(updateVisualization);
 
     function animate() {
         if (!app.isConnected) return;

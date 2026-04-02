@@ -21,6 +21,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.textTransform = 'lowercase';
+    resultsDiv.style.zIndex = '10';
 
     const infoText = document.createElement('div');
     infoText.innerText = 'Ready';
@@ -32,6 +33,7 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '10';
 
     const stats = new Stats();
     stats.dom.style.position = 'static';
@@ -62,6 +64,9 @@ export async function run(app: HTMLElement) {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     app.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    renderer.domElement.style.left = '0px';
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -146,15 +151,15 @@ export async function run(app: HTMLElement) {
         const sVertsPerFace = getStats(vertsPerFace);
 
         infoText.innerText = 
-            `Relaxation:   ${dt.toFixed(2)} ms\n` +
+            `relaxation:   ${dt.toFixed(2)} ms\n` +
             `--------------------------------------\n` +
-            `Metric        | Avg       | Std Dev   \n` +
+            `metric        | avg       | std dev   \n` +
             `--------------------------------------\n` +
-            `Volume        | ${sVol.avg.toFixed(2).padStart(9)} | ${sVol.std.toFixed(2).padStart(9)}\n` +
-            `Faces/Cell    | ${sFaces.avg.toFixed(2).padStart(9)} | ${sFaces.std.toFixed(2).padStart(9)}\n` +
-            `Verts/Cell    | ${sVerts.avg.toFixed(2).padStart(9)} | ${sVerts.std.toFixed(2).padStart(9)}\n` +
-            `Verts/Face    | ${sVertsPerFace.avg.toFixed(2).padStart(9)} | ${sVertsPerFace.std.toFixed(2).padStart(9)}\n` +
-            `Face Area     | ${sAreas.avg.toFixed(2).padStart(9)} | ${sAreas.std.toFixed(2).padStart(9)}`;
+            `volume        | ${sVol.avg.toFixed(2).padStart(9)} | ${sVol.std.toFixed(2).padStart(9)}\n` +
+            `faces/cell    | ${sFaces.avg.toFixed(2).padStart(9)} | ${sFaces.std.toFixed(2).padStart(9)}\n` +
+            `verts/cell    | ${sVerts.avg.toFixed(2).padStart(9)} | ${sVerts.std.toFixed(2).padStart(9)}\n` +
+            `verts/face    | ${sVertsPerFace.avg.toFixed(2).padStart(9)} | ${sVertsPerFace.std.toFixed(2).padStart(9)}\n` +
+            `face area     | ${sAreas.avg.toFixed(2).padStart(9)} | ${sAreas.std.toFixed(2).padStart(9)}`;
     }
 
     function resetGenerators() {
@@ -209,10 +214,10 @@ export async function run(app: HTMLElement) {
 
     resetGenerators();
 
-    gui.add(params, 'count', 10, 1000, 10).name('Point Count').onChange(resetGenerators);
-    gui.add(params, 'autoRelax').name('Auto Relax');
-    gui.add(params, 'relax').name('Step Relax');
-    gui.add(params, 'reset').name('Reset');
+    gui.add(params, 'count', 10, 1000, 10).name('generator count').onChange(resetGenerators);
+    gui.add(params, 'autoRelax').name('auto relax');
+    gui.add(params, 'relax').name('step relax');
+    gui.add(params, 'reset').name('reset');
 
     // Handle screenshot
     window.addEventListener('keydown', (event) => {

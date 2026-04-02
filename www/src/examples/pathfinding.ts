@@ -15,6 +15,7 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '10';
 
     // --- UI for Results ---
     const resultsDiv = document.createElement('div');
@@ -30,6 +31,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.textTransform = 'lowercase';
+    resultsDiv.style.zIndex = '10';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';
@@ -61,6 +63,9 @@ export async function run(app: HTMLElement) {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     app.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    renderer.domElement.style.left = '0px';
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;

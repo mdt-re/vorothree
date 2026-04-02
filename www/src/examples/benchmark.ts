@@ -21,6 +21,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.textTransform = 'lowercase';
     resultsDiv.style.display = 'none';
+    resultsDiv.style.zIndex = '10';
     app.appendChild(resultsDiv);
 
     // --- Three.js Setup ---
@@ -46,6 +47,9 @@ export async function run(app: HTMLElement) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     app.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    renderer.domElement.style.left = '0px';
 
     const controls = new OrbitControls(activeCamera, renderer.domElement);
     controls.enableDamping = true;
@@ -65,7 +69,7 @@ export async function run(app: HTMLElement) {
 
     // --- Benchmark Logic ---
     const params = {
-        cameraType: 'Perspective',
+        cameraType: 'perspective',
         count: 1000,
         boxSize: 20,
         n: 10,
@@ -81,10 +85,11 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '10';
 
-    gui.add(params, 'cameraType', ['Perspective', 'Orthographic']).name('Camera').onChange((val: string) => {
+    gui.add(params, 'cameraType', ['perspective', 'orthographic']).name('camera').onChange((val: string) => {
         const prevCamera = activeCamera;
-        if (val === 'Perspective') {
+        if (val === 'perspective') {
             activeCamera = persCamera;
         } else {
             activeCamera = orthoCamera;
@@ -93,13 +98,13 @@ export async function run(app: HTMLElement) {
         activeCamera.rotation.copy(prevCamera.rotation);
         controls.object = activeCamera;
     });
-    gui.add(params, 'count', 100, 50000, 100).name('Particle Count');
-    gui.add(params, 'boxSize', 10, 100).name('Box Size');
-    gui.add(params, 'n', 1, 50, 1).name('Grid Size (n)');
-    gui.add(params, 'capacity', 4, 20, 1).name('Octree Cap');
-    gui.add(params, 'render').name('Render Result');
-    gui.add(params, 'run').name('Run Benchmark');
-    gui.add(params, 'download').name('Download CSV');
+    gui.add(params, 'count', 100, 50000, 100).name('particle count');
+    gui.add(params, 'boxSize', 10, 100).name('box size');
+    gui.add(params, 'n', 1, 50, 1).name('grid size (n)');
+    gui.add(params, 'capacity', 4, 20, 1).name('octree cap');
+    gui.add(params, 'render').name('render result');
+    gui.add(params, 'run').name('run benchmark');
+    gui.add(params, 'download').name('download CSV');
 
     function runBenchmark() {
         if (resultsDiv) {

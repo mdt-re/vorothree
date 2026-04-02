@@ -12,6 +12,7 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '10';
 
     // --- UI for Results ---
     const resultsDiv = document.createElement('div');
@@ -27,6 +28,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.textTransform = 'lowercase';
+    resultsDiv.style.zIndex = '10';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';
@@ -70,6 +72,9 @@ export async function run(app: HTMLElement) {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     app.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    renderer.domElement.style.left = '0px';
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -558,9 +563,9 @@ export async function run(app: HTMLElement) {
 
     gui.add(params, 'count', 100, 5000, 100).onChange(initTessellation);
     const visFolder = gui.addFolder('Visualization');
-    visFolder.add(params, 'showEdges').name('Show Edges').onChange(updateVisualization);
-    visFolder.add(params, 'boundaryEdgesOnly').name('Boundary Edges Only').onChange(updateVisualization);
-    visFolder.add(params, 'edgeOpacity', 0, 1).name('Edge Opacity').onChange((v: number) => edgeMaterial.opacity = v);
+    visFolder.add(params, 'showEdges').name('show edges').onChange(updateVisualization);
+    visFolder.add(params, 'boundaryEdgesOnly').name('boundary edges').onChange(updateVisualization);
+    visFolder.add(params, 'edgeOpacity', 0, 1).name('edge opacity').onChange((v: number) => edgeMaterial.opacity = v);
 
     const wallTypeCtrl = gui.add(params, 'wallType', ['sphere', 'cylinder', 'cone', 'torus', 'trefoil', 'tetrahedron', 'hexahedron', 'octahedron', 'dodecahedron', 'icosahedron', 'ellipsoid', 'bezier', 'catmull']).name('wall');
 
@@ -595,21 +600,21 @@ export async function run(app: HTMLElement) {
     });
     updateVisibility();
 
-    gui.add(params, 'svgPrecision', 1, 10, 1).name('SVG Precision');
-    gui.add(params, 'exportSVG').name('Export to SVG');
-    gui.add(params, 'exportJSON').name('Export to JSON');
+    gui.add(params, 'svgPrecision', 1, 10, 1).name('svg precision');
+    gui.add(params, 'exportSVG').name('export to svg');
+    gui.add(params, 'exportJSON').name('export to json');
 
-    const animFolder = gui.addFolder('Animation Export');
-    animFolder.add(params, 'animFrames', 2, 120, 1).name('Frames');
-    animFolder.add(params, 'animDuration', 0.1, 60).name('Duration (s)');
-    animFolder.add(params, 'exportAnimatedSVG').name('Export Animated SVG');
+    const animFolder = gui.addFolder('Animation');
+    animFolder.add(params, 'animFrames', 2, 120, 1).name('frames');
+    animFolder.add(params, 'animDuration', 0.1, 60).name('duration (s)');
+    animFolder.add(params, 'exportAnimatedSVG').name('export animated svg');
 
     // Handle screenshot
     window.addEventListener('keydown', (event) => {
         if (event.key === 'p') {
             renderer.render(scene, camera);
             const link = document.createElement('a');
-            link.download = 'walls.png';
+            link.download = 'vector_graphics.png';
             link.href = renderer.domElement.toDataURL('image/png');
             link.click();
         }

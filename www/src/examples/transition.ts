@@ -11,6 +11,7 @@ export async function run(app: HTMLElement) {
     gui.domElement.style.position = 'absolute';
     gui.domElement.style.top = '10px';
     gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '10';
 
     // --- UI for Results ---
     const resultsDiv = document.createElement('div');
@@ -26,6 +27,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.style.pointerEvents = 'none';
     resultsDiv.style.userSelect = 'none';
     resultsDiv.style.textTransform = 'lowercase';
+    resultsDiv.style.zIndex = '10';
 
     const infoText = document.createElement('div');
     infoText.style.marginBottom = '10px';
@@ -38,7 +40,7 @@ export async function run(app: HTMLElement) {
     resultsDiv.appendChild(stats.dom);
 
     const params = {
-        transition: 'Dodec <-> Ico',
+        transition: 'dodec <-> ico',
         count: 1000,
         radius: 40,
         opacity: 0.3,
@@ -56,6 +58,9 @@ export async function run(app: HTMLElement) {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     app.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    renderer.domElement.style.left = '0px';
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -169,18 +174,18 @@ export async function run(app: HTMLElement) {
         }
 
         const avgVolume = cellCount > 0 ? totalVolume / cellCount : 0;
-        infoText.innerText = `Total Volume:   ${totalVolume.toFixed(0)}\n` +
-                             `Total Area:     ${totalArea.toFixed(0)}\n` +
-                             `Avg Cell Vol:   ${avgVolume.toFixed(1)}`;
+        infoText.innerText = `total volume:   ${totalVolume.toFixed(0)}\n` +
+                             `total area:     ${totalArea.toFixed(0)}\n` +
+                             `avg cell vol:   ${avgVolume.toFixed(1)}`;
     }
 
     initGenerators();
 
-    gui.add(params, 'transition', ['Dodec <-> Ico', 'Cube <-> Octa', 'Sphere <-> Cube', 'Cylinder <-> Cone']);
+    gui.add(params, 'transition', ['dodec <-> ico', 'cube <-> octa', 'sphere <-> cube', 'cylinder <-> cone']);
     gui.add(params, 'count', 100, 5000, 100).onChange(initGenerators);
-    gui.add(params, 'radius', 10, 60).name('Base Radius');
-    gui.add(params, 'animate').name('Morph Shape');
-    gui.add(params, 'speed', 0.1, 5.0).name('Anim Speed');
+    gui.add(params, 'radius', 10, 60).name('radius');
+    gui.add(params, 'animate').name('morph shape');
+    gui.add(params, 'speed', 0.1, 5.0).name('anim speed');
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
 
     // --- Precompute Normals for Morphing ---
