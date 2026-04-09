@@ -1,2 +1,2 @@
-createSrcSidebar('[["vorothree",["",[["algorithm",[],["algo_2d_grid.rs","algo_3d_grid.rs","algo_3d_octree.rs","mod.rs"]],["bounds",[],["mod.rs"]],["cell",[],["cell_2d.rs","cell_3d_faces.rs","mod.rs"]],["wall",[],["mod.rs","wall_2d.rs","wall_3d.rs"]],["wasm",[],["mod.rs","utils.rs","wasm_2d.rs","wasm_3d.rs"]]],["lib.rs","tessellation.rs"]]]]');
-//{"start":19,"fragment_lengths":[322]}
+createSrcSidebar('[["voronoid",["",[["algorithm",[],["algo_2d_grid.rs","algo_3d_grid.rs","algo_3d_octree.rs","mod.rs"]],["bounds",[],["mod.rs"]],["cell",[],["cell_2d.rs","cell_3d_faces.rs","mod.rs"]],["wall",[],["mod.rs","wall_2d.rs","wall_3d.rs"]],["wasm",[],["mod.rs","utils.rs","wasm_2d.rs","wasm_3d.rs"]]],["lib.rs","tessellation.rs"]]]]');
+//{"start":19,"fragment_lengths":[321]}
