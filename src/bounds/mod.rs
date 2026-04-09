@@ -1,4 +1,4 @@
-/// Generic bounding box for N-dimensional space.
+/// Generic bounding box for D-dimensional space.
 #[derive(Clone, Copy, Debug)]
 pub struct BoundingBox<const D: usize> {
     pub min: [f64; D],

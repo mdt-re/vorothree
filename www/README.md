@@ -1,6 +1,6 @@
-# vorothree WASM
+# voronoid WASM
 
-This directory contains the web integration for the `vorothree` WASM library, including interactive examples, tests, and benchmarks. The live version is hosted on GitHub Pages.
+This directory contains the web integration for the `voronoid` WASM library, including interactive examples, tests, and benchmarks. The live version is hosted on GitHub Pages.
 
 ## Setup
 

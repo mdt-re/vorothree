@@ -23,7 +23,7 @@ jobs:
         run: cargo doc --no-deps --document-private-items
 
       - name: Create index.html redirect
-        run: echo '<meta http-equiv="refresh" content="0; url=vorothree/index.html">' > target/doc/index.html
+        run: echo '<meta http-equiv="refresh" content="0; url=voronoid/index.html">' > target/doc/index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

@@ -1,6 +1,6 @@
 {
-  "entryPoints": ["../pkg/vorothree.d.ts"],
+  "entryPoints": ["../pkg/voronoid.d.ts"],
   "out": "docs",
-  "name": "vorothree WASM API",
+  "name": "voronoid WASM API",
   "readme": "none"
 }

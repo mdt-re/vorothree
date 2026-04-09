@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'voronoid';
 import { SVGRenderer } from 'three/examples/jsm/renderers/SVGRenderer.js';
 
 export async function run(app: HTMLElement) {
@@ -85,7 +85,7 @@ export async function run(app: HTMLElement) {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
  
-    // --- Vorothree Setup ---
+    // --- voronoid Setup ---
     let tess: Tessellation3D;
 
     function initTessellation() {

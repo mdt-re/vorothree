@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains examples demonstrating how to use the `vorothree` library.
+This directory contains examples demonstrating how to use the `voronoid` library.
 
 ## Tessellation SVG
 

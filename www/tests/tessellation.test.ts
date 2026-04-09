@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
 
-describe('Vorothree WASM', () => {
+describe('voronoid WASM', () => {
     let init: any;
     let Tessellation: any;
     let BoundingBox: any;
@@ -13,7 +13,7 @@ describe('Vorothree WASM', () => {
             // @ts-ignore
             global.self = global;
         }
-        const module = await import('vorothree');
+        const module = await import('voronoid');
         init = module.default;
         Tessellation = module.Tessellation3D;
         BoundingBox = module.BoundingBox3D;
@@ -21,7 +21,7 @@ describe('Vorothree WASM', () => {
         // In a test environment, we initialize the module.
         // We load the WASM file manually because 'fetch' is not available/working 
         // for local files in the Node.js environment used by Vitest.
-        const wasmPath = path.resolve(process.cwd(), '../pkg/vorothree_bg.wasm');
+        const wasmPath = path.resolve(process.cwd(), '../pkg/voronoid_bg.wasm');
         const buffer = await fs.readFile(wasmPath);
         await init(buffer);
     });

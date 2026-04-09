@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Tessellation3D/*, TessellationMoctree3D*/, BoundingBox3D } from 'vorothree';
+import { Tessellation3D/*, TessellationMoctree3D*/, BoundingBox3D } from 'voronoid';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = ''; // Clear existing content

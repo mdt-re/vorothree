@@ -1,5 +1,5 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces};
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::collections::BTreeMap;

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-use vorothree::wall_3d::SphereGeometry;
-use vorothree::{Algorithm3DGrid, BoundingBox, Cell3DFaces, Tessellation, Wall, WALL_ID_MAX};
+use voronoid::wall_3d::SphereGeometry;
+use voronoid::{Algorithm3DGrid, BoundingBox, Cell3DFaces, Tessellation, Wall, WALL_ID_MAX};
 
 #[test]
 fn test_comparisons_face_counts() {

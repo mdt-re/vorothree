@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
 
 fn benchmark_cell_volume(c: &mut Criterion) {
     let bounds = BoundingBox::new([0.0, 0.0, 0.0], [100.0, 100.0, 100.0]);

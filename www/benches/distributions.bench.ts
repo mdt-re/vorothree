@@ -12,10 +12,10 @@ if (typeof self === 'undefined') {
     self.removeEventListener = () => {};
 }
 
-const { default: init, Tessellation3D, BoundingBox3D, Wall3D, Tessellation2D, BoundingBox2D } = await import('vorothree');
+const { default: init, Tessellation3D, BoundingBox3D, Wall3D, Tessellation2D, BoundingBox2D } = await import('voronoid');
 
 // Initialize WASM module globally for the benchmarks
-const wasmPath = path.resolve(process.cwd(), '../pkg/vorothree_bg.wasm');
+const wasmPath = path.resolve(process.cwd(), '../pkg/voronoid_bg.wasm');
 const buffer = await fs.readFile(wasmPath);
 await init({ module_or_path: buffer });
 

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation3D, BoundingBox3D, Wall3D } from 'vorothree';
+import { Tessellation3D, BoundingBox3D, Wall3D } from 'voronoid';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export async function run(app: HTMLElement) {
@@ -127,7 +127,7 @@ export async function run(app: HTMLElement) {
     // --- Physics Boundaries (Tube) ---
     let wallBody: RAPIER.RigidBody;
 
-    // --- Vorothree Setup ---
+    // --- voronoid Setup ---
     const bounds = new BoundingBox3D(-boxSize/2, -boxSize/2, -boxSize/2, boxSize/2, boxSize/2, boxSize/2);
     let tess = new Tessellation3D(bounds, 15, 15, 15);
 
@@ -256,7 +256,7 @@ export async function run(app: HTMLElement) {
             const wallColliderDesc = RAPIER.ColliderDesc.trimesh(tubeVerts, tubeIndices);
             world.createCollider(wallColliderDesc, wallBody);
 
-            // Vorothree Wall
+            // voronoid Wall
             const wallPoints = new Float64Array(points.length * 3);
             for (let i = 0; i < points.length; i++) {
                 wallPoints[i * 3] = points[i].x;
@@ -288,7 +288,7 @@ export async function run(app: HTMLElement) {
             const wallColliderDesc = RAPIER.ColliderDesc.trimesh(coneVerts, coneIndices);
             world.createCollider(wallColliderDesc, wallBody);
 
-            // Custom Vorothree Wall for Cone
+            // Custom voronoid Wall for Cone
             const coneWall = {
                 contains: (x: number, y: number, z: number) => {
                     if (z < -75 || z > 75) return false;

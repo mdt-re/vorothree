@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { Tessellation3D, BoundingBox3D } from 'vorothree';
+import { Tessellation3D, BoundingBox3D } from 'voronoid';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = '';
@@ -84,7 +84,7 @@ export async function run(app: HTMLElement) {
     scene.add(light);
     scene.add(new THREE.AmbientLight(0x404040));
 
-    // --- Vorothree ---
+    // --- voronoid ---
     const size = 100;
     const bounds = new BoundingBox3D(-size/2, -size/2, -size/2, size/2, size/2, size/2);
     const tess = new Tessellation3D(bounds, 8, 8, 8);

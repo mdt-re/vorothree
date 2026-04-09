@@ -1,6 +1,6 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Define the output file and dimensions

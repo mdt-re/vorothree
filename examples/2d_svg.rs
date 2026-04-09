@@ -1,7 +1,7 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{Algorithm2DGrid, BoundingBox, Cell2D, Tessellation, Wall};
-use vorothree::wall_2d::{LineGeometry, CircleGeometry, ConvexPolygonGeometry2D, AnnulusGeometry, CubicBezierGeometry2D};
+use voronoid::{Algorithm2DGrid, BoundingBox, Cell2D, Tessellation, Wall};
+use voronoid::wall_2d::{LineGeometry, CircleGeometry, ConvexPolygonGeometry2D, AnnulusGeometry, CubicBezierGeometry2D};
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

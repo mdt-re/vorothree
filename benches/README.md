@@ -1,6 +1,6 @@
 # Benchmarks
 
-This folder contains performance benchmarks for the `vorothree` library, utilizing [Criterion.rs](https://crates.io/crates/criterion).
+This folder contains performance benchmarks for the `voronoid` library, utilizing [Criterion.rs](https://crates.io/crates/criterion).
 
 ## Usage
 

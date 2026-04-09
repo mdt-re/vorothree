@@ -12,11 +12,11 @@ if (typeof self === 'undefined') {
     global.self.removeEventListener = () => {};
 }
 
-const { default: init, Tessellation3D, BoundingBox3D } = await import('vorothree');
+const { default: init, Tessellation3D, BoundingBox3D } = await import('voronoid');
 
 // Initialize WASM module globally for the benchmarks
 // We use top-level await here which Vitest supports
-const wasmPath = path.resolve(process.cwd(), '../pkg/vorothree_bg.wasm');
+const wasmPath = path.resolve(process.cwd(), '../pkg/voronoid_bg.wasm');
 const buffer = await fs.readFile(wasmPath);
 await init({ module_or_path: buffer });
 

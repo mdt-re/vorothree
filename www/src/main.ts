@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import './style.css';
-import init from 'vorothree';
+import init from 'voronoid';
 
 const examples: Record<string, () => Promise<{ run: (app: HTMLElement) => Promise<void> }>> = {
     'moving_cell': () => import('./examples/moving_cell'),
@@ -124,7 +124,7 @@ async function run() {
         const infoDiv = document.createElement('div');
         infoDiv.className = 'overlay overlay-title overlay-interactive';
 
-        const githubUrl = `https://github.com/mdt-re/vorothree/tree/main/www/src/examples/${details?.file || exampleName + '.ts'}`;
+        const githubUrl = `https://github.com/mdt-re/voronoid/tree/main/www/src/examples/${details?.file || exampleName + '.ts'}`;
         
         infoDiv.innerHTML = `
             <div style="display: flex; align-items: center; margin-bottom: 8px;">

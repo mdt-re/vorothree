@@ -1,6 +1,6 @@
 use criterion::{criterion_group, Criterion, BenchmarkId};
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Wall, Cell3DFaces};
-use vorothree::wall_3d::TrefoilKnotGeometry;
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Wall, Cell3DFaces};
+use voronoid::wall_3d::TrefoilKnotGeometry;
 use rand::prelude::*;
 use plotters::prelude::*;
 use serde::Deserialize;

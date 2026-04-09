@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 // @ts-ignore
-import { Tessellation2D, BoundingBox2D, Wall2D } from 'vorothree';
+import { Tessellation2D, BoundingBox2D, Wall2D } from 'voronoid';
 
 export async function run(app: HTMLElement) {
     app.innerHTML = '';
@@ -129,7 +129,7 @@ export async function run(app: HTMLElement) {
     const boxLines = new THREE.LineSegments(boxGeo, new THREE.LineBasicMaterial({ color: 0x888888 }));
     scene.add(boxLines);
 
-    // --- Vorothree Setup ---
+    // --- voronoid Setup ---
     let tess: any;
 
     function initTessellation() {

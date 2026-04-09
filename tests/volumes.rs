@@ -1,5 +1,5 @@
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces, Wall, WALL_ID_MAX};
-use vorothree::wall_3d::{SphereGeometry, CylinderGeometry, ConvexPolyhedronGeometry};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces, Wall, WALL_ID_MAX};
+use voronoid::wall_3d::{SphereGeometry, CylinderGeometry, ConvexPolyhedronGeometry};
 
 const GRID_SIZE: usize = 20;
 

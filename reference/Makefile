@@ -1,6 +1,6 @@
 TEX = pdflatex
 BIB = bibtex
-MAIN = vorothree
+MAIN = voronoid
 BIBFILE = references.bib
 
 .PHONY: all clean

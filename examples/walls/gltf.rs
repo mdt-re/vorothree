@@ -2,10 +2,10 @@ use std::fs::File;
 use std::io::Write;
 use std::collections::BTreeMap;
 use rand::Rng;
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Wall, Cell3DFaces};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Wall, Cell3DFaces};
 use gltf::json;
 use gltf::json::validation::{Checked, USize64};
-use vorothree::wall_3d::{ConeGeometry, TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
+use voronoid::wall_3d::{ConeGeometry, TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
 
 struct GltfBuilder {
     positions: Vec<[f32; 3]>,
@@ -409,7 +409,7 @@ impl GltfBuilder {
             accessors: vec![accessor_pos, accessor_ind, accessor_edge_ind, accessor_gen_pos, accessor_gen_ind],
             animations: vec![],
             asset: json::Asset {
-                generator: Some("vorothree example".to_string()),
+                generator: Some("voronoid example".to_string()),
                 version: "2.0".to_string(),
                 ..Default::default()
             },

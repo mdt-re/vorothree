@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, Cell3DFaces, Algorithm3DGrid, Tessellation};
+use voronoid::{BoundingBox, Cell3DFaces, Algorithm3DGrid, Tessellation};
 
 #[test]
 fn test_cell_metrics() {

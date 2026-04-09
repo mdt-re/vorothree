@@ -1,5 +1,5 @@
 {
-  "name": "vorothree-demo",
+  "name": "voronoid-demo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,7 +16,7 @@
     "ngraph.graph": "^20.1.1",
     "ngraph.path": "^1.6.1",
     "three": "^0.182.0",
-    "vorothree": "file:../pkg"
+    "voronoid": "file:../pkg"
   },
   "devDependencies": {
     "@types/node": "^25.0.6",

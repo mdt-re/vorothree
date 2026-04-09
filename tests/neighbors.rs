@@ -1,5 +1,5 @@
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces, Wall, Cell, WALL_ID_MAX};
-use vorothree::wall_3d::{SphereGeometry, PlaneGeometry, ConvexPolyhedronGeometry};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Algorithm3DOctree, Cell3DFaces, Wall, Cell, WALL_ID_MAX};
+use voronoid::wall_3d::{SphereGeometry, PlaneGeometry, ConvexPolyhedronGeometry};
 use rand::Rng;
 
 trait NeighborCell: Cell<3> {
@@ -16,7 +16,7 @@ impl NeighborCell for Cell3DFaces {
     fn face_area(&self, face_index: usize) -> f64 { self.face_area(face_index) }
 }
 
-fn check_reciprocity<C: NeighborCell, A: vorothree::SpatialAlgorithm<3>>(tess: &Tessellation<3, C, A>) {
+fn check_reciprocity<C: NeighborCell, A: voronoid::SpatialAlgorithm<3>>(tess: &Tessellation<3, C, A>) {
     let count = tess.count_cells();
     for i in 0..count {
         let cell = tess.get_cell(i).unwrap();

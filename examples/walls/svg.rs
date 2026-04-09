@@ -1,7 +1,7 @@
 use plotters::prelude::*;
 use rand::Rng;
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Wall, Cell3DFaces};
-use vorothree::wall_3d::{TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Wall, Cell3DFaces};
+use voronoid::wall_3d::{TrefoilKnotGeometry, PlaneGeometry, SphereGeometry, CylinderGeometry, TorusGeometry};
 
 fn draw_tessellation(
     tess: &Tessellation<3, Cell3DFaces, Algorithm3DGrid>,

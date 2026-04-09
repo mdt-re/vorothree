@@ -1,6 +1,6 @@
 # Integration Tests
 
-This folder contains all integration tests for the `vorothree` library.
+This folder contains all integration tests for the `voronoid` library.
 
 ## Usage
 

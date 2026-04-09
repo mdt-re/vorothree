@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
 
 fn main() {
     // Initialize Rayon explicitly so thread creation (clone3) happens

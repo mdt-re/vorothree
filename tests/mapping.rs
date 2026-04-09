@@ -1,4 +1,4 @@
-use vorothree::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
+use voronoid::{BoundingBox, Tessellation, Algorithm3DGrid, Cell3DFaces};
 
 #[test]
 fn test_mapping_face_counts() {
