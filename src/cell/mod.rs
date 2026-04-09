@@ -31,4 +31,14 @@ pub trait Cell<const D: usize>: Send + Sync + Sized + Clone {
 
     /// Check if the cell is empty (collapsed).
     fn is_empty(&self) -> bool;
+
+    /// Get the indices of neighboring cells. Negative values indicate bounding box or wall boundaries.
+    fn neighbors(&self) -> &[i32];
+
+    /// Returns the vertices shared by two neighboring boundaries.
+    fn shared_vertices(&self, neighbor_a: i32, neighbor_b: i32) -> Vec<f64> {
+        let _ = neighbor_a;
+        let _ = neighbor_b;
+        Vec::new()
+    }
 }

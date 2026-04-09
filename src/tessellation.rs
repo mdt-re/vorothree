@@ -13,12 +13,12 @@ use std::convert::TryInto;
 pub struct Tessellation<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> {
     pub bounds: BoundingBox<D>,
     pub generators: Vec<f64>,
-    pub combined_generators: Vec<f64>,
-    pub ghost_wall_ids: Vec<i32>,
-    pub ghost_normals: Vec<[f64; D]>,
     pub cells: Vec<C>,
     pub walls: Vec<Wall<D>>,
     pub algorithm: A,
+    pub seal_log: Vec<i32>,
+    pub prune_log: Vec<i32>,
+    pub prune_pos_log: Vec<f64>,
 }
 
 impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
@@ -26,50 +26,13 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
         Self {
             bounds,
             generators: Vec::new(),
-            combined_generators: Vec::new(),
-            ghost_wall_ids: Vec::new(),
-            ghost_normals: Vec::new(),
             cells: Vec::new(),
             walls: Vec::new(),
             algorithm,
+            seal_log: Vec::new(),
+            prune_log: Vec::new(),
+            prune_pos_log: Vec::new(),
         }
-    }
-
-    /// Efficiently computes all ghost generators resulting from curved walls and caches
-    /// them alongside the real generators to be processed uniformly by the spatial algorithm.
-    fn update_ghost_generators(&mut self) {
-        self.combined_generators.clear();
-        self.combined_generators.extend_from_slice(&self.generators);
-        self.ghost_wall_ids.clear();
-        self.ghost_normals.clear();
-
-        let count = self.generators.len() / D;
-        
-        for wall in &self.walls {
-            if !wall.is_planar() {
-                for i in 0..count {
-                    let offset = i * D;
-                    let g_slice = &self.generators[offset..offset + D];
-                    let g_pos: [f64; D] = g_slice.try_into().unwrap();
-                    
-                    wall.cut(&g_pos, &mut |point_on_surface, normal_out| {
-                        let mut ghost_pos = [0.0; D];
-                        let mut dist_to_plane = 0.0;
-                        for k in 0..D {
-                            dist_to_plane += (point_on_surface[k] - g_pos[k]) * normal_out[k];
-                        }
-                        for k in 0..D {
-                            ghost_pos[k] = g_pos[k] + 2.0 * dist_to_plane * normal_out[k];
-                        }
-                        self.combined_generators.extend_from_slice(&ghost_pos);
-                        self.ghost_wall_ids.push(wall.id());
-                        self.ghost_normals.push(normal_out);
-                    });
-                }
-            }
-        }
-        
-        self.algorithm.set_generators(&self.combined_generators, &self.bounds);
     }
 
     /// Update all generators at once. Only accepts generators that are inside the
@@ -100,7 +63,7 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
 
         valid_generators.shrink_to_fit();
         self.generators = valid_generators;
-        self.update_ghost_generators();
+        self.algorithm.set_generators(&self.generators, &self.bounds);
     }
 
     /// Update the position of a single generator by index. Only sets the generator
@@ -117,25 +80,14 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
             }
         }
 
-        let old_pos: [f64; D] = self.generators[offset..offset + D].try_into().unwrap();
+        let old_slice = &self.generators[offset..offset + D];
+        let old_pos: [f64; D] = old_slice.try_into().unwrap();
 
-        // Update the main generators list
+        self.algorithm
+            .update_generator(index, &old_pos, generator, &self.bounds);
+
         for (i, &val) in generator.iter().enumerate() {
             self.generators[offset + i] = val;
-        }
-
-        if self.walls.iter().any(|w| !w.is_planar()) {
-            // Expensive: non-planar walls exist, must rebuild ghosts
-            self.update_ghost_generators();
-        } else {
-            // Cheap: only planar walls, no ghosts to worry about.
-            // We can update the combined list (which is identical to generators)
-            // and tell the algorithm to update one generator.
-            for (i, &val) in generator.iter().enumerate() {
-                self.combined_generators[offset + i] = val;
-            }
-            self.algorithm
-                .update_generator(index, &old_pos, generator, &self.bounds);
         }
     }
 
@@ -165,7 +117,7 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
         }
         
         self.generators = points;
-        self.update_ghost_generators();
+        self.algorithm.set_generators(&self.generators, &self.bounds);
     }
 
     /// Imports generators from a text file.
@@ -237,7 +189,7 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
         if new_generators.len() != self.generators.len() {
             new_generators.shrink_to_fit();
             self.generators = new_generators;
-            self.update_ghost_generators();
+            self.algorithm.set_generators(&self.generators, &self.bounds);
         }
     }
 
@@ -250,7 +202,6 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
     /// Removes all walls from the tessellation.
     pub fn clear_walls(&mut self) {
         self.walls.clear();
-        self.update_ghost_generators();
     }
 
     /// Calculates all cells based on the current generators.
@@ -260,11 +211,11 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
     /// For the clipping it applies the algoritm as defined in the Cell implementation.
     /// It runs in parallel if the `rayon` feature is enabled (which is default).
     pub fn calculate(&mut self) {
+        self.seal_log.clear();
+        self.prune_log.clear();
+        self.prune_pos_log.clear();
         let count = self.generators.len() / D;
         let generators = &self.generators;
-        let combined_generators = &self.combined_generators;
-        let ghost_wall_ids = &self.ghost_wall_ids;
-        let ghost_normals = &self.ghost_normals;
         let bounds = &self.bounds;
         let walls = &self.walls;
         let algorithm = &self.algorithm;
@@ -273,9 +224,164 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
             .into_par_iter()
             .map_init(
                 || C::Scratch::default(),
-                |scratch, i| Self::compute_cell(i, generators, combined_generators, ghost_wall_ids, ghost_normals, bounds, walls, algorithm, scratch),
+                |scratch, i| Self::compute_cell(i, generators, bounds, walls, algorithm, scratch),
             )
             .collect();
+    }
+
+    /// Calculates cells, and then runs a post-processing pass to share
+    /// curved wall tangent planes between neighbors, guaranteeing watertight boundaries.
+    pub fn calculate_sealed(&mut self) {
+        self.calculate();
+
+        let count = self.generators.len() / D;
+        let generators = &self.generators;
+        let walls = &self.walls;
+
+        // 2. Extract neighbor topologies
+        // We need to know who neighbors who before we start mutating cells.
+        let mut topologies: Vec<Vec<usize>> = Vec::with_capacity(count);
+        let mut cell_walls: Vec<Vec<i32>> = Vec::with_capacity(count);
+        for cell in &self.cells {
+            let mut neighbors = Vec::new();
+            let mut non_planar_walls = Vec::new();
+            for &face_neighbor in cell.neighbors() {
+                if face_neighbor >= 0 && (face_neighbor as usize) < count {
+                    neighbors.push(face_neighbor as usize);
+                } else {
+                    if let Some(wall) = walls.iter().find(|w| w.id() == face_neighbor) {
+                        if !wall.is_planar() && !non_planar_walls.contains(&face_neighbor) {
+                            non_planar_walls.push(face_neighbor);
+                        }
+                    }
+                }
+            }
+            topologies.push(neighbors);
+            cell_walls.push(non_planar_walls);
+        }
+
+        // 3. Post-Op Planar Consensus (Pass 2)
+        // Note: Using `par_iter_mut` so we can clip cells in parallel!
+        let logs: Vec<Vec<i32>> = self.cells.par_iter_mut().enumerate().filter_map(|(i, cell)| {
+            let my_walls = &cell_walls[i];
+            if my_walls.is_empty() {
+                return None;
+            }
+
+            let mut scratch = C::Scratch::default();
+            let offset_i = i * D;
+            let g_pos: [f64; D] = generators[offset_i..offset_i + D].try_into().unwrap();
+            let mut local_log = Vec::new();
+            
+            // For every neighbor this cell has...
+            for &neighbor_idx in &topologies[i] {
+                let neighbor_walls = &cell_walls[neighbor_idx];
+
+                let offset_n = neighbor_idx * D;
+                let n_slice = &generators[offset_n..offset_n + D];
+                let n_pos: [f64; D] = n_slice.try_into().unwrap();
+
+                // Check if the neighbor generated any tangent planes from curved walls
+                for wall in walls {
+                    if !wall.is_planar() && my_walls.contains(&wall.id()) && neighbor_walls.contains(&wall.id()) {
+                        // We ask the wall for the tangent plane *as if we were the neighbor*
+                        wall.cut(&n_pos, &mut |point, normal| {
+                            // Validate the neighbor's tangent plane against our own generator.
+                            // On concave curves (convex obstacles), a neighbor's plane points 
+                            // outward and would severely truncate or destroy this cell.
+                            let mut dot = 0.0;
+                            for k in 0..D {
+                                dot += (g_pos[k] - point[k]) * normal[k];
+                            }
+                            
+                            // Only apply the plane if our generator is on the valid side of it
+                            if dot <= 1e-9 {
+                                let (modified, _) = cell.clip(&point, &normal, wall.id(), &mut scratch, None);
+                                if modified {
+                                    local_log.push(i as i32);
+                                    local_log.push(neighbor_idx as i32);
+                                    local_log.push(wall.id());
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+            if local_log.is_empty() {
+                None
+            } else {
+                Some(local_log)
+            }
+        }).collect();
+
+        self.seal_log = logs.into_iter().flatten().collect();
+    }
+
+    /// Runs a post-processing pass to prune the cells faces at the boundaries.
+    /// It queries additional tangent planes from curved walls by interpolating
+    /// between the cell's generator and its neighbors' generators, creating a beveled, smoother surface.
+    pub fn prune_boundaries(&mut self) {
+        let count = self.generators.len() / D;
+        let walls = &self.walls;
+
+        let mut topologies: Vec<Vec<usize>> = Vec::with_capacity(count);
+        let mut cell_walls: Vec<Vec<i32>> = Vec::with_capacity(count);
+        for cell in &self.cells {
+            let mut neighbors = Vec::new();
+            let mut non_planar_walls = Vec::new();
+            for &face_neighbor in cell.neighbors() {
+                if face_neighbor >= 0 && (face_neighbor as usize) < count {
+                    if !neighbors.contains(&(face_neighbor as usize)) {
+                        neighbors.push(face_neighbor as usize);
+                    }
+                } else {
+                    if let Some(wall) = walls.iter().find(|w| w.id() == face_neighbor) {
+                        if !wall.is_planar() && !non_planar_walls.contains(&face_neighbor) {
+                            non_planar_walls.push(face_neighbor);
+                        }
+                    }
+                }
+            }
+            topologies.push(neighbors);
+            cell_walls.push(non_planar_walls);
+        }
+
+        let logs: Vec<(Vec<i32>, Vec<f64>)> = self.cells.par_iter().enumerate().filter_map(|(i, cell)| {
+            let my_walls = &cell_walls[i];
+            if my_walls.is_empty() {
+                return None;
+            }
+
+            let mut local_log = Vec::new();
+            let mut local_pos_log = Vec::new();
+            
+            for &neighbor_idx in &topologies[i] {
+                let neighbor_walls = &cell_walls[neighbor_idx];
+
+                for wall in walls {
+                    if !wall.is_planar() && my_walls.contains(&wall.id()) && neighbor_walls.contains(&wall.id()) {
+                        
+                        let shared = cell.shared_vertices(wall.id(), neighbor_idx as i32);
+                        if !shared.is_empty() {
+                            local_log.push(i as i32);
+                            local_log.push(neighbor_idx as i32);
+                            local_log.push(wall.id());
+                            local_log.push((shared.len() / D) as i32);
+                            local_pos_log.extend_from_slice(&shared);
+                        }
+                    }
+                }
+            }
+            if local_log.is_empty() {
+                None
+            } else {
+                Some((local_log, local_pos_log))
+            }
+        }).collect();
+
+        let (prune_logs, prune_pos_logs): (Vec<_>, Vec<_>) = logs.into_iter().unzip();
+        self.prune_log = prune_logs.into_iter().flatten().collect();
+        self.prune_pos_log = prune_pos_logs.into_iter().flatten().collect();
     }
 
     /// Computes cells and applies a mapping function `f` to each cell, returning the collected results.
@@ -289,9 +395,6 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
     {
         let count = self.generators.len() / D;
         let generators = &self.generators;
-        let combined_generators = &self.combined_generators;
-        let ghost_wall_ids = &self.ghost_wall_ids;
-        let ghost_normals = &self.ghost_normals;
         let bounds = &self.bounds;
         let walls = &self.walls;
         let algorithm = &self.algorithm;
@@ -301,7 +404,7 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
             .map_init(
                 || C::Scratch::default(),
                 |scratch, i| {
-                    let cell = Self::compute_cell(i, generators, combined_generators, ghost_wall_ids, ghost_normals, bounds, walls, algorithm, scratch);
+                    let cell = Self::compute_cell(i, generators, bounds, walls, algorithm, scratch);
                     f(cell)
                 },
             )
@@ -311,38 +414,32 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
     fn compute_cell(
         i: usize,
         generators: &[f64],
-        combined_generators: &[f64],
-        ghost_wall_ids: &[i32],
-        ghost_normals: &[[f64; D]],
         bounds: &BoundingBox<D>,
         walls: &[Wall<D>],
         algorithm: &A,
         scratch: &mut C::Scratch,
     ) -> C {
-        let count = generators.len() / D;
         let offset = i * D;
         let g_slice = &generators[offset..offset + D];
         let g_pos: [f64; D] = g_slice.try_into().unwrap();
 
         let mut cell = C::new(i, *bounds);
 
-        // 1. Clip against planar walls
+        // 1. Clip against walls
         for wall in walls {
-            if wall.is_planar() {
-                wall.cut(&g_pos, &mut |point, normal| {
-                    cell.clip(&point, &normal, wall.id(), scratch, None);
-                });
-                if cell.is_empty() {
-                    return cell;
-                }
+            wall.cut(&g_pos, &mut |point, normal| {
+                cell.clip(&point, &normal, wall.id(), scratch, None);
+            });
+            if cell.is_empty() {
+                return cell;
             }
         }
 
         let mut current_max_dist_sq = cell.max_radius_sq(&g_pos);
 
-        // 2. Clip against neighbors (real and ghost) found by the SpatialAlgorithm
+        // 2. Clip against neighbors found by the SpatialAlgorithm
         algorithm.visit_neighbors(
-            combined_generators,
+            generators,
             i,
             g_pos,
             &mut current_max_dist_sq,
@@ -362,27 +459,8 @@ impl<const D: usize, C: Cell<D>, A: SpatialAlgorithm<D>> Tessellation<D, C, A> {
                     return cur_dist;
                 }
 
-                let neighbor_id = if j < count {
-                    j as i32
-                } else {
-                    let ghost_idx = j - count;
-                    let n_out = &ghost_normals[ghost_idx];
-                    
-                    // Prune ghosts that face away from the current generator.
-                    // This prevents ghost artifacts across self-intersecting walls or small gaps.
-                    let mut dot = 0.0;
-                    for k in 0..D {
-                        dot += (n_pos[k] - g_pos[k]) * n_out[k];
-                    }
-                    if dot < -1e-8 {
-                        return cur_dist;
-                    }
-                    
-                    ghost_wall_ids[ghost_idx]
-                };
-
                 if let (true, new_radius) =
-                    cell.clip(&midpoint, &normal, neighbor_id, scratch, Some(&g_pos))
+                    cell.clip(&midpoint, &normal, j as i32, scratch, Some(&g_pos))
                 {
                     if cell.is_empty() {
                         return 0.0;

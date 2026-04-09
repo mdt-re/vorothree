@@ -528,6 +528,44 @@ impl Cell<3> for Cell3DFaces {
     fn is_empty(&self) -> bool {
         self.vertices.is_empty()
     }
+
+    fn neighbors(&self) -> &[i32] {
+        &self.face_neighbors
+    }
+
+    fn shared_vertices(&self, neighbor_a: i32, neighbor_b: i32) -> Vec<f64> {
+        let mut a_verts = Vec::new();
+        let mut b_verts = Vec::new();
+        
+        let mut offset = 0;
+        for (i, &count) in self.face_counts.iter().enumerate() {
+            let n = self.face_neighbors[i];
+            let count = count as usize;
+            if n == neighbor_a {
+                for j in 0..count {
+                    let v = self.face_indices[offset + j] as usize;
+                    if !a_verts.contains(&v) { a_verts.push(v); }
+                }
+            }
+            if n == neighbor_b {
+                for j in 0..count {
+                    let v = self.face_indices[offset + j] as usize;
+                    if !b_verts.contains(&v) { b_verts.push(v); }
+                }
+            }
+            offset += count;
+        }
+        
+        let mut result = Vec::new();
+        for v in a_verts {
+            if b_verts.contains(&v) {
+                result.push(self.vertices[v * 3]);
+                result.push(self.vertices[v * 3 + 1]);
+                result.push(self.vertices[v * 3 + 2]);
+            }
+        }
+        result
+    }
 }
 
 #[cfg(test)]

@@ -266,6 +266,26 @@ impl Cell<2> for Cell2D {
     fn is_empty(&self) -> bool {
         self.vertices.is_empty()
     }
+
+    fn neighbors(&self) -> &[i32] {
+        &self.edge_neighbors
+    }
+
+    fn shared_vertices(&self, neighbor_a: i32, neighbor_b: i32) -> Vec<f64> {
+        let mut result = Vec::new();
+        let n = self.vertices.len() / 2;
+        if n < 3 { return result; }
+        for i in 0..n {
+            let prev_edge = if i == 0 { n - 1 } else { i - 1 };
+            let n1 = self.edge_neighbors[prev_edge];
+            let n2 = self.edge_neighbors[i];
+            if (n1 == neighbor_a && n2 == neighbor_b) || (n1 == neighbor_b && n2 == neighbor_a) {
+                result.push(self.vertices[i * 2]);
+                result.push(self.vertices[i * 2 + 1]);
+            }
+        }
+        result
+    }
 }
 
 #[cfg(test)]

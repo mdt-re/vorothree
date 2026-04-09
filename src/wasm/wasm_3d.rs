@@ -327,6 +327,10 @@ impl Tessellation3D {
     pub fn clear_walls(&mut self) { self.inner.clear_walls(); }
     /// Calculates the Voronoi tessellation.
     pub fn calculate(&mut self) { self.inner.calculate(); }
+    /// Calculates the Voronoi tessellation and seals the boundaries.
+    pub fn calculate_sealed(&mut self) { self.inner.calculate_sealed(); }
+    /// Runs a post-processing pass to prune the cell faces at the boundaries.
+    pub fn prune_boundaries(&mut self) { self.inner.prune_boundaries(); }
     /// Performs one step of Lloyd's relaxation to smooth the cell distribution.
     pub fn relax(&mut self) { self.inner.relax(); }
     /// Returns the number of generators.
@@ -345,4 +349,13 @@ impl Tessellation3D {
     /// Returns all cells.
     #[wasm_bindgen(getter)]
     pub fn cells(&self) -> Vec<Cell3D> { self.inner.cells().into_iter().map(|inner| Cell3D { inner }).collect() }
+    /// Returns the seal log as a flat array [cell_id, neighbor_id, wall_id, ...].
+    #[wasm_bindgen(getter)]
+    pub fn seal_log(&self) -> Vec<i32> { self.inner.seal_log.clone() }
+    /// Returns the prune log as a flat array [cell_id, neighbor_id, wall_id, ...].
+    #[wasm_bindgen(getter)]
+    pub fn prune_log(&self) -> Vec<i32> { self.inner.prune_log.clone() }
+    /// Returns the intermediate generator positions from the prune log as a flat array [x, y, z, ...].
+    #[wasm_bindgen(getter)]
+    pub fn prune_pos_log(&self) -> Vec<f64> { self.inner.prune_pos_log.clone() }
 }
