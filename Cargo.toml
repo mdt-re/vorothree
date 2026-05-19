@@ -34,6 +34,7 @@ wasm-opt = false
 [package.metadata.docs.rs]
 targets = ["wasm32-unknown-unknown"]
 all-features = true
+rustc-args = ["-C", "target-feature=+atomics,+bulk-memory"]
 
 [dev-dependencies]
 criterion = "0.5"
