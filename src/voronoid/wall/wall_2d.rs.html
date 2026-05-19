@@ -272,4 +272,180 @@
 <a href=#272 id=272 data-nosnippet>272</a>        callback([px, py], [nx, ny]);
 <a href=#273 id=273 data-nosnippet>273</a>    }
 <a href=#274 id=274 data-nosnippet>274</a>}
-</code></pre></div></section></main></body></html>
+<a href=#275 id=275 data-nosnippet>275</a>
+<a href=#276 id=276 data-nosnippet>276</a><span class="doccomment">/// A wall defined by a tube around a Catmull-Rom spline in 2D.
+<a href=#277 id=277 data-nosnippet>277</a>///
+<a href=#278 id=278 data-nosnippet>278</a>/// The valid region is inside the tube following the curve.
+<a href=#279 id=279 data-nosnippet>279</a></span><span class="attr">#[derive(Debug)]
+<a href=#280 id=280 data-nosnippet>280</a></span><span class="kw">pub struct </span>CatmullRomGeometry2D {
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="doccomment">/// Sample points along the curve.
+<a href=#282 id=282 data-nosnippet>282</a>    </span><span class="kw">pub </span>samples: Vec&lt;[f64; <span class="number">2</span>]&gt;,
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="doccomment">/// The radius (thickness) of the tube.
+<a href=#284 id=284 data-nosnippet>284</a>    </span><span class="kw">pub </span>radius: f64,
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="doccomment">/// Whether the tube is closed (loops back to start).
+<a href=#286 id=286 data-nosnippet>286</a>    </span><span class="kw">pub </span>closed: bool,
+<a href=#287 id=287 data-nosnippet>287</a>}
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a><span class="kw">impl </span>CatmullRomGeometry2D {
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">pub fn </span>new(points: Vec&lt;[f64; <span class="number">2</span>]&gt;, radius: f64, resolution: usize, closed: bool) -&gt; <span class="self">Self </span>{
+<a href=#291 id=291 data-nosnippet>291</a>        <span class="kw">let </span><span class="kw-2">mut </span>samples = Vec::with_capacity(resolution + <span class="number">1</span>);
+<a href=#292 id=292 data-nosnippet>292</a>        <span class="kw">if </span>points.len() &gt;= <span class="number">2 </span>{
+<a href=#293 id=293 data-nosnippet>293</a>            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..=resolution {
+<a href=#294 id=294 data-nosnippet>294</a>                <span class="kw">let </span>t = i <span class="kw">as </span>f64 / resolution <span class="kw">as </span>f64;
+<a href=#295 id=295 data-nosnippet>295</a>                samples.push(<span class="self">Self</span>::get_point(t, <span class="kw-2">&amp;</span>points, closed));
+<a href=#296 id=296 data-nosnippet>296</a>            }
+<a href=#297 id=297 data-nosnippet>297</a>        }
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="self">Self </span>{ samples, radius, closed }
+<a href=#299 id=299 data-nosnippet>299</a>    }
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="kw">fn </span>get_point(t: f64, points: <span class="kw-2">&amp;</span>[[f64; <span class="number">2</span>]], closed: bool) -&gt; [f64; <span class="number">2</span>] {
+<a href=#302 id=302 data-nosnippet>302</a>        <span class="kw">let </span>l = points.len();
+<a href=#303 id=303 data-nosnippet>303</a>        <span class="kw">let </span>p = (l <span class="kw">as </span>f64 - <span class="kw">if </span>closed { <span class="number">0.0 </span>} <span class="kw">else </span>{ <span class="number">1.0 </span>}) * t;
+<a href=#304 id=304 data-nosnippet>304</a>        <span class="kw">let </span><span class="kw-2">mut </span>int_point = p.floor() <span class="kw">as </span>isize;
+<a href=#305 id=305 data-nosnippet>305</a>        <span class="kw">let </span>weight = p - int_point <span class="kw">as </span>f64;
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>        <span class="kw">if </span>closed {
+<a href=#308 id=308 data-nosnippet>308</a>            <span class="kw">if </span>int_point &gt; <span class="number">0 </span>{
+<a href=#309 id=309 data-nosnippet>309</a>                 int_point += <span class="number">0</span>;
+<a href=#310 id=310 data-nosnippet>310</a>            } <span class="kw">else </span>{
+<a href=#311 id=311 data-nosnippet>311</a>                 int_point += (int_point.abs() / l <span class="kw">as </span>isize + <span class="number">1</span>) * l <span class="kw">as </span>isize;
+<a href=#312 id=312 data-nosnippet>312</a>            }
+<a href=#313 id=313 data-nosnippet>313</a>        } <span class="kw">else if </span>weight == <span class="number">0.0 </span>&amp;&amp; int_point == l <span class="kw">as </span>isize - <span class="number">1 </span>{
+<a href=#314 id=314 data-nosnippet>314</a>            int_point = l <span class="kw">as </span>isize - <span class="number">2</span>;
+<a href=#315 id=315 data-nosnippet>315</a>        }
+<a href=#316 id=316 data-nosnippet>316</a>
+<a href=#317 id=317 data-nosnippet>317</a>        <span class="kw">let </span>p0;
+<a href=#318 id=318 data-nosnippet>318</a>        <span class="kw">let </span>p1;
+<a href=#319 id=319 data-nosnippet>319</a>        <span class="kw">let </span>p2;
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="kw">let </span>p3;
+<a href=#321 id=321 data-nosnippet>321</a>
+<a href=#322 id=322 data-nosnippet>322</a>        <span class="kw">if </span>closed || int_point &gt; <span class="number">0 </span>{
+<a href=#323 id=323 data-nosnippet>323</a>             p0 = points[((int_point - <span class="number">1</span>) % l <span class="kw">as </span>isize + l <span class="kw">as </span>isize) <span class="kw">as </span>usize % l];
+<a href=#324 id=324 data-nosnippet>324</a>        } <span class="kw">else </span>{
+<a href=#325 id=325 data-nosnippet>325</a>             p0 = [
+<a href=#326 id=326 data-nosnippet>326</a>                 points[<span class="number">0</span>][<span class="number">0</span>] - (points[<span class="number">1</span>][<span class="number">0</span>] - points[<span class="number">0</span>][<span class="number">0</span>]),
+<a href=#327 id=327 data-nosnippet>327</a>                 points[<span class="number">0</span>][<span class="number">1</span>] - (points[<span class="number">1</span>][<span class="number">1</span>] - points[<span class="number">0</span>][<span class="number">1</span>]),
+<a href=#328 id=328 data-nosnippet>328</a>             ];
+<a href=#329 id=329 data-nosnippet>329</a>        }
+<a href=#330 id=330 data-nosnippet>330</a>
+<a href=#331 id=331 data-nosnippet>331</a>        p1 = points[int_point <span class="kw">as </span>usize % l];
+<a href=#332 id=332 data-nosnippet>332</a>        p2 = points[(int_point + <span class="number">1</span>) <span class="kw">as </span>usize % l];
+<a href=#333 id=333 data-nosnippet>333</a>
+<a href=#334 id=334 data-nosnippet>334</a>        <span class="kw">if </span>closed || int_point + <span class="number">2 </span>&lt; l <span class="kw">as </span>isize {
+<a href=#335 id=335 data-nosnippet>335</a>            p3 = points[(int_point + <span class="number">2</span>) <span class="kw">as </span>usize % l];
+<a href=#336 id=336 data-nosnippet>336</a>        } <span class="kw">else </span>{
+<a href=#337 id=337 data-nosnippet>337</a>            <span class="kw">let </span>last = points[l-<span class="number">1</span>];
+<a href=#338 id=338 data-nosnippet>338</a>            <span class="kw">let </span>prev = points[l-<span class="number">2</span>];
+<a href=#339 id=339 data-nosnippet>339</a>            p3 = [
+<a href=#340 id=340 data-nosnippet>340</a>                last[<span class="number">0</span>] - (prev[<span class="number">0</span>] - last[<span class="number">0</span>]),
+<a href=#341 id=341 data-nosnippet>341</a>                last[<span class="number">1</span>] - (prev[<span class="number">1</span>] - last[<span class="number">1</span>]),
+<a href=#342 id=342 data-nosnippet>342</a>            ];
+<a href=#343 id=343 data-nosnippet>343</a>        }
+<a href=#344 id=344 data-nosnippet>344</a>
+<a href=#345 id=345 data-nosnippet>345</a>        <span class="kw">let </span>pow = <span class="number">0.25</span>;
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="kw">let </span><span class="kw-2">mut </span>dt0 = dist_sq_2d(p0, p1).powf(pow);
+<a href=#347 id=347 data-nosnippet>347</a>        <span class="kw">let </span><span class="kw-2">mut </span>dt1 = dist_sq_2d(p1, p2).powf(pow);
+<a href=#348 id=348 data-nosnippet>348</a>        <span class="kw">let </span><span class="kw-2">mut </span>dt2 = dist_sq_2d(p2, p3).powf(pow);
+<a href=#349 id=349 data-nosnippet>349</a>
+<a href=#350 id=350 data-nosnippet>350</a>        <span class="kw">if </span>dt1 &lt; <span class="number">1e-4 </span>{ dt1 = <span class="number">1.0</span>; }
+<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw">if </span>dt0 &lt; <span class="number">1e-4 </span>{ dt0 = dt1; }
+<a href=#352 id=352 data-nosnippet>352</a>        <span class="kw">if </span>dt2 &lt; <span class="number">1e-4 </span>{ dt2 = dt1; }
+<a href=#353 id=353 data-nosnippet>353</a>
+<a href=#354 id=354 data-nosnippet>354</a>        <span class="kw">let </span>px = init_nonuniform_catmull_rom_2d(p0[<span class="number">0</span>], p1[<span class="number">0</span>], p2[<span class="number">0</span>], p3[<span class="number">0</span>], dt0, dt1, dt2);
+<a href=#355 id=355 data-nosnippet>355</a>        <span class="kw">let </span>py = init_nonuniform_catmull_rom_2d(p0[<span class="number">1</span>], p1[<span class="number">1</span>], p2[<span class="number">1</span>], p3[<span class="number">1</span>], dt0, dt1, dt2);
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>        [
+<a href=#358 id=358 data-nosnippet>358</a>            px.calc(weight),
+<a href=#359 id=359 data-nosnippet>359</a>            py.calc(weight),
+<a href=#360 id=360 data-nosnippet>360</a>        ]
+<a href=#361 id=361 data-nosnippet>361</a>    }
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="kw">fn </span>get_closest_point(<span class="kw-2">&amp;</span><span class="self">self</span>, point: <span class="kw-2">&amp;</span>[f64; <span class="number">2</span>]) -&gt; [f64; <span class="number">2</span>] {
+<a href=#364 id=364 data-nosnippet>364</a>        <span class="kw">if </span><span class="self">self</span>.samples.is_empty() { <span class="kw">return </span>[<span class="number">0.0</span>, <span class="number">0.0</span>]; }
+<a href=#365 id=365 data-nosnippet>365</a>        <span class="kw">let </span><span class="kw-2">mut </span>min_dist_sq = f64::MAX;
+<a href=#366 id=366 data-nosnippet>366</a>        <span class="kw">let </span><span class="kw-2">mut </span>closest_pt = <span class="self">self</span>.samples[<span class="number">0</span>];
+<a href=#367 id=367 data-nosnippet>367</a>        <span class="kw">let </span>n = <span class="self">self</span>.samples.len();
+<a href=#368 id=368 data-nosnippet>368</a>        <span class="kw">let </span>limit = <span class="kw">if </span><span class="self">self</span>.closed { n } <span class="kw">else </span>{ n - <span class="number">1 </span>};
+<a href=#369 id=369 data-nosnippet>369</a>        
+<a href=#370 id=370 data-nosnippet>370</a>        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..limit {
+<a href=#371 id=371 data-nosnippet>371</a>            <span class="kw">let </span>p0 = <span class="self">self</span>.samples[i];
+<a href=#372 id=372 data-nosnippet>372</a>            <span class="kw">let </span>p1 = <span class="self">self</span>.samples[(i + <span class="number">1</span>) % n];
+<a href=#373 id=373 data-nosnippet>373</a>            
+<a href=#374 id=374 data-nosnippet>374</a>            <span class="kw">let </span>v = [p1[<span class="number">0</span>] - p0[<span class="number">0</span>], p1[<span class="number">1</span>] - p0[<span class="number">1</span>]];
+<a href=#375 id=375 data-nosnippet>375</a>            <span class="kw">let </span>w = [point[<span class="number">0</span>] - p0[<span class="number">0</span>], point[<span class="number">1</span>] - p0[<span class="number">1</span>]];
+<a href=#376 id=376 data-nosnippet>376</a>            
+<a href=#377 id=377 data-nosnippet>377</a>            <span class="kw">let </span>c1 = w[<span class="number">0</span>]<span class="kw-2">*</span>v[<span class="number">0</span>] + w[<span class="number">1</span>]<span class="kw-2">*</span>v[<span class="number">1</span>];
+<a href=#378 id=378 data-nosnippet>378</a>            <span class="kw">let </span>c2 = v[<span class="number">0</span>]<span class="kw-2">*</span>v[<span class="number">0</span>] + v[<span class="number">1</span>]<span class="kw-2">*</span>v[<span class="number">1</span>];
+<a href=#379 id=379 data-nosnippet>379</a>            <span class="kw">let </span>t = <span class="kw">if </span>c2 &lt;= <span class="number">0.0 </span>{ <span class="number">0.0 </span>} <span class="kw">else </span>{ (c1 / c2).clamp(<span class="number">0.0</span>, <span class="number">1.0</span>) };
+<a href=#380 id=380 data-nosnippet>380</a>            
+<a href=#381 id=381 data-nosnippet>381</a>            <span class="kw">let </span>proj = [p0[<span class="number">0</span>] + v[<span class="number">0</span>] * t, p0[<span class="number">1</span>] + v[<span class="number">1</span>] * t];
+<a href=#382 id=382 data-nosnippet>382</a>            <span class="kw">let </span>dx = point[<span class="number">0</span>] - proj[<span class="number">0</span>];
+<a href=#383 id=383 data-nosnippet>383</a>            <span class="kw">let </span>dy = point[<span class="number">1</span>] - proj[<span class="number">1</span>];
+<a href=#384 id=384 data-nosnippet>384</a>            <span class="kw">let </span>d2 = dx<span class="kw-2">*</span>dx + dy<span class="kw-2">*</span>dy;
+<a href=#385 id=385 data-nosnippet>385</a>            
+<a href=#386 id=386 data-nosnippet>386</a>            <span class="kw">if </span>d2 &lt; min_dist_sq {
+<a href=#387 id=387 data-nosnippet>387</a>                min_dist_sq = d2;
+<a href=#388 id=388 data-nosnippet>388</a>                closest_pt = proj;
+<a href=#389 id=389 data-nosnippet>389</a>            }
+<a href=#390 id=390 data-nosnippet>390</a>        }
+<a href=#391 id=391 data-nosnippet>391</a>        closest_pt
+<a href=#392 id=392 data-nosnippet>392</a>    }
+<a href=#393 id=393 data-nosnippet>393</a>}
+<a href=#394 id=394 data-nosnippet>394</a>
+<a href=#395 id=395 data-nosnippet>395</a><span class="kw">impl </span>WallGeometry&lt;<span class="number">2</span>&gt; <span class="kw">for </span>CatmullRomGeometry2D {
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, point: <span class="kw-2">&amp;</span>[f64; <span class="number">2</span>]) -&gt; bool {
+<a href=#397 id=397 data-nosnippet>397</a>        <span class="kw">let </span>closest = <span class="self">self</span>.get_closest_point(point);
+<a href=#398 id=398 data-nosnippet>398</a>        <span class="kw">let </span>dist_sq = (point[<span class="number">0</span>] - closest[<span class="number">0</span>]).powi(<span class="number">2</span>) + (point[<span class="number">1</span>] - closest[<span class="number">1</span>]).powi(<span class="number">2</span>);
+<a href=#399 id=399 data-nosnippet>399</a>        dist_sq &lt;= <span class="self">self</span>.radius.powi(<span class="number">2</span>)
+<a href=#400 id=400 data-nosnippet>400</a>    }
+<a href=#401 id=401 data-nosnippet>401</a>
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">fn </span>cut(<span class="kw-2">&amp;</span><span class="self">self</span>, generator: <span class="kw-2">&amp;</span>[f64; <span class="number">2</span>], callback: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FnMut([f64; <span class="number">2</span>], [f64; <span class="number">2</span>])) {
+<a href=#403 id=403 data-nosnippet>403</a>        <span class="kw">let </span>closest = <span class="self">self</span>.get_closest_point(generator);
+<a href=#404 id=404 data-nosnippet>404</a>        <span class="kw">let </span>dx = generator[<span class="number">0</span>] - closest[<span class="number">0</span>];
+<a href=#405 id=405 data-nosnippet>405</a>        <span class="kw">let </span>dy = generator[<span class="number">1</span>] - closest[<span class="number">1</span>];
+<a href=#406 id=406 data-nosnippet>406</a>        <span class="kw">let </span>dist = (dx<span class="kw-2">*</span>dx + dy<span class="kw-2">*</span>dy).sqrt();
+<a href=#407 id=407 data-nosnippet>407</a>        
+<a href=#408 id=408 data-nosnippet>408</a>        <span class="kw">if </span>dist == <span class="number">0.0 </span>{ <span class="kw">return</span>; }
+<a href=#409 id=409 data-nosnippet>409</a>        
+<a href=#410 id=410 data-nosnippet>410</a>        <span class="kw">let </span>nx = dx / dist;
+<a href=#411 id=411 data-nosnippet>411</a>        <span class="kw">let </span>ny = dy / dist;
+<a href=#412 id=412 data-nosnippet>412</a>        
+<a href=#413 id=413 data-nosnippet>413</a>        <span class="kw">let </span>px = closest[<span class="number">0</span>] + nx * <span class="self">self</span>.radius;
+<a href=#414 id=414 data-nosnippet>414</a>        <span class="kw">let </span>py = closest[<span class="number">1</span>] + ny * <span class="self">self</span>.radius;
+<a href=#415 id=415 data-nosnippet>415</a>        
+<a href=#416 id=416 data-nosnippet>416</a>        callback([px, py], [nx, ny]);
+<a href=#417 id=417 data-nosnippet>417</a>    }
+<a href=#418 id=418 data-nosnippet>418</a>}
+<a href=#419 id=419 data-nosnippet>419</a>
+<a href=#420 id=420 data-nosnippet>420</a><span class="kw">fn </span>dist_sq_2d(a: [f64; <span class="number">2</span>], b: [f64; <span class="number">2</span>]) -&gt; f64 {
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">let </span>dx = a[<span class="number">0</span>] - b[<span class="number">0</span>];
+<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">let </span>dy = a[<span class="number">1</span>] - b[<span class="number">1</span>];
+<a href=#423 id=423 data-nosnippet>423</a>    dx * dx + dy * dy
+<a href=#424 id=424 data-nosnippet>424</a>}
+<a href=#425 id=425 data-nosnippet>425</a>
+<a href=#426 id=426 data-nosnippet>426</a><span class="kw">struct </span>CubicPoly2D {
+<a href=#427 id=427 data-nosnippet>427</a>    c0: f64, c1: f64, c2: f64, c3: f64
+<a href=#428 id=428 data-nosnippet>428</a>}
+<a href=#429 id=429 data-nosnippet>429</a>
+<a href=#430 id=430 data-nosnippet>430</a><span class="kw">impl </span>CubicPoly2D {
+<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">fn </span>calc(<span class="kw-2">&amp;</span><span class="self">self</span>, t: f64) -&gt; f64 {
+<a href=#432 id=432 data-nosnippet>432</a>        <span class="kw">let </span>t2 = t * t;
+<a href=#433 id=433 data-nosnippet>433</a>        <span class="kw">let </span>t3 = t2 * t;
+<a href=#434 id=434 data-nosnippet>434</a>        <span class="self">self</span>.c0 + <span class="self">self</span>.c1 * t + <span class="self">self</span>.c2 * t2 + <span class="self">self</span>.c3 * t3
+<a href=#435 id=435 data-nosnippet>435</a>    }
+<a href=#436 id=436 data-nosnippet>436</a>}
+<a href=#437 id=437 data-nosnippet>437</a>
+<a href=#438 id=438 data-nosnippet>438</a><span class="kw">fn </span>init_nonuniform_catmull_rom_2d(x0: f64, x1: f64, x2: f64, x3: f64, dt0: f64, dt1: f64, dt2: f64) -&gt; CubicPoly2D {
+<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">let </span><span class="kw-2">mut </span>t1 = (x1 - x0) / dt0 - (x2 - x0) / (dt0 + dt1) + (x2 - x1) / dt1;
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="kw">let </span><span class="kw-2">mut </span>t2 = (x2 - x1) / dt1 - (x3 - x1) / (dt1 + dt2) + (x3 - x2) / dt2;
+<a href=#441 id=441 data-nosnippet>441</a>
+<a href=#442 id=442 data-nosnippet>442</a>    t1 <span class="kw-2">*</span>= dt1;
+<a href=#443 id=443 data-nosnippet>443</a>    t2 <span class="kw-2">*</span>= dt1;
+<a href=#444 id=444 data-nosnippet>444</a>
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">let </span>c0 = x1;
+<a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">let </span>c1 = t1;
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>c2 = -<span class="number">3.0 </span>* x1 + <span class="number">3.0 </span>* x2 - <span class="number">2.0 </span>* t1 - t2;
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>c3 = <span class="number">2.0 </span>* x1 - <span class="number">2.0 </span>* x2 + t1 + t2;
+<a href=#449 id=449 data-nosnippet>449</a>
+<a href=#450 id=450 data-nosnippet>450</a>    CubicPoly2D { c0, c1, c2, c3 }
+<a href=#451 id=451 data-nosnippet>451</a>}</code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AnnulusGeometry","CircleGeometry","ConvexPolygonGeometry2D","CubicBezierGeometry2D","LineGeometry"]};
+window.SIDEBAR_ITEMS = {"struct":["AnnulusGeometry","CatmullRomGeometry2D","CircleGeometry","ConvexPolygonGeometry2D","CubicBezierGeometry2D","LineGeometry"]};

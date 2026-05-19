@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AnnulusGeometry","CircleGeometry","ConvexPolygonGeometry2D","CubicBezierGeometry2D","LineGeometry"]};
+window.SIDEBAR_ITEMS = {"fn":["dist_sq_2d","init_nonuniform_catmull_rom_2d"],"struct":["AnnulusGeometry","CatmullRomGeometry2D","CircleGeometry","ConvexPolygonGeometry2D","CubicBezierGeometry2D","CubicPoly2D","LineGeometry"]};
