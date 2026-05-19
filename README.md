@@ -47,9 +47,9 @@ To build the project for web usage:
 ```bash
 wasm-pack build --target web
 ```
-which can then be added as a local dependency. To prepare the generated package for publication we need to copy the `README_WASM.md` to the package folder.
+which can then be added as a local dependency. To prepare the generated package for publication on npm run the patch_npm_pkg script.
 ```bash
-cp README_WASM.md pkg/README.md
+node patch_npm_pkg.js
 ```
 
 ## Usage & Documentation
