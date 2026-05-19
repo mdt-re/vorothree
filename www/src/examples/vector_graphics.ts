@@ -64,7 +64,7 @@ export async function run(app: HTMLElement) {
 
     // --- Three.js Setup ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+    scene.background = new THREE.Color(0x242424);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(80, 80, 80);
@@ -331,7 +331,7 @@ export async function run(app: HTMLElement) {
     
     // 2. Create Meshes for Cells
     const edgeMaterial = new THREE.LineBasicMaterial({
-        color: 0x000000,
+        color: 0xffffff,
         transparent: true,
         opacity: params.edgeOpacity,
     });
@@ -407,14 +407,17 @@ export async function run(app: HTMLElement) {
 
         const originalBackground = scene.background;
         const originalAspect = camera.aspect;
+        const originalEdgeColor = edgeMaterial.color.getHex();
 
         scene.background = null;
+        edgeMaterial.color.setHex(0x000000);
         camera.aspect = 1;
         camera.updateProjectionMatrix();
 
         svgRenderer.render(scene, camera);
 
         scene.background = originalBackground;
+        edgeMaterial.color.setHex(originalEdgeColor);
         camera.aspect = originalAspect;
         camera.updateProjectionMatrix();
 
@@ -440,8 +443,10 @@ export async function run(app: HTMLElement) {
         const originalRotZEdge = edgeGroup.rotation.z;
         const originalBackground = scene.background;
         const originalAspect = camera.aspect;
+        const originalEdgeColor = edgeMaterial.color.getHex();
 
         scene.background = null;
+        edgeMaterial.color.setHex(0x000000);
         camera.aspect = 1;
         camera.updateProjectionMatrix();
 
@@ -525,6 +530,7 @@ export async function run(app: HTMLElement) {
         edgeGroup.rotation.z = originalRotZEdge;
         edgeGroup.updateMatrixWorld();
         scene.background = originalBackground;
+        edgeMaterial.color.setHex(originalEdgeColor);
         camera.aspect = originalAspect;
         camera.updateProjectionMatrix();
         

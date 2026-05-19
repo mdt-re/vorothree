@@ -96,6 +96,18 @@ impl Wall2D {
     pub fn new_bezier(p0x: f64, p0y: f64, p1x: f64, p1y: f64, p2x: f64, p2y: f64, p3x: f64, p3y: f64, radius: f64, resolution: usize, closed: bool, id: i32) -> Wall2D {
         Wall2D { inner: Some(Wall::new(id, Box::new(CubicBezierGeometry2D::new([p0x, p0y], [p1x, p1y], [p2x, p2y], [p3x, p3y], radius, resolution, closed)))) }
     }
+
+    /// Creates a wall defined by a Catmull-Rom spline tube.
+    pub fn new_catmull_rom(points: &[f64], radius: f64, resolution: usize, closed: bool, id: i32) -> Wall2D {
+        if points.len() % 2 != 0 {
+            panic!("Catmull-Rom curve points must be a multiple of 2 coordinates");
+        }
+        let mut control_points = Vec::with_capacity(points.len() / 2);
+        for i in (0..points.len()).step_by(2) {
+            control_points.push([points[i], points[i+1]]);
+        }
+        Wall2D { inner: Some(Wall::new(id, Box::new(CatmullRomGeometry2D::new(control_points, radius, resolution, closed)))) }
+    }
 }
 
 impl Wall2D {

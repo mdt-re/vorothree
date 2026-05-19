@@ -272,3 +272,180 @@ impl WallGeometry<2> for CubicBezierGeometry2D {
         callback([px, py], [nx, ny]);
     }
 }
+
+/// A wall defined by a tube around a Catmull-Rom spline in 2D.
+///
+/// The valid region is inside the tube following the curve.
+#[derive(Debug)]
+pub struct CatmullRomGeometry2D {
+    /// Sample points along the curve.
+    pub samples: Vec<[f64; 2]>,
+    /// The radius (thickness) of the tube.
+    pub radius: f64,
+    /// Whether the tube is closed (loops back to start).
+    pub closed: bool,
+}
+
+impl CatmullRomGeometry2D {
+    pub fn new(points: Vec<[f64; 2]>, radius: f64, resolution: usize, closed: bool) -> Self {
+        let mut samples = Vec::with_capacity(resolution + 1);
+        if points.len() >= 2 {
+            for i in 0..=resolution {
+                let t = i as f64 / resolution as f64;
+                samples.push(Self::get_point(t, &points, closed));
+            }
+        }
+        Self { samples, radius, closed }
+    }
+
+    fn get_point(t: f64, points: &[[f64; 2]], closed: bool) -> [f64; 2] {
+        let l = points.len();
+        let p = (l as f64 - if closed { 0.0 } else { 1.0 }) * t;
+        let mut int_point = p.floor() as isize;
+        let weight = p - int_point as f64;
+
+        if closed {
+            if int_point > 0 {
+                 int_point += 0;
+            } else {
+                 int_point += (int_point.abs() / l as isize + 1) * l as isize;
+            }
+        } else if weight == 0.0 && int_point == l as isize - 1 {
+            int_point = l as isize - 2;
+        }
+
+        let p0;
+        let p1;
+        let p2;
+        let p3;
+
+        if closed || int_point > 0 {
+             p0 = points[((int_point - 1) % l as isize + l as isize) as usize % l];
+        } else {
+             p0 = [
+                 points[0][0] - (points[1][0] - points[0][0]),
+                 points[0][1] - (points[1][1] - points[0][1]),
+             ];
+        }
+
+        p1 = points[int_point as usize % l];
+        p2 = points[(int_point + 1) as usize % l];
+
+        if closed || int_point + 2 < l as isize {
+            p3 = points[(int_point + 2) as usize % l];
+        } else {
+            let last = points[l-1];
+            let prev = points[l-2];
+            p3 = [
+                last[0] - (prev[0] - last[0]),
+                last[1] - (prev[1] - last[1]),
+            ];
+        }
+
+        let pow = 0.25;
+        let mut dt0 = dist_sq_2d(p0, p1).powf(pow);
+        let mut dt1 = dist_sq_2d(p1, p2).powf(pow);
+        let mut dt2 = dist_sq_2d(p2, p3).powf(pow);
+
+        if dt1 < 1e-4 { dt1 = 1.0; }
+        if dt0 < 1e-4 { dt0 = dt1; }
+        if dt2 < 1e-4 { dt2 = dt1; }
+
+        let px = init_nonuniform_catmull_rom_2d(p0[0], p1[0], p2[0], p3[0], dt0, dt1, dt2);
+        let py = init_nonuniform_catmull_rom_2d(p0[1], p1[1], p2[1], p3[1], dt0, dt1, dt2);
+
+        [
+            px.calc(weight),
+            py.calc(weight),
+        ]
+    }
+
+    fn get_closest_point(&self, point: &[f64; 2]) -> [f64; 2] {
+        if self.samples.is_empty() { return [0.0, 0.0]; }
+        let mut min_dist_sq = f64::MAX;
+        let mut closest_pt = self.samples[0];
+        let n = self.samples.len();
+        let limit = if self.closed { n } else { n - 1 };
+        
+        for i in 0..limit {
+            let p0 = self.samples[i];
+            let p1 = self.samples[(i + 1) % n];
+            
+            let v = [p1[0] - p0[0], p1[1] - p0[1]];
+            let w = [point[0] - p0[0], point[1] - p0[1]];
+            
+            let c1 = w[0]*v[0] + w[1]*v[1];
+            let c2 = v[0]*v[0] + v[1]*v[1];
+            let t = if c2 <= 0.0 { 0.0 } else { (c1 / c2).clamp(0.0, 1.0) };
+            
+            let proj = [p0[0] + v[0] * t, p0[1] + v[1] * t];
+            let dx = point[0] - proj[0];
+            let dy = point[1] - proj[1];
+            let d2 = dx*dx + dy*dy;
+            
+            if d2 < min_dist_sq {
+                min_dist_sq = d2;
+                closest_pt = proj;
+            }
+        }
+        closest_pt
+    }
+}
+
+impl WallGeometry<2> for CatmullRomGeometry2D {
+    fn contains(&self, point: &[f64; 2]) -> bool {
+        let closest = self.get_closest_point(point);
+        let dist_sq = (point[0] - closest[0]).powi(2) + (point[1] - closest[1]).powi(2);
+        dist_sq <= self.radius.powi(2)
+    }
+
+    fn cut(&self, generator: &[f64; 2], callback: &mut dyn FnMut([f64; 2], [f64; 2])) {
+        let closest = self.get_closest_point(generator);
+        let dx = generator[0] - closest[0];
+        let dy = generator[1] - closest[1];
+        let dist = (dx*dx + dy*dy).sqrt();
+        
+        if dist == 0.0 { return; }
+        
+        let nx = dx / dist;
+        let ny = dy / dist;
+        
+        let px = closest[0] + nx * self.radius;
+        let py = closest[1] + ny * self.radius;
+        
+        callback([px, py], [nx, ny]);
+    }
+}
+
+fn dist_sq_2d(a: [f64; 2], b: [f64; 2]) -> f64 {
+    let dx = a[0] - b[0];
+    let dy = a[1] - b[1];
+    dx * dx + dy * dy
+}
+
+struct CubicPoly2D {
+    c0: f64, c1: f64, c2: f64, c3: f64
+}
+
+impl CubicPoly2D {
+    fn calc(&self, t: f64) -> f64 {
+        let t2 = t * t;
+        let t3 = t2 * t;
+        self.c0 + self.c1 * t + self.c2 * t2 + self.c3 * t3
+    }
+}
+
+fn init_nonuniform_catmull_rom_2d(x0: f64, x1: f64, x2: f64, x3: f64, dt0: f64, dt1: f64, dt2: f64) -> CubicPoly2D {
+    let mut t1 = (x1 - x0) / dt0 - (x2 - x0) / (dt0 + dt1) + (x2 - x1) / dt1;
+    let mut t2 = (x2 - x1) / dt1 - (x3 - x1) / (dt1 + dt2) + (x3 - x2) / dt2;
+
+    t1 *= dt1;
+    t2 *= dt1;
+
+    let c0 = x1;
+    let c1 = t1;
+    let c2 = -3.0 * x1 + 3.0 * x2 - 2.0 * t1 - t2;
+    let c3 = 2.0 * x1 - 2.0 * x2 + t1 + t2;
+
+    CubicPoly2D { c0, c1, c2, c3 }
+}

@@ -36,10 +36,9 @@ async function run() {
     const params = new URLSearchParams(window.location.search);
     const exampleName = params.get('example');
 
-    if (exampleName && examples[exampleName]) {
-        // Inject global styles
-        const style = document.createElement('style');
-        style.innerHTML = `
+    // Global style for light mode
+    const globalStyle = document.createElement('style');
+    globalStyle.innerHTML = `
             :root {
                 --bg-color: #1a1a1a;
                 --overlay-bg: rgba(20, 20, 20, 0.8);
@@ -48,11 +47,39 @@ async function run() {
             }
             body { 
                 margin: 0; 
-                overflow: hidden; 
                 background-color: var(--bg-color); 
                 color: var(--text-color); 
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        a:hover {
+            color: #fff;
+        }
+        @media (prefers-color-scheme: light) {
+            html {
+                filter: invert(1) hue-rotate(180deg);
+            }
+            /* Keep images and videos from being inverted if there are any on the index page */
+            html img,
+            html video {
+                filter: invert(1) hue-rotate(180deg);
+            }
+        }
+    `;
+    document.head.appendChild(globalStyle);
+
+    if (exampleName && examples[exampleName]) {
+        // Inject global styles
+        const style = document.createElement('style');
+        style.innerHTML = `
+            body { 
+                overflow: hidden; 
             }
             #app { width: 100%; height: 100%; }
             canvas { display: block; outline: none; }
@@ -98,16 +125,6 @@ async function run() {
             .overlay-legend {
                 bottom: 16px;
                 left: 16px;
-            }
-
-            /* Link styling */
-            .overlay a {
-                color: var(--accent-color);
-                text-decoration: none;
-                transition: color 0.2s;
-            }
-            .overlay a:hover {
-                color: #fff;
             }
 
             /* Lil-GUI Customization */

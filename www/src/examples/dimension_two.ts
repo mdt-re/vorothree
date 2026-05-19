@@ -64,8 +64,10 @@ export async function run(app: HTMLElement) {
         width: 60.0,
         height: 60.0,
         tube: 5.0,
+        speed: 2.0,
         count: 500,
         opacity: 0.5,
+        showGenerators: true,
         showEdges: true,
         showFaces: true,
         showLabels: false,
@@ -131,11 +133,20 @@ export async function run(app: HTMLElement) {
 
     // --- voronoid Setup ---
     let tess: any;
+    let currentWallPoints: Float64Array | null = null;
+    
+    const snakeNumPoints = 12;
+    const snakePoints = new Float64Array(snakeNumPoints * 2);
+    for (let i = 0; i < snakeNumPoints; i++) {
+        snakePoints[i * 2] = Math.cos(i * 0.5) * 20;
+        snakePoints[i * 2 + 1] = Math.sin(i * 0.5) * 20;
+    }
 
     function initTessellation() {
         const half = boxSize / 2;
         const bounds = new BoundingBox2D(-half, -half, half, half);
         tess = new Tessellation2D(bounds, 10, 10);
+        currentWallPoints = null;
 
         switch (params.wallType) {
             case 'circle':
@@ -150,7 +161,7 @@ export async function run(app: HTMLElement) {
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_regular_polygon(0.0, 0.0, params.radius, params.sides, -1000));
                 break;
-            case 'rectangle':
+            case 'rectangle': {
                 const w = params.width / 2;
                 const h = params.height / 2;
                 // @ts-ignore
@@ -162,7 +173,9 @@ export async function run(app: HTMLElement) {
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_line(0.0, -h, 0.0, +1.0, -1000));
                 break;
-            case 'diamond':
+            }
+            case 'diamond': {
+                const r = params.radius;
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_line(-r / 2, -r / 2, +1, +1, -1000));
                 // @ts-ignore
@@ -172,14 +185,46 @@ export async function run(app: HTMLElement) {
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_line(+r / 2, -r / 2, -1, +1, -1000));
                 break;
-            case 'bezier':
+            }
+            case 'bezier': {
                 const r = params.radius;
                 // @ts-ignore
                 tess.add_wall(Wall2D.new_bezier(-r, -r, -r / 2, r, r / 2, -r, r, r, params.tube, 100, false, -1000));
                 break;
+            }
+            case 'snake': {
+                currentWallPoints = snakePoints;
+                // @ts-ignore
+                tess.add_wall(Wall2D.new_catmull_rom(snakePoints, params.tube, 100, false, -1000));
+                
+                let seed = 1337;
+                const random = () => {
+                    seed = (seed * 1664525 + 1013904223) % 4294967296;
+                    return seed / 4294967296;
+                };
+                const generators = new Float64Array(params.count * 2);
+                for (let i = 0; i < params.count; i++) {
+                    const t = (i + 0.5) / params.count; // Uniformly spaced along the curve
+                    const pointIndex = t * (snakeNumPoints - 1);
+                    const idx1 = Math.floor(pointIndex);
+                    const idx2 = Math.min(idx1 + 1, snakeNumPoints - 1);
+                    const frac = pointIndex - idx1;
+                    
+                    const cx = snakePoints[idx1 * 2] + (snakePoints[idx2 * 2] - snakePoints[idx1 * 2]) * frac;
+                    const cy = snakePoints[idx1 * 2 + 1] + (snakePoints[idx2 * 2 + 1] - snakePoints[idx1 * 2 + 1]) * frac;
+                    const angle = random() * Math.PI * 2;
+                    const r = Math.sqrt(random()) * (params.tube * 0.75);
+                    generators[i * 2] = cx + Math.cos(angle) * r;
+                    generators[i * 2 + 1] = cy + Math.sin(angle) * r;
+                }
+                tess.set_generators(generators);
+                break;
+            }
         }
 
-        tess.random_generators(params.count);
+        if (params.wallType !== 'snake') {
+            tess.random_generators(params.count);
+        }
         tess.calculate();
         updateVisualization();
     }
@@ -193,6 +238,8 @@ export async function run(app: HTMLElement) {
     });
     
     const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+    const pointsMaterial = new THREE.PointsMaterial({ color: 0xff0000, size: 4, sizeAttenuation: false, depthTest: false });
+    const wallPointsMaterial = new THREE.PointsMaterial({ color: 0x00ff00, size: 6, sizeAttenuation: false, depthTest: false });
 
     const geometryGroup = new THREE.Group();
     scene.add(geometryGroup);
@@ -345,6 +392,31 @@ export async function run(app: HTMLElement) {
             geometryGroup.add(lines);
         }
 
+        if (params.showGenerators) {
+            const generators = tess.generators;
+            if (generators) {
+                const ptPositions = [];
+                for (let i = 0; i < generators.length; i += 2) {
+                    ptPositions.push(generators[i], generators[i + 1], 0.1);
+                }
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(ptPositions, 3));
+                const points = new THREE.Points(geo, pointsMaterial);
+                geometryGroup.add(points);
+            }
+            
+            if (currentWallPoints && params.wallType === 'snake') {
+                const wallPtPositions = [];
+                for (let i = 0; i < currentWallPoints.length; i += 2) {
+                    wallPtPositions.push(currentWallPoints[i], currentWallPoints[i + 1], 0.2);
+                }
+                const wallGeo = new THREE.BufferGeometry();
+                wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(wallPtPositions, 3));
+                const wallPointsMesh = new THREE.Points(wallGeo, wallPointsMaterial);
+                geometryGroup.add(wallPointsMesh);
+            }
+        }
+
         infoText.innerText = `Cells: ${cellCount}\nTotal Area: ${totalArea.toFixed(2)}`;
 
         if (params.showFaces && params.colorByVertexCount) {
@@ -369,13 +441,14 @@ export async function run(app: HTMLElement) {
 
     gui.add(params, 'count', 10, 2000, 10).onChange(initTessellation);
     const wallFolder = gui.addFolder('wall settings');
-    const wallTypeCtrl = wallFolder.add(params, 'wallType', ['circle', 'annulus', 'regular_polygon', 'rectangle', 'diamond', 'bezier']).name('wall');
+    const wallTypeCtrl = wallFolder.add(params, 'wallType', ['circle', 'annulus', 'regular_polygon', 'rectangle', 'diamond', 'bezier', 'snake']).name('wall');
     const radiusCtrl = wallFolder.add(params, 'radius', 10, 50).onChange(initTessellation);
     const innerRadiusCtrl = wallFolder.add(params, 'innerRadius', 5, 45).name('inner radius').onChange(initTessellation);
     const sidesCtrl = wallFolder.add(params, 'sides', 3, 12, 1).onChange(initTessellation);
     const widthCtrl = wallFolder.add(params, 'width', 10, 100).onChange(initTessellation);
     const heightCtrl = wallFolder.add(params, 'height', 10, 100).onChange(initTessellation);
     const tubeCtrl = wallFolder.add(params, 'tube', 1, 20).onChange(initTessellation);
+    const speedCtrl = wallFolder.add(params, 'speed', 0.1, 5.0).name('speed');
 
     const updateVisibility = () => {
         const type = params.wallType;
@@ -384,7 +457,8 @@ export async function run(app: HTMLElement) {
         sidesCtrl.show(type === 'regular_polygon');
         widthCtrl.show(type === 'rectangle');
         heightCtrl.show(type === 'rectangle');
-        tubeCtrl.show(type === 'bezier');
+        tubeCtrl.show(['bezier', 'snake'].includes(type));
+        speedCtrl.show(type === 'snake');
     };
 
     wallTypeCtrl.onChange(() => {
@@ -394,6 +468,7 @@ export async function run(app: HTMLElement) {
     updateVisibility();
     
     gui.add(params, 'opacity', 0, 1).onChange((v: number) => material.opacity = v);
+    gui.add(params, 'showGenerators').name('show points').onChange(updateVisualization);
     gui.add(params, 'showEdges').name('show edges').onChange(updateVisualization);
     gui.add(params, 'checkNeighbors').name('check neighbors').onChange(updateVisualization);
     gui.add(params, 'colorByVertexCount').name('color (#vertices)').onChange(updateVisualization);
@@ -406,6 +481,49 @@ export async function run(app: HTMLElement) {
         requestAnimationFrame(animate);
         stats.update();
         controls.update();
+
+        if (params.wallType === 'snake') {
+            tess.clear_walls();
+            
+            const time = performance.now() * 0.001 * params.speed * 0.125;
+            const amplitude = 40.0;
+
+            for (let i = 0; i < snakeNumPoints; i++) {
+                const tOffset = time - i * 0.1; // Delay for body segments
+                snakePoints[i * 2] = amplitude * Math.cos(3 * tOffset);
+                snakePoints[i * 2 + 1] = amplitude * Math.sin(4 * tOffset);
+            }
+
+            currentWallPoints = snakePoints;
+            // @ts-ignore
+            tess.add_wall(Wall2D.new_catmull_rom(snakePoints, params.tube, 100, false, -1000));
+            
+            let seed = 1337;
+            const random = () => {
+                seed = (seed * 1664525 + 1013904223) % 4294967296;
+                return seed / 4294967296;
+            };
+            const generators = new Float64Array(params.count * 2);
+            for (let i = 0; i < params.count; i++) {
+                const t = (i + 0.5) / params.count; // Uniformly spaced along the curve
+                const pointIndex = t * (snakeNumPoints - 1);
+                const idx1 = Math.floor(pointIndex);
+                const idx2 = Math.min(idx1 + 1, snakeNumPoints - 1);
+                const frac = pointIndex - idx1;
+                
+                const cx = snakePoints[idx1 * 2] + (snakePoints[idx2 * 2] - snakePoints[idx1 * 2]) * frac;
+                const cy = snakePoints[idx1 * 2 + 1] + (snakePoints[idx2 * 2 + 1] - snakePoints[idx1 * 2 + 1]) * frac;
+                const angle = random() * Math.PI * 2;
+                const r = Math.sqrt(random()) * (params.tube * 0.75);
+                generators[i * 2] = cx + Math.cos(angle) * r;
+                generators[i * 2 + 1] = cy + Math.sin(angle) * r;
+            }
+            tess.set_generators(generators);
+            
+            tess.calculate();
+            updateVisualization();
+        }
+
         labelRenderer.render(scene, camera);
         renderer.render(scene, camera);
     }

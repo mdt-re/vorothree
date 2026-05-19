@@ -1,6 +1,7 @@
 # voronoid
 
 [![crates.io](https://img.shields.io/crates/v/voronoid)](https://crates.io/crates/voronoid)
+[![npm](https://img.shields.io/npm/v/voronoid)](https://www.npmjs.com/package/voronoid)
 [![tests](https://github.com/mdt-re/voronoid/actions/workflows/test.yml/badge.svg)](https://github.com/mdt-re/voronoid/actions/workflows/test.yml)
 [![examples](https://github.com/mdt-re/voronoid/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/mdt-re/voronoid/actions/workflows/deploy.yml)
 [![docs](https://github.com/mdt-re/voronoid/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/mdt-re/voronoid/actions/workflows/docs.yml)

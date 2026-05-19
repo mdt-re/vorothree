@@ -6,6 +6,7 @@ description = "3D Voronoi tessellation in Rust: a fast, feature-rich grid-based 
 license = "MIT/Apache-2.0"
 repository = "https://github.com/mdt-re/voronoid"
 edition = "2024"
+documentation = "https://docs.rs/voronoid"
 readme = "README.md"
 homepage = "https://mdt-re.github.io/voronoid/"
 categories = ["graphics", "visualization", "mathematics", "science", "wasm"]
